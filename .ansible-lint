@@ -12,6 +12,7 @@ exclude_paths:
   - /requirements/
   - /schema/
   - /scripts/
+  - /ui/
 
 offline: false
 

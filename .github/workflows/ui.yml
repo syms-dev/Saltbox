@@ -1,0 +1,61 @@
+name: UI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'ui/**'
+      - 'schema/**'
+      - 'defaults/**'
+      - 'roles/*/defaults/main.yml'
+      - 'saltbox.yml'
+      - '.github/workflows/ui.yml'
+  pull_request:
+    paths:
+      - 'ui/**'
+      - 'schema/**'
+      - 'defaults/**'
+      - 'roles/*/defaults/main.yml'
+      - 'saltbox.yml'
+      - '.github/workflows/ui.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine:
+    name: Engine lint and tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-saltbox-uv
+
+      - name: Install
+        working-directory: ui
+        run: |
+          uv python install --managed-python --no-bin "$(< ../.python-version)"
+          uv venv --python "$(< ../.python-version)" --managed-python --no-project .venv
+          uv pip install --python .venv/bin/python -e ".[dev,docker]"
+
+      - name: Lint
+        working-directory: ui
+        run: |
+          .venv/bin/ruff check .
+          .venv/bin/ruff format --check .
+
+      - name: Test
+        working-directory: ui
+        run: .venv/bin/pytest
+
+      - name: Smoke test the CLI against the checkout
+        working-directory: ui
+        env:
+          SALTBOX_REPO: ${{ github.workspace }}
+          SALTBOX_APPDATA: /tmp/sbx-appdata
+          SALTBOX_UI_STATE: /tmp/sbx-state
+        run: |
+          .venv/bin/sbx catalog apps | python3 -c 'import json,sys; a=json.load(sys.stdin); assert len(a) > 50, a; print(len(a), "apps")'
+          .venv/bin/sbx catalog fields sonarr > /dev/null
+          .venv/bin/sbx run install core --dry-run

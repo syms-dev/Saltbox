@@ -50,3 +50,11 @@
 /.vscode/
 /.claude/
 /.worktrees/
+
+### UI ###
+/ui/.venv/
+/ui/**/__pycache__/
+/ui/.pytest_cache/
+/ui/.ruff_cache/
+/ui/dist/
+/ui/*.egg-info/

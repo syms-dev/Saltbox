@@ -1,0 +1,6780 @@
+{
+ "apps": [
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://getarcane.app/docs"
+    },
+    {
+     "name": "Versions",
+     "purpose": "release",
+     "url": "https://github.com/getarcaneapp/manager/pkgs/container/manager"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/WyXYpdyV3Z"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/arcane/",
+   "link": "https://getarcane.app",
+   "repo": "saltbox",
+   "role": "arcane",
+   "status": "",
+   "summary": "a free, open-source Docker management UI designed to simplify the administration of container infrastructure through a modern, web-based interface.",
+   "title": "Arcane Manager"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://getarcane.app/docs/remote/environments"
+    },
+    {
+     "name": "Image tags",
+     "purpose": "release",
+     "url": "https://github.com/getarcaneapp/agent/pkgs/container/agent"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/WyXYpdyV3Z"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/arcane_agent/",
+   "link": "https://getarcane.app",
+   "repo": "saltbox",
+   "role": "arcane_agent",
+   "status": "",
+   "summary": "a lightweight, headless process that runs on a remote Docker host to allow the central Arcane Manager to manage that host\u2019s containers, images, volumes, and networks through a single unified interface.",
+   "title": "Arcane Agent"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/ZeroQI/Absolute-Series-Scanner/wiki"
+    },
+    {
+     "name": "ASS Source",
+     "purpose": "other",
+     "url": "https://github.com/ZeroQI/Absolute-Series-Scanner"
+    },
+    {
+     "name": "HAMA Source",
+     "purpose": "other",
+     "url": "https://github.com/ZeroQI/Hama.bundle"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/ZeroQI/Absolute-Series-Scanner/discussions"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/asshama/",
+   "link": "https://github.com/ZeroQI/Absolute-Series-Scanner",
+   "repo": "saltbox",
+   "role": "asshama",
+   "status": "",
+   "summary": "the combined setup of Absolute Series Scanner (ASS) and Hama.bundle (HAMA), used together for optimal anime library management in Plex.",
+   "title": "ASSHAMA"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.authelia.com/configuration/prologue/introduction"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/authelia/authelia/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.authelia.com"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Access Control"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/authelia/",
+   "link": "https://www.authelia.com",
+   "repo": "saltbox",
+   "role": "authelia",
+   "status": "",
+   "summary": "an open-source authentication and authorization server and portal fulfilling the identity and access management (IAM) role of information security in providing multi-factor authentication and single sign-on (SSO) for your applications via a web portal.",
+   "title": "Authelia"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.goauthentik.io/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/beryju/authentik/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://goauthentik.io/discord"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Access Control"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/authentik/",
+   "link": "https://goauthentik.io/",
+   "repo": "saltbox",
+   "role": "authentik",
+   "status": "outdated",
+   "summary": "an open-source Identity Provider (IdP) and Single Sign-On (SSO) platform designed for self-hosting, enabling organizations to manage user authentication, authorization, and access controls with full control over their identity infrastructure.",
+   "title": "Authentik"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://autobrr.com/configuration/indexers"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/autobrr/autobrr/pkgs/container/autobrr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.autobrr.com"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/autobrr/",
+   "link": "https://autobrr.com",
+   "repo": "saltbox",
+   "role": "autobrr",
+   "status": "",
+   "summary": "a modern download automation tool designed for torrents and Usenet, serving as a comprehensive replacement for older tools like autodl-irssi, trackarr, and flexget.",
+   "title": "Autobrr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/willfarrell/docker-autoheal#readme"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/willfarrell/autoheal/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/autoheal/",
+   "link": "https://github.com/willfarrell/docker-autoheal",
+   "repo": "saltbox",
+   "role": "autoheal",
+   "status": "",
+   "summary": "a Docker container designed to monitor and automatically restart unhealthy Docker containers.",
+   "title": "Autoheal"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/saltydk/autoscan/blob/master/README.md#overview"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/saltydk/autoscan/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/ugfKXpFND8"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Integration"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/autoscan/",
+   "link": "https://github.com/saltydk/autoscan",
+   "repo": "saltbox",
+   "role": "autoscan",
+   "status": "outdated",
+   "summary": "the official Saltbox continuation of *Cloudbox/autoscan*, an open-source tool designed to automatically trigger media scans in media servers like Plex, Emby, and Jellyfin when new content is added.",
+   "title": "Autoscan"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wiki.bazarr.media"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/bazarr/pkgs/container/bazarr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/MH2e2eb"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/bazarr/",
+   "link": "https://www.bazarr.media",
+   "repo": "saltbox",
+   "role": "bazarr",
+   "status": "",
+   "summary": "a companion application to Sonarr and Radarr that manages and downloads subtitles based on your requirements.",
+   "title": "Bazarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/aristocratos/btop/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/aristocratos/btop/discussions"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Monitoring > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/btop/",
+   "link": "https://github.com/aristocratos/btop",
+   "repo": "saltbox",
+   "role": "btop",
+   "status": "",
+   "summary": "a modern, real-time system monitoring tool for Linux that provides a visually appealing and interactive interface to monitor system resources such as CPU usage, memory consumption, disk activity, network bandwidth, and running processes.",
+   "title": "btop"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/kdave/btrfsmaintenance/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/btrfsmaintenance/",
+   "link": "https://github.com/kdave/btrfsmaintenance",
+   "repo": "saltbox",
+   "role": "btrfsmaintenance",
+   "status": "",
+   "summary": "a set of scripts designed to automate key maintenance tasks for the BTRFS filesystem, including scrubbing, balancing, trimming, and defragmentation.",
+   "title": "BTRFS Maintenance"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/google/cadvisor/tree/master/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://console.cloud.google.com/artifacts/docker/cadvisor/us/gcr.io/cadvisor"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/cadvisor/",
+   "link": "https://github.com/google/cadvisor",
+   "repo": "saltbox",
+   "role": "cadvisor",
+   "status": "",
+   "summary": "an open-source monitoring tool to collect, aggregate, process, and export resource usage and performance characteristics of running containers.",
+   "title": "cAdvisor"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": ""
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > File Operation"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/cloudplow/",
+   "link": "https://github.com/l3uddz/cloudplow",
+   "repo": "saltbox",
+   "role": "cloudplow",
+   "status": "",
+   "summary": "an automatic rclone remote uploader designed to transfer files from local storage to cloud storage providers, such as Google Drive, with support for multiple remote/folder pairings.",
+   "title": "Cloudplow"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": ""
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Access Control"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/crowdsec/",
+   "link": "https://www.crowdsec.net/security-engine",
+   "repo": "saltbox",
+   "role": "crowdsec",
+   "status": "draft2",
+   "summary": "a powerful, open source solution for detecting and blocking malicious IPs, safeguarding both infrastructure and application security.",
+   "title": "CrowdSec Security Engine"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/bcicen/ctop/blob/master/README.md#usage"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/bcicen/ctop/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/ctop/",
+   "link": "https://ctop.sh",
+   "repo": "saltbox",
+   "role": "ctop",
+   "status": "",
+   "summary": "a command-line, top-like tool for monitoring Linux containers in real-time.",
+   "title": "ctop"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://ddclient.net/general"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/ddclient/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Network Service > Routing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/ddclient/",
+   "link": "https://ddclient.net",
+   "repo": "saltbox",
+   "role": "ddclient",
+   "status": "",
+   "summary": "a dynamic DNS client that automatically updates DNS records when your public IP address changes.",
+   "title": "DDClient"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.saltbox.dev"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/saltydk/dns/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Network Service > Routing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/ddns/",
+   "link": "",
+   "repo": "saltbox",
+   "role": "ddns",
+   "status": "",
+   "summary": "a Saltbox-specific Dynamic DNS service that automatically manages DNS records with Cloudflare based on Traefik routes. This container monitors Traefik's API for active routes and automatically creates or updates corresponding DNS records in Cloudflare, supporting both IPv4 and IPv6.",
+   "title": "DDNS"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.linuxserver.io/general/container-customization"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/deluge/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://forum.deluge-torrent.org"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > BitTorrent Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/deluge/",
+   "link": "https://deluge-torrent.org",
+   "repo": "saltbox",
+   "role": "deluge",
+   "status": "",
+   "summary": "a full-featured BitTorrent client for Linux, OS X, Unix and Windows.",
+   "title": "Deluge"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://crazymax.dev/diun/notif/discord"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/crazymax/diun/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/diun/",
+   "link": "https://crazymax.dev/diun",
+   "repo": "saltbox",
+   "role": "diun",
+   "status": "",
+   "summary": "a CLI application designed to receive notifications when a Docker image is updated on a Docker registry.",
+   "title": "Diun"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.docker.com"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://docs.docker.com/engine/release-notes"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://forums.docker.com"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/docker/",
+   "link": "https://www.docker.com/community",
+   "repo": "saltbox",
+   "role": "docker",
+   "status": "",
+   "summary": "an open-source containerization technology for building and containerizing your applications.",
+   "title": "Docker CE"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/socket-proxy/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/Tecnativa/docker-socket-proxy/discussions"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/docker_socket_proxy/",
+   "link": "https://github.com/Tecnativa/docker-socket-proxy",
+   "repo": "saltbox",
+   "role": "docker_socket_proxy",
+   "status": "",
+   "summary": "a security-enhanced proxy for the Docker socket.",
+   "title": "Docker Socket Proxy"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://dozzle.dev/guide/what-is-dozzle"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/amir20/dozzle/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/dozzle/",
+   "link": "https://dozzle.dev/",
+   "repo": "saltbox",
+   "role": "dozzle",
+   "status": "",
+   "summary": "a small lightweight application with a web based interface to monitor Docker logs. It doesn\u2019t store any log files. It is for live monitoring of your container logs only. Dozzle can only access logs written to stdout or stderr which is the same functionality as the `docker logs` command. See below for more info on that.",
+   "title": "Dozzle"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://support.emby.media/support/home"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/emby/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://emby.media/community"
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Media Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/emby/",
+   "link": "https://emby.media",
+   "repo": "saltbox",
+   "role": "emby",
+   "status": "",
+   "summary": "a media server designed to organize, play, and stream audio and video to a variety of devices.",
+   "title": "Emby"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/tarampampam/error-pages/blob/master/README.md#-usage-scenarios"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/tarampampam/error-pages/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Landing Page"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/error_pages/",
+   "link": "https://github.com/tarampampam/error-pages",
+   "repo": "saltbox",
+   "role": "error_pages",
+   "status": "",
+   "summary": "a GitHub repository that provides visually appealing, customizable error pages for HTTP servers, Kubernetes clusters, and other systems like Traefik and Nginx.",
+   "title": "Error Pages"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://nicolargo.github.io/glances/#documentation"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/nicolargo/glances/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://nicolargo.github.io/glances/#community"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Monitoring > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/glances/",
+   "link": "https://nicolargo.github.io/glances",
+   "repo": "saltbox",
+   "role": "glances",
+   "status": "",
+   "summary": "an open-source system cross-platform monitoring tool.",
+   "title": "Glances"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/qdm12/gluetun-wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/qmcgaw/gluetun/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/passteque/gluetun/discussions"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Network Service > VPN"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/gluetun/",
+   "link": "https://github.com/qdm12/gluetun",
+   "repo": "saltbox",
+   "role": "gluetun",
+   "status": "outdated",
+   "summary": "a VPN client in a thin Docker container for multiple VPN providers, written in Go, and using OpenVPN or Wireguard, DNS over TLS, with a few proxy servers built-in.",
+   "title": "Gluetun"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://grafana.com/docs/grafana"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/grafana/grafana/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Monitoring > Dashboard"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/grafana/",
+   "link": "https://grafana.com/grafana",
+   "repo": "saltbox",
+   "role": "grafana",
+   "status": "",
+   "summary": "an open-source analytics and interactive visualization web application designed to query, visualize, alert on, and understand data from various sources.",
+   "title": "Grafana"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://software.es.net/iperf/invoking.html#iperf3-manual-page"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://software.es.net/iperf/news.html"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/esnet/iperf/discussions"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Diagnostics"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/iperf3/",
+   "link": "https://software.es.net/iperf",
+   "repo": "saltbox",
+   "role": "iperf3",
+   "status": "",
+   "summary": "a tool for active measurements of the maximum achievable bandwidth on IP networks, supporting TCP, UDP, and SCTP protocols over both IPv4 and IPv6.",
+   "title": "iPerf3"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/Jackett/Jackett/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/jackett/pkgs/container/jackett"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Indexer Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/jackett/",
+   "link": "https://github.com/Jackett/Jackett",
+   "repo": "saltbox",
+   "role": "jackett",
+   "status": "",
+   "summary": "a free, open-source, self-hosted indexer proxy server that acts as an intermediary between torrent indexing applications like Sonarr, Radarr, and qBittorrent, and various torrent trackers.",
+   "title": "Jackett"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/jellyfin/pkgs/container/jellyfin"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://forum.jellyfin.org"
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Media Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/jellyfin/",
+   "link": "https://jellyfin.org",
+   "repo": "saltbox",
+   "role": "jellyfin",
+   "status": "",
+   "summary": "a free and open-source media server and suite of multimedia applications designed to organize, manage, and share digital media files across networked devices.",
+   "title": "Jellyfin"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wiki.servarr.com/en/lidarr"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/lidarr/pkgs/container/lidarr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://lidarr.audio/discord"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/lidarr/",
+   "link": "https://lidarr.audio",
+   "repo": "saltbox",
+   "role": "lidarr",
+   "status": "",
+   "summary": "a music collection manager designed for Usenet and BitTorrent users, automating the process of finding, downloading, and managing albums and tracks.",
+   "title": "Lidarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/lldap/lldap/blob/main/README.md"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/nitnelave/lldap/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/lldap/lldap/discussions"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Access Control"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/lldap/",
+   "link": "https://github.com/lldap/lldap",
+   "repo": "saltbox",
+   "role": "lldap",
+   "status": "",
+   "summary": "a small, lightweight LDAP server designed for directory services with minimal overhead compared to full-featured implementations like OpenLDAP.",
+   "title": "LLDAP"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/bkw777/mainline/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/bkw777/mainline/discussions"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/mainline/",
+   "link": "https://github.com/bkw777/mainline",
+   "repo": "saltbox",
+   "role": "mainline",
+   "status": "",
+   "summary": "a free and open-source graphical tool designed to install and manage the latest mainline Linux kernels on Debian-based distributions.",
+   "title": "Mainline"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://mariadb.com/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/mariadb/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/mariadb/",
+   "link": "https://mariadb.org",
+   "repo": "saltbox",
+   "role": "mariadb",
+   "status": "",
+   "summary": "a community-developed, open-source relational database management system (RDBMS) that serves as a drop-in replacement for MySQL.",
+   "title": "MariaDB Server"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.mongodb.com/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/mongo/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/mongodb/",
+   "link": "https://www.mongodb.com",
+   "repo": "saltbox",
+   "role": "mongodb",
+   "status": "",
+   "summary": "a free and open-source cross-platform document-oriented database program.",
+   "title": "MongoDB"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://learn.netdata.cloud/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/netdata/netdata/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Monitoring > Dashboard"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/netdata/",
+   "link": "https://github.com/netdata/netdata/",
+   "repo": "saltbox",
+   "role": "netdata",
+   "status": "",
+   "summary": "distributed, real-time, performance and health monitoring for systems and applications.",
+   "title": "Netdata"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://nginx.org/en/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/nginx/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Web Publishing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/nginx/",
+   "link": "https://nginx.org",
+   "repo": "saltbox",
+   "role": "nginx",
+   "status": "",
+   "summary": "a high-performance web server, reverse proxy, and load balancer. This role deploys Nginx using the LinuxServer.io container, providing a simple way to host static websites or act as a reverse proxy for your applications.",
+   "title": "NGINX"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://prometheus.io/docs/guides/node-exporter"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/prometheus/node_exporter/releases"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://prometheus.io/community"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Monitoring > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/node_exporter/",
+   "link": "https://github.com/prometheus/node_exporter",
+   "repo": "saltbox",
+   "role": "node_exporter",
+   "status": "",
+   "summary": "a specialized monitoring agent designed for Prometheus that collects and exposes detailed system-level metrics from host machines in Kubernetes environments.",
+   "title": "Node Exporter"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://nzbget.com/documentation"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/nzbget/pkgs/container/nzbget"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://nzbget.com/contact"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Usenet Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/nzbget/",
+   "link": "https://nzbget.com",
+   "repo": "saltbox",
+   "role": "nzbget",
+   "status": "",
+   "summary": "a very efficient, cross-platform usenet downloader.",
+   "title": "NZBGet"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/theotherp/nzbhydra2/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/nzbhydra2/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/uh9W3rd"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Indexer Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/nzbhydra2/",
+   "link": "https://github.com/theotherp/nzbhydra2",
+   "repo": "saltbox",
+   "role": "nzbhydra2",
+   "status": "",
+   "summary": "a meta search tool designed to aggregate results from various Usenet indexers and torrent trackers into a single, unified interface.",
+   "title": "NZBHydra2"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/daghaian/nzbthrottle#readme"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/daghaian/nzbthrottle/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > For Download Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/nzbthrottle/",
+   "link": "https://github.com/daghaian/nzbthrottle",
+   "repo": "saltbox",
+   "role": "nzbthrottle",
+   "status": "",
+   "summary": "a utility that automatically throttles Usenet download speeds based on custom schedules and conditions.",
+   "title": "NZBThrottle"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.organizr.app"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/organizr/organizr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://organizr.app/discord"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Landing Page"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/organizr/",
+   "link": "https://organizr.app",
+   "repo": "saltbox",
+   "role": "organizr",
+   "status": "outdated",
+   "summary": "a free, open-source, web-based dashboard designed to organize and manage multiple server services, particularly for home theater PCs (HTPCs) and homelabs.",
+   "title": "Organizr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.overseerr.dev"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/sctx/overseerr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/seerr"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Request"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/overseerr/",
+   "link": "https://overseerr.dev/",
+   "repo": "saltbox",
+   "role": "overseerr",
+   "status": "",
+   "summary": "a free and open-source request management and media discovery tool designed to work with the Plex ecosystem.",
+   "title": "Overseerr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.petio.tv"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/petio-team/petio/pkgs/container/petio"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/bseGmrUd3N"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Request"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/petio/",
+   "link": "https://petio.tv",
+   "repo": "saltbox",
+   "role": "petio",
+   "status": "",
+   "summary": "a third party companion app available to Plex server owners to allow their users to request, review and discover content.",
+   "title": "Petio"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://support.plex.tv/articles/categories/plex-media-server"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/plexinc/pms-docker/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://forums.plex.tv"
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Media Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/plex/",
+   "link": "https://www.plex.tv/personal-media-server",
+   "repo": "saltbox",
+   "role": "plex",
+   "status": "",
+   "summary": "a software application that allows you to organize and stream your collection of movies, TV shows, music, and photos, from a central location to various devices.",
+   "title": "Plex Media Server"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.portainer.io"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/portainer/portainer-ce/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://portainer.io/slack"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/portainer/",
+   "link": "https://portainer.io",
+   "repo": "saltbox",
+   "role": "portainer",
+   "status": "",
+   "summary": "a lightweight, open-source management UI that provides a graphical interface for managing containerized applications across various environments, including Docker, Kubernetes, Docker Swarm, and Podman.",
+   "title": "Portainer"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.postgresql.org/docs/12/index.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/postgres/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/postgres/",
+   "link": "https://www.postgresql.org",
+   "repo": "saltbox",
+   "role": "postgres",
+   "status": "",
+   "summary": "an object-relational database management system (ORDBMS) with an emphasis on extensibility and standards-compliance.",
+   "title": "PostgreSQL"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.postgresql.org/docs/12/index.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://www.postgresql.org/ftp/source"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/postgres_host/",
+   "link": "https://www.postgresql.org",
+   "repo": "saltbox",
+   "role": "postgres_host",
+   "status": "",
+   "summary": "an object-relational database management system (ORDBMS) with an emphasis on extensibility and standards-compliance.",
+   "title": "PostgreSQL (Host Install)"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://prometheus.io/docs/introduction/overview"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/prom/prometheus/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://prometheus.io/community"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/prometheus/",
+   "link": "https://prometheus.io",
+   "repo": "saltbox",
+   "role": "prometheus",
+   "status": "",
+   "summary": "an open-source systems monitoring and alerting toolkit.",
+   "title": "Prometheus"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wiki.servarr.com/en/prowlarr"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/prowlarr/pkgs/container/prowlarr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://prowlarr.com/discord"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Indexer Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/prowlarr/",
+   "link": "https://prowlarr.com",
+   "repo": "saltbox",
+   "role": "prowlarr",
+   "status": "",
+   "summary": "an open-source indexer manager and proxy, designed to integrate with various PVR applications such as Sonarr, Radarr, Lidarr and Mylar3.",
+   "title": "Prowlarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.python.org/doc"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": ""
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://www.python.org/community"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/python/",
+   "link": "https://www.python.org",
+   "repo": "saltbox",
+   "role": "python",
+   "status": "",
+   "summary": "a command-line application that executes scripts written in the Python programming language.",
+   "title": "Python"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wiki.qbittorrent.org"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/saltydk/qbittorrent/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://forum.qbittorrent.org"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > BitTorrent Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/qbittorrent/",
+   "link": "https://www.qbittorrent.org",
+   "repo": "saltbox",
+   "role": "qbittorrent",
+   "status": "",
+   "summary": "a free, open-source, cross-platform BitTorrent client, designed as a reliable and ad-free alternative to other clients like \u00b5Torrent.",
+   "title": "qBittorrent"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wiki.servarr.com/radarr"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/radarr/pkgs/container/radarr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://radarr.video/discord"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/radarr/",
+   "link": "https://radarr.video",
+   "repo": "saltbox",
+   "role": "radarr",
+   "status": "",
+   "summary": "a smart Personal Video Recorder (PVR) designed for Usenet and BitTorrent users, automating the process of finding, downloading, and managing movies.",
+   "title": "Radarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://rclone.org/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": ""
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://forum.rclone.org"
+    }
+   ],
+   "categories": [
+    "Admin Apps > File Operation"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/rclone/",
+   "link": "https://rclone.org",
+   "repo": "saltbox",
+   "role": "rclone",
+   "status": "draft",
+   "summary": "an open-source, command-line program designed to manage files on remote storage.",
+   "title": "Rclone"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://redis.io/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/redis/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/redis/",
+   "link": "https://redis.io/open-source",
+   "repo": "saltbox",
+   "role": "redis",
+   "status": "",
+   "summary": "an open-source, in-memory data structure store used as a database, cache, message broker, and streaming engine. It supports various data structures such as strings, hashes, lists, sets, and sorted sets, making it extremely versatile and fast.",
+   "title": "Redis"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://sabnzbd.org/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/sabnzbd/pkgs/container/sabnzbd"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://forums.sabnzbd.org"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Usenet Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/sabnzbd/",
+   "link": "https://sabnzbd.org",
+   "repo": "saltbox",
+   "role": "sabnzbd",
+   "status": "",
+   "summary": "a free, open-source Usenet client designed to simplify downloading files from Usenet by automating the entire process using NZB files, which act as blueprints for locating content on Usenet servers.",
+   "title": "SABnzbd"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/AnalogJ/scrutiny/blob/master/README.md"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/analogj/scrutiny/pkgs/container/scrutiny"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Monitoring > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/scrutiny/",
+   "link": "https://github.com/AnalogJ/scrutiny",
+   "repo": "saltbox",
+   "role": "scrutiny",
+   "status": "",
+   "summary": "a hard drive health monitoring tool that tracks S.M.A.R.T. metrics for your drives.",
+   "title": "Scrutiny"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.seerr.dev/category/using-seerr"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/seerr/pkgs/container/seerr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/seerr"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Request"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/seerr/",
+   "link": "https://seerr.dev",
+   "repo": "saltbox",
+   "role": "seerr",
+   "status": "draft",
+   "summary": "a request management and media discovery tool built to work with your existing Plex/Jellyseerr ecosystem.",
+   "title": "Seerr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wiki.sonarr.tv"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/sonarr/pkgs/container/sonarr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.sonarr.tv"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/sonarr/",
+   "link": "https://sonarr.tv",
+   "repo": "saltbox",
+   "role": "sonarr",
+   "status": "",
+   "summary": "a smart Personal Video Recorder (PVR) designed for Usenet and BitTorrent users, automating the process of finding, downloading, and managing TV show episodes.",
+   "title": "Sonarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/Tautulli/Tautulli/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/tautulli/pkgs/container/tautulli"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://tautulli.com/discord"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Monitoring"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/tautulli/",
+   "link": "https://tautulli.com",
+   "repo": "saltbox",
+   "role": "tautulli",
+   "status": "",
+   "summary": "a third-party, Python-based web application designed to monitor, analyze, and provide notifications for Plex Media Server activity.",
+   "title": "Tautulli"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/timescale/timescaledb-ha/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [],
+   "docs_url": "https://docs.saltbox.dev/apps/timescaledb/",
+   "link": "",
+   "repo": "saltbox",
+   "role": "timescaledb",
+   "status": "draft2",
+   "summary": "",
+   "title": "timescaledb"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://doc.traefik.io/traefik"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/traefik/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://community.traefik.io"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Network Service > Routing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/traefik/",
+   "link": "https://traefik.io/traefik",
+   "repo": "saltbox",
+   "role": "traefik",
+   "status": "draft",
+   "summary": "an open-source, dynamic reverse proxy and load balancer designed for modern, distributed, and microservices architectures.",
+   "title": "Traefik Proxy"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/dutchcoders/transfer.sh/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Collaborative"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/transfer/",
+   "link": "https://github.com/dutchcoders/transfer.sh",
+   "repo": "saltbox",
+   "role": "transfer",
+   "status": "",
+   "summary": "an easy and fast file sharing from the command-line or web gui app.",
+   "title": "transfer.sh"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://unpackerr.zip/docs/introduction"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/unpackerr/pkgs/container/unpackerr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://golift.io/discord"
+    }
+   ],
+   "categories": [
+    "Accessories > For Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/unpackerr/",
+   "link": "https://unpackerr.zip",
+   "repo": "saltbox",
+   "role": "unpackerr",
+   "status": "",
+   "summary": "a lightweight, cross-platform application designed to automatically extract compressed files (like RAR, ZIP, 7Z, TAR, and ISO) from download folders, primarily for use with media management tools such as Radarr, Sonarr, Lidarr.",
+   "title": "Unpackerr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wiki.servarr.com/en/whisparr/quick-start-guide"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/whisparr/pkgs/container/whisparr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://whisparr.com/discord"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/whisparr/",
+   "link": "https://whisparr.com",
+   "repo": "saltbox",
+   "role": "whisparr",
+   "status": "",
+   "summary": "an adult movie collection manager for Usenet and BitTorrent users.",
+   "title": "Whisparr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": ""
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/apps/yyq/",
+   "link": "https://mikefarah.gitbook.io/yq",
+   "repo": "saltbox",
+   "role": "yyq",
+   "status": "draft",
+   "summary": "a lightweight, portable command-line tool designed to process YAML, JSON, XML, INI, properties, CSV, and TSV files using a syntax similar to jq, which is used for JSON processing.",
+   "title": "yq"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://actualbudget.org/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/actualbudget/actual-server/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Finance"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/actualbudget/",
+   "link": "https://actualbudget.org/",
+   "repo": "sandbox",
+   "role": "actualbudget",
+   "status": "",
+   "summary": "a super fast, privacy-focused app for managing your finances. Its heart is the well-proven and much-loved Envelope Budgeting methodology.",
+   "title": "Actual Budget"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://kb.adguard.com/en/home/overview"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/adguard/adguardhome/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Network Service > Routing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/adguardhome/",
+   "link": "https://hub.docker.com/r/adguard/adguardhome",
+   "repo": "sandbox",
+   "role": "adguardhome",
+   "status": "",
+   "summary": "a network-wide, open source software for blocking ads & tracking and for gaining control over all traffic in your home network. After you set it up, it'll cover ALL devices in your home Wi-Fi network, and you won't need any client-side software for that. At the same time, it provides a user-friendly web interface that allows you to easily manage the traffic, even from a mobile device.",
+   "title": "AdGuard Home"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/vrana/adminer/#readme"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/adminer//tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/adminer/",
+   "link": "https://www.adminer.org",
+   "repo": "sandbox",
+   "role": "adminer",
+   "status": "",
+   "summary": "a full-featured, web-based database management tool, originally developed as a lightweight alternative to phpMyAdmin.",
+   "title": "Adminer"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://airdcpp-web.github.io/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/gangefors/airdcpp-webclient/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Download Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/airdcpp/",
+   "link": "https://www.airdcpp.net/",
+   "repo": "sandbox",
+   "role": "airdcpp",
+   "status": "",
+   "summary": "an easy to use client for [Advanced Direct Connect](http://en.wikipedia.org/wiki/Advanced_Direct_Connect) and [Direct Connect](http://en.wikipedia.org/wiki/Direct_Connect_(file_sharing)) networks. You are able to join \"hubs\" with other users, and chat, perform searches and browse the share of each user. It allows you to share files with friends and other people.",
+   "title": "AirDC++"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.linuxserver.io/general/container-customization"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/airsonic-advanced/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Audio Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/airsonic/",
+   "link": "https://github.com/kagemomiji/airsonic-advanced",
+   "repo": "sandbox",
+   "role": "airsonic",
+   "status": "",
+   "summary": "a more modern implementation of the Airsonic fork with several key performance and feature enhancements. It adds and supersedes several features in Airsonic.",
+   "title": "Airsonic-Advanced"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://apprise.apps.merit.edu"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/apprise-api/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Notification"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/apprise/",
+   "link": "https://github.com/caronc/apprise-api",
+   "repo": "sandbox",
+   "role": "apprise",
+   "status": "",
+   "summary": "an open-source, lightweight REST framework that provides a unified interface to send notifications to over 100 services\u2014such as email, SMS, Slack, Telegram, and Discord\u2014via a single API.",
+   "title": "Apprise API"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/ArchiveBox/ArchiveBox/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/archivebox/archivebox/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/archivebox/",
+   "link": "https://github.com/ArchiveBox/ArchiveBox",
+   "repo": "sandbox",
+   "role": "archivebox",
+   "status": "",
+   "summary": "a powerful, self-hosted internet archiving solution to collect, save, and view sites you want to preserve offline.",
+   "title": "ArchiveBox"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.audiobookshelf.org/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/advplyr/audiobookshelf/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Audio Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/audiobookshelf/",
+   "link": "https://www.audiobookshelf.org/",
+   "repo": "sandbox",
+   "role": "audiobookshelf",
+   "status": "",
+   "summary": "a free and open-source, self-hosted audiobook and podcast server that allows users to manage, stream, and organize their personal audiobook, podcast, and ebook collections.",
+   "title": "Audiobookshelf"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "http://beets.readthedocs.org"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/beets/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Accessories > Tag Editor"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/beets/",
+   "link": "https://beets.io",
+   "repo": "sandbox",
+   "role": "beets",
+   "status": "",
+   "summary": "a media library management system designed for music enthusiasts and obsessive music geeks, aiming to organize music collections accurately and efficiently.",
+   "title": "Beets"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.bookstackapp.com/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/bookstack/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Web Publishing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/bookstack/",
+   "link": "https://www.bookstackapp.com",
+   "repo": "sandbox",
+   "role": "bookstack",
+   "status": "",
+   "summary": "a simple, self-hosted, easy-to-use platform for organising and storing information.",
+   "title": "BookStack"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://manual.calibre-ebook.com"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/calibre/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Accessories > Tag Editor"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/calibre/",
+   "link": "https://calibre-ebook.com",
+   "repo": "sandbox",
+   "role": "calibre",
+   "status": "",
+   "summary": "a cross-platform, free, and open-source suite of e-book software designed for managing digital book collections.",
+   "title": "Calibre"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/janeczku/calibre-web/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/calibre-web/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/h2VsJ2NEfB"
+    }
+   ],
+   "categories": [
+    "Accessories > Library Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/calibre_web/",
+   "link": "https://github.com/janeczku/calibre-web",
+   "repo": "sandbox",
+   "role": "calibre_web",
+   "status": "",
+   "summary": "a web app providing a clean interface for browsing, reading and downloading eBooks using an existing Calibre database.",
+   "title": "Calibre-Web"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.linuxserver.io/general/container-customization"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/changedetection.io/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/dgtlmoon/changedetection.io/discussions"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Notification"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/changedetection/",
+   "link": "https://github.com/dgtlmoon/changedetection.io",
+   "repo": "sandbox",
+   "role": "changedetection",
+   "status": "",
+   "summary": "a tool for tracking changes to websites.",
+   "title": "changedetection.io"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://cherry.haishan.me/docs/intro"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/haishanh/cherry/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/cherry/",
+   "link": "https://cherry.haishan.me/",
+   "repo": "sandbox",
+   "role": "cherry",
+   "status": "",
+   "summary": "a bookmark service that is open source.",
+   "title": "Cherry"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://console.cloud.google.com/artifacts/docker/zenika-hub/us/gcr.io/alpine-chrome"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Remote Access"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/chrome/",
+   "link": "https://developer.chrome.com/blog/headless-chrome",
+   "repo": "sandbox",
+   "role": "chrome",
+   "status": "",
+   "summary": "a way to run the Chrome browser in a headless environment.",
+   "title": "Headless Chrome"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/cleanuparr/cleanuparr/pkgs/container/cleanuparr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/cleanuparr/",
+   "link": "",
+   "repo": "sandbox",
+   "role": "cleanuparr",
+   "status": "draft2",
+   "summary": "",
+   "title": "cleanuparr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://cockpit-project.org/documentation.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": ""
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Remote Access"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/cockpit/",
+   "link": "https://cockpit-project.org",
+   "repo": "sandbox",
+   "role": "cockpit",
+   "status": "",
+   "summary": "an interactive server admin interface that makes Linux servers discoverable and manageable through a web browser, providing comprehensive server management capabilities with a modern web interface.",
+   "title": "Cockpit"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://code.visualstudio.com/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/codercom/code-server/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Development"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/code_server/",
+   "link": "https://github.com/coder/code-server",
+   "repo": "sandbox",
+   "role": "code_server",
+   "status": "outdated",
+   "summary": "an open-source platform that enables developers to run Microsoft Visual Studio Code (VS Code) on a remote server and access it through a web browser, transforming VS Code into a cloud-based integrated development environment (IDE).",
+   "title": "code-server"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/ajslater/codex#%EF%B8%8F-configuration"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/ajslater/codex/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Reader"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/codex/",
+   "link": "https://github.com/ajslater/codex",
+   "repo": "sandbox",
+   "role": "codex",
+   "status": "",
+   "summary": "a web based comic archive browser and reader.",
+   "title": "Codex"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/comixed/comixed/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/comixed/comixed/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > Library Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/comixed/",
+   "link": "https://github.com/comixed/comixed",
+   "repo": "sandbox",
+   "role": "comixed",
+   "status": "",
+   "summary": "an application for managing digital comics. It seeks to be the ultimate management tool for digital comic books.",
+   "title": "ComiXed"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.craftycontrol.com"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/arcadiatechnology/crafty-4/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Game Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/crafty/",
+   "link": "https://craftycontrol.com/",
+   "repo": "sandbox",
+   "role": "crafty",
+   "status": "",
+   "summary": "a cross-platform Minecraft server control panel with web-based interface. It features server scheduling, interactive console, and support for multiple server types including vanilla, modded, and plugin-based servers.",
+   "title": "Crafty Controller"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/mauricenino/dashdot/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Landing Page"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/dashdot/",
+   "link": "https://getdashdot.com/",
+   "repo": "sandbox",
+   "role": "dashdot",
+   "status": "",
+   "summary": "a simple, modern server dashboard designed with glassmorphism aesthetics, primarily intended for smaller VPS and private servers. It provides real-time system monitoring and beautiful visualizations.",
+   "title": "Dashdot"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://dashy.to/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/lissy93/dashy/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Landing Page"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/dashy/",
+   "link": "https://dashy.to/",
+   "repo": "sandbox",
+   "role": "dashy",
+   "status": "",
+   "summary": "the \"Ultimate homepage for your homelab\".",
+   "title": "Dashy"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://gitlab.com/Bockiii/deemix-docker"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://gitlab.com/Bockiii/deemix-docker/container_registry"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Download Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/deemix/",
+   "link": "https://gitlab.com/Bockiii/deemix-docker",
+   "repo": "sandbox",
+   "role": "deemix",
+   "status": "",
+   "summary": "a barebone deezer downloader library built from the ashes of Deezloader Remix.",
+   "title": "deemix-docker"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://dev.deluge-torrent.org/wiki/UserGuide"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/binhex/arch-delugevpn/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > BitTorrent Client > With VPN"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/delugevpn/",
+   "link": "https://deluge-torrent.org/",
+   "repo": "sandbox",
+   "role": "delugevpn",
+   "status": "outdated",
+   "summary": "a VPN version of [Deluge](../../apps/deluge.md) with OpenVPN to ensure a secure and private connection to the Internet, including use of iptables to prevent IP leakage when the tunnel is down.",
+   "title": "DelugeVPN"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/nickheyer/discoflix/blob/main/README.md"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/nickheyer/discoflix/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Chat Bot"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/discoflix/",
+   "link": "https://github.com/nickheyer/discoflix",
+   "repo": "sandbox",
+   "role": "discoflix",
+   "status": "",
+   "summary": "a user-request-management system for your media server. With Radarr / Sonarr / Discord integration, DiscoFlix facilitates requests by your users for your media server.",
+   "title": "DiscoFlix"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://dockhand.pro/manual"
+    },
+    {
+     "name": "Versions",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/fnsys/dockhand/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/rMxW9Y5cQw"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/dockhand/",
+   "link": "https://dockhand.pro",
+   "repo": "sandbox",
+   "role": "dockhand",
+   "status": "",
+   "summary": "a modern, efficient Docker management application providing real-time container management, Compose stack orchestration, and multi-environment support.",
+   "title": "Dockhand"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/Notifiarr/dockwatch#environment-variables"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/notifiarr/dockwatch/pkgs/container/dockwatch"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Container Operation > Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/dockwatch/",
+   "link": "https://github.com/Notifiarr/dockwatch",
+   "repo": "sandbox",
+   "role": "dockwatch",
+   "status": "",
+   "summary": "a web-based tool developed by Notifiarr that provides a user-friendly interface for managing Docker container updates and notifications.",
+   "title": "Dockwatch"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://kiranshila.github.io/Doplarr/#/configuration"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/doplarr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/884mGq2fV6"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Chat Bot"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/doplarr/",
+   "link": "https://kiranshila.github.io/Doplarr",
+   "repo": "sandbox",
+   "role": "doplarr",
+   "status": "",
+   "summary": "a Discord bot designed to simplify media requests for self-hosted media servers like Radarr, Sonarr, and Overseerr.",
+   "title": "Doplarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://duplicati.readthedocs.io/en/latest"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/duplicati/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > File Operation"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/duplicati/",
+   "link": "https://duplicati.com/",
+   "repo": "sandbox",
+   "role": "duplicati",
+   "status": "",
+   "summary": "a free, open-source backup client that securely stores encrypted, incremental, compressed backups on cloud storage services and remote file servers. It works with a variety of storage types, including FTP, SSH, WebDAV, and cloud services like Backblaze B2, Tardigrade, and Amazon S3.",
+   "title": "Duplicati"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.elastic.co/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/elasticsearch/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/elasticsearch/",
+   "link": "https://www.elastic.co/elasticsearch",
+   "repo": "sandbox",
+   "role": "elasticsearch",
+   "status": "",
+   "summary": "an open source distributed, RESTful search and analytics engine, scalable data store, and vector database capable of addressing a growing number of use cases. As the heart of the Elastic Stack, it centrally stores your data for lightning-fast search, fine\u2011tuned relevancy, and powerful analytics that scale with ease.",
+   "title": "Elasticsearch"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wiki.factorio.com/Multiplayer"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/goofball222/factorio/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Game Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/factorio/",
+   "link": "https://www.factorio.com",
+   "repo": "sandbox",
+   "role": "factorio",
+   "status": "",
+   "summary": "a sandbox video game in which you build and maintain your own factories to produce basic resources.",
+   "title": "Factorio"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.filebot.net"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/jlesage/filebot/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > Library Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/filebot/",
+   "link": "http://www.filebot.net/",
+   "repo": "sandbox",
+   "role": "filebot",
+   "status": "",
+   "summary": "the ultimate tool for organizing and renaming your movies, tv shows or anime, and music well as downloading subtitles and artwork. It's smart and just works.",
+   "title": "FileBot"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wiki.filezilla-project.org/Main_Page"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/jlesage/filezilla/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/filezilla/",
+   "link": "https://filezilla-project.org/",
+   "repo": "sandbox",
+   "role": "filezilla",
+   "status": "",
+   "summary": "a cross-platform graphical FTP, SFTP, and FTPS file management tool with a vast list of features.",
+   "title": "FileZilla"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.firefly-iii.org"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/fireflyiii/core/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/orgs/firefly-iii/discussions"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Finance"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/fireflyiii/",
+   "link": "https://www.firefly-iii.org",
+   "repo": "sandbox",
+   "role": "fireflyiii",
+   "status": "",
+   "summary": "a (self-hosted) manager for your personal finances. It can help you keep track of your expenses and income, so you can spend less and save more. Firefly III supports the use of budgets, categories and tags. Using a bunch of external tools, you can import data. It also has many neat financial reports available.",
+   "title": "Firefly III"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.firefly-iii.org/tutorials/firefly-iii/importing-data"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/fireflyiii/data-importer/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/orgs/firefly-iii/discussions"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Finance"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/fireflyiii_importer/",
+   "link": "https://www.firefly-iii.org",
+   "repo": "sandbox",
+   "role": "fireflyiii_importer",
+   "status": "",
+   "summary": "a tool designed to import financial data into the Firefly III personal finance manager.",
+   "title": "Firefly III Data Importer"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://support.plex.tv/articles/categories/plex-media-server"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/jlesage/firefox/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/jlesage/docker-firefox/discussions"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Remote Access"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/firefox/",
+   "link": "https://github.com/jlesage/docker-firefox#readme",
+   "repo": "sandbox",
+   "role": "firefox",
+   "status": "",
+   "summary": "a Docker container image that provides the Mozilla Firefox web browser, accessible through a modern web browser or any VNC client.",
+   "title": "Docker container for Firefox"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/FlareSolverr/FlareSolverr"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/flaresolverr/flaresolverr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/FlareSolverr/FlareSolverr/discussions"
+    }
+   ],
+   "categories": [
+    "Accessories > For Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/flaresolverr/",
+   "link": "https://flaresolverr.com",
+   "repo": "sandbox",
+   "role": "flaresolverr",
+   "status": "",
+   "summary": "a proxy server to bypass Cloudflare protection.",
+   "title": "FlareSolverr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://forgejo.org/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://codeberg.org/forgejo/-/packages/container/forgejo/versions"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Development"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/forgejo/",
+   "link": "https://www.Forgejo.dev/",
+   "repo": "sandbox",
+   "role": "forgejo",
+   "status": "",
+   "summary": "a self-hosted, lightweight software forge designed for collaborative software development using the Git version control system.",
+   "title": "Forgejo"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://foundryvtt.com/kb"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/ajnart/Foundry/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Game Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/foundry/",
+   "link": "https://foundryvtt.com/",
+   "repo": "sandbox",
+   "role": "foundry",
+   "status": "",
+   "summary": "a modern, feature-rich \"virtual tabletop\" (a \"VTT\"). Foundry VTT serves as a digital \"tabletop\" so that you can gather your friends and party members and have an excellent role-playing game experience together digitally.",
+   "title": "Foundry"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://freshrss.github.io/FreshRSS"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/freshrss/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/freshrss/",
+   "link": "https://freshrss.org",
+   "repo": "sandbox",
+   "role": "freshrss",
+   "status": "",
+   "summary": "a self-hosted RSS and Atom feed aggregator.",
+   "title": "FreshRSS"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.gitea.io"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/gitea/gitea/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Development"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/gitea/",
+   "link": "https://gitea.io/en-us/",
+   "repo": "sandbox",
+   "role": "gitea",
+   "status": "",
+   "summary": "a community managed lightweight code hosting solution written in Go.",
+   "title": "Gitea"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/nicolargo/glances/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/nicolargo/glances/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Monitoring > Dashboard"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/glances_web/",
+   "link": "http://nicolargo.github.io/glances/",
+   "repo": "sandbox",
+   "role": "glances_web",
+   "status": "",
+   "summary": "a cross-platform monitoring tool which aims to present a large amount of monitoring information through a curses or Web based interface. The information dynamically adapts depending on the size of the user interface.",
+   "title": "Glances"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://goaccess.io/man"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/gregyankovoy/goaccess/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Diagnostics"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/goaccess/",
+   "link": "https://goaccess.io/",
+   "repo": "sandbox",
+   "role": "goaccess",
+   "status": "",
+   "summary": "an open source real-time web log analyzer and interactive viewer that runs in a terminal in *nix systems or through your browser.",
+   "title": "GoAccess"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/gotenberg/gotenberg/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Development"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/gotenberg/",
+   "link": "https://gotenberg.dev/",
+   "repo": "sandbox",
+   "role": "gotenberg",
+   "status": "draft2",
+   "summary": "a...",
+   "title": "gotenberg"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://gotify.github.io/api-docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/gotify/server/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Notification"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/gotify/",
+   "link": "https://gotify.net",
+   "repo": "sandbox",
+   "role": "gotify",
+   "status": "",
+   "summary": "a simple server for sending and receiving messages.",
+   "title": "Gotify"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://grimmory.org/docs/getting-started"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/grimmory/grimmory/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/9YJ7HB4n8T"
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Reader"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/grimmory/",
+   "link": "https://grimmory.org",
+   "repo": "sandbox",
+   "role": "grimmory",
+   "status": "",
+   "summary": "a self-hosted application designed to manage your entire book collection in one place.",
+   "title": "Grimmory"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/grocy/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Home"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/grocy/",
+   "link": "https://grocy.info/",
+   "repo": "sandbox",
+   "role": "grocy",
+   "status": "",
+   "summary": "a self-hosted ERP system for groceries and household management. It features barcode scanning, shopping lists, expiration tracking, and comprehensive inventory management for home use.",
+   "title": "Grocy"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://handbrake.fr/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/jlesage/handbrake/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > File Processing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/handbrake/",
+   "link": "https://handbrake.fr/",
+   "repo": "sandbox",
+   "role": "handbrake",
+   "status": "",
+   "summary": "a tool for converting video from nearly any format to a selection of modern, widely supported codecs.",
+   "title": "HandBrake"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://healthchecks.io/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/healthchecks/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/healthchecks/healthchecks/discussions"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Monitoring > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/healthchecks/",
+   "link": "https://healthchecks.io",
+   "repo": "sandbox",
+   "role": "healthchecks",
+   "status": "",
+   "summary": "a watchdog for your cron jobs. It's a web server that listens for pings from your cron jobs, plus a web interface.",
+   "title": "Healthchecks"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/linuxserver/Heimdall-Apps"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/heimdall/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Landing Page"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/heimdall/",
+   "link": "https://heimdall.site",
+   "repo": "sandbox",
+   "role": "heimdall",
+   "status": "",
+   "summary": "an open-source web application dashboard designed to centralize access to web applications, services, and links in a single, customizable interface.",
+   "title": "Heimdall"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://homarr.dev/docs/getting-started"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/ajnart/homarr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Landing Page"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/homarr/",
+   "link": "https://www.homarr.dev/",
+   "repo": "sandbox",
+   "role": "homarr",
+   "status": "",
+   "summary": "a simple and modern homepage for your server that helps you access all of your services in one place. It integrates with the services you use to display useful information or control them. It's easy to install and supports many different devices.",
+   "title": "Homarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.home-assistant.io/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/homeassistant/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > IoT"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/homeassistant/",
+   "link": "https://www.home-assistant.io",
+   "repo": "sandbox",
+   "role": "homeassistant",
+   "status": "",
+   "summary": "a localized, open-source home automation server system that operates independently of external cloud services, though it can optionally use them.",
+   "title": "Home Assistant"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://homebox.software/en/quick-start.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/sysadminsmedia/homebox/pkgs/container/homebox"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Home"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/homebox/",
+   "link": "https://homebox.software/en/",
+   "repo": "sandbox",
+   "role": "homebox",
+   "status": "",
+   "summary": "the inventory and organization system built for the Home User! With a focus on simplicity and ease of use, Homebox is the perfect solution for your home inventory, organization, and management needs.",
+   "title": "Homebox"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://gethomepage.dev/latest/configs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/gethomepage/homepage/pkgs/container/homepage"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Landing Page"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/homepage/",
+   "link": "https://github.com/benphelps/homepage",
+   "repo": "sandbox",
+   "role": "homepage",
+   "status": "",
+   "summary": "a modern (fully static, fast), secure (fully proxied), customizable application dashboard with integrations for more than 25 services and translations for over 15 languages. Easily configured via YAML files (or discovery via docker labels).",
+   "title": "Homepage"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://immich.app/docs/overview/introduction"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/imagegenius/docker-immich/pkgs/container/immich"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > Library Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/immich/",
+   "link": "https://immich.app/",
+   "repo": "sandbox",
+   "role": "immich",
+   "status": "outdated",
+   "summary": "a self-hosted photo and video backup tool, similar to google photos and apple photos.",
+   "title": "Immich"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "hhttps://docs.influxdata.com/influxdb/v1"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/influxdb/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/influxdb/",
+   "link": "https://www.influxdata.com/products/influxdb/",
+   "repo": "sandbox",
+   "role": "influxdb",
+   "status": "",
+   "summary": "an open source time series database for recording metrics, events, and analytics.",
+   "title": "InfluxDB"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.influxdata.com/influxdb/latest"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/influxdb/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/influxdb2/",
+   "link": "https://www.influxdata.com/products/influxdb/",
+   "repo": "sandbox",
+   "role": "influxdb2",
+   "status": "",
+   "summary": "an open source time series database for recording metrics, events, and analytics.",
+   "title": "InfluxDB2"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://invoiceninja.github.io"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/invoiceninja/invoiceninja/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Finance"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/invoiceninjav5/",
+   "link": "https://www.invoiceninja.com/",
+   "repo": "sandbox",
+   "role": "invoiceninjav5",
+   "status": "",
+   "summary": "a self-hosted accounting system with ability to Quote & Invoice Clients, Time Billable-Tasks, Track Expenses, Get Paid.",
+   "title": "InvoiceNinja"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/corentinth/it-tools/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Development"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/it_tools/",
+   "link": "https://it-tools.tech/",
+   "repo": "sandbox",
+   "role": "it_tools",
+   "status": "",
+   "summary": "a collection of handy online tools for developers with great UX. It provides 71+ developer tools including code conversion, OTP generation, JWT parsing, SQL query building, and password generators.",
+   "title": "IT Tools"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://beta.jdownloader.org/support"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/jlesage/jdownloader-2/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Download Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/jdownloader2/",
+   "link": "https://beta.jdownloader.org/",
+   "repo": "sandbox",
+   "role": "jdownloader2",
+   "status": "",
+   "summary": "a free download-manager that makes downloading as easy, fast and automated as it should be. It's like your personal internet robot that does all the work for you. He will download whole photo albums, playlists or just about anything else with just one click. Go ahead and try it!.",
+   "title": "JDownloader"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/cyfershepard/jellystat/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/9SMBj2RyEe"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Monitoring"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/jellystat/",
+   "link": "https://github.com/CyferShepard/Jellystat",
+   "repo": "sandbox",
+   "role": "jellystat",
+   "status": "",
+   "summary": "a free and open source statistics web application for Jellyfin that provides a dashboard with information about the server, libraries, users, and playback activity. Still in development with some expected functionality gaps.",
+   "title": "Jellystat"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://joplinapp.org/desktop"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/florider89/joplin-server/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/joplin/",
+   "link": "https://joplinapp.org/",
+   "repo": "sandbox",
+   "role": "joplin",
+   "status": "",
+   "summary": "an open source note-taking app. Capture your thoughts and securely access them from any device.",
+   "title": "Joplin"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/mrcas/kapowarr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/kapowarr/",
+   "link": "",
+   "repo": "sandbox",
+   "role": "kapowarr",
+   "status": "draft2",
+   "summary": "",
+   "title": "kapowarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.karakeep.app"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/karakeep-app/karakeep/pkgs/container/karakeep"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/NrgeYywsFh"
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Collaborative"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/karakeep/",
+   "link": "https://karakeep.app/",
+   "repo": "sandbox",
+   "role": "karakeep",
+   "status": "",
+   "summary": "an open source \"Bookmark Everything\" app that uses AI for automatically tagging the content you throw at it. The app is built with self-hosting as a first class citizen.",
+   "title": "Karakeep"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wiki.kavitareader.com"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/kizaing/kavita/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Reader"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/kavita/",
+   "link": "http://www.kavitareader.com/",
+   "repo": "sandbox",
+   "role": "kavita",
+   "status": "",
+   "summary": "a fast, feature rich, cross platform reading server. Built with a focus for manga, and the goal of being a full solution for all your reading needs. Setup your own server and share your reading collection with your friends and family!.",
+   "title": "Kavita"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/xtaci/kcptun"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/horjulf/kcptun/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Network Service > VPN"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/kcptun_client/",
+   "link": "https://github.com/xtaci/kcptun",
+   "repo": "sandbox",
+   "role": "kcptun_client",
+   "status": "draft2",
+   "summary": "a Stable & Secure Tunnel based on KCP with N:M multiplexing and FEC.",
+   "title": "kcptun Client"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/xtaci/kcptun"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/horjulf/kcptun/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Network Service > VPN"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/kcptun_server/",
+   "link": "https://github.com/xtaci/kcptun",
+   "repo": "sandbox",
+   "role": "kcptun_server",
+   "status": "draft2",
+   "summary": "a Stable & Secure Tunnel based on KCP with N:M multiplexing and FEC.",
+   "title": "kcptun Server"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/phanan/koel/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Audio Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/koel/",
+   "link": "https://koel.dev/",
+   "repo": "sandbox",
+   "role": "koel",
+   "status": "",
+   "summary": "a simple web-based personal audio streaming service written in Vue and Laravel that embraces modern web technologies. It features transparent FLAC support, cross-device sync, smart playlists, and multi-user support.",
+   "title": "Koel"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/gabehf/koito/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/koito/",
+   "link": "",
+   "repo": "sandbox",
+   "role": "koito",
+   "status": "draft2",
+   "summary": "",
+   "title": "koito"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://kometa.wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/kometateam/kometa/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Integration"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/kometa/",
+   "link": "https://kometa.wiki",
+   "repo": "sandbox",
+   "role": "kometa",
+   "status": "",
+   "summary": "a powerful tool designed to give you complete control over your media libraries.",
+   "title": "Kometa"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://komga.org/installation/docker.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/gotson/komga/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Reader"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/komga/",
+   "link": "https://komga.org/",
+   "repo": "sandbox",
+   "role": "komga",
+   "status": "",
+   "summary": "a free and open source comics/mangas server.",
+   "title": "Komga"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/binhex/arch-krusader"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/binhex/arch-krusader/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/krusader/",
+   "link": "http://www.krusader.org",
+   "repo": "sandbox",
+   "role": "krusader",
+   "status": "",
+   "summary": "an advanced orthodox file manager for KDE and other desktops in the Unix world. It is similar to the console-based GNU Midnight Commander, GNOME Commander for the GNOME desktop environment, or Total Commander for Windows, all of which can trace their paradigmatic features to the original Norton Commander for DOS. It supports extensive archive handling, mounted filesystem support, FTP, advanced search, viewer/editor, directory synchronisation, file content comparisons, batch renaming, etc.",
+   "title": "Krusader"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://lazylibrarian.gitlab.io"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/lazylibrarian/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/lazylibrarian/",
+   "link": "https://gitlab.com/LazyLibrarian/LazyLibrarian",
+   "repo": "sandbox",
+   "role": "lazylibrarian",
+   "status": "",
+   "summary": "a program to follow authors and grab metadata for all your digital reading needs.",
+   "title": "LazyLibrarian"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.linuxgsm.com"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/gameservermanagers/gameserver/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Game Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/lgsm/",
+   "link": "https://linuxgsm.com",
+   "repo": "sandbox",
+   "role": "lgsm",
+   "status": "outdated",
+   "summary": "a command-line tool for quick and simple deployment and management of Linux dedicated game servers. It aims to make the process of managing game servers hassle-free. With LinuxGSM, we can avoid spending hours trying to configure and manage game servers. It provides a streamlined and efficient solution for setting up and maintaining dedicated game servers on Linux.",
+   "title": "LinuxGSM"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/sissbruecker/linkding#documentation"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/sissbruecker/linkding/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/linkding/",
+   "link": "https://github.com/sissbruecker/linkding#introduction",
+   "repo": "sandbox",
+   "role": "linkding",
+   "status": "",
+   "summary": "a simple bookmark service that you can host yourself. It's designed be to be minimal and fast.",
+   "title": "Linkding"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.linkwarden.app"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/linkwarden/linkwarden/pkgs/container/linkwarden"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/CtuYV47nuJ"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/linkwarden/",
+   "link": "https://linkwarden.app",
+   "repo": "sandbox",
+   "role": "linkwarden",
+   "status": "",
+   "summary": "a self-hosted collaborative bookmark manager designed to collect, read, annotate, and fully preserve web content. It automatically captures screenshots, PDFs, and HTML files of bookmarked pages to prevent link rot.",
+   "title": "LinkWarden"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.maintainerr.info"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/maintainerr/maintainerr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > For Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/maintainerr/",
+   "link": "https://maintainerr.info",
+   "repo": "sandbox",
+   "role": "maintainerr",
+   "status": "",
+   "summary": "an automated media management tool designed to help users free up storage space on their media servers by identifying and removing unwatched or unwanted content.",
+   "title": "Maintainerr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.makemkv.com/onlinehelp"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/jlesage/makemkv/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > File Processing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/makemkv/",
+   "link": "http://www.makemkv.com/",
+   "repo": "sandbox",
+   "role": "makemkv",
+   "status": "",
+   "summary": "your one-click solution to convert video that you own into free and patents-unencumbered format that can be played everywhere. MakeMKV is a format converter, otherwise called \"transcoder\". It converts the video clips from proprietary (and usually encrypted) disc into a set of MKV files, preserving most information but not changing it in any way. The MKV format can store multiple video/audio tracks with all meta-information and preserve chapters.",
+   "title": "MakeMKV"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.mealie.io/documentation/getting-started/introduction"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/-/mealie-recipes/packages/container/package/mealie"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Home"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/mealie/",
+   "link": "https://mealie.io/",
+   "repo": "sandbox",
+   "role": "mealie",
+   "status": "",
+   "summary": "aan intuitive and easy to use recipe management app. It's designed to make your life easier by being the best recipes management experience on the web and providing you with an easy to use interface to manage your growing collection of recipes.",
+   "title": "Mealie"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/pymedusa/Medusa/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/medusa/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/medusa/",
+   "link": "https://pymedusa.com",
+   "repo": "sandbox",
+   "role": "medusa",
+   "status": "",
+   "summary": "an automatic Video Library Manager for TV Shows. It watches for new episodes of your favorite shows, and when they are posted it does its magic.",
+   "title": "Medusa"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.meilisearch.com/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/getmeili/meilisearch/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.meilisearch.com"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/meilisearch/",
+   "link": "https://www.meilisearch.com",
+   "repo": "sandbox",
+   "role": "meilisearch",
+   "status": "",
+   "summary": "an AI powered search tool.",
+   "title": "Meilisearch"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/Yoruio/Membarr"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/yoruio/membarr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/7hAUKKTyTd"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Chat Bot"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/membarr/",
+   "link": "https://github.com/Yoruio/Membarr",
+   "repo": "sandbox",
+   "role": "membarr",
+   "status": "",
+   "summary": "a fork of Invitarr that invites discord users to Plex and Jellyfin. You can also automate this bot to invite discord users to a media server once a certain role is given to a user or the user can also be added manually.",
+   "title": "Membarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/alexta69/metube/pkgs/container/metube"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/alexta69/metube/discussions"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Download Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/metube/",
+   "link": "https://github.com/alexta69/metube",
+   "repo": "sandbox",
+   "role": "metube",
+   "status": "",
+   "summary": "a self-hosted web UI for `yt-dlp`, for downloading media from YouTube and dozens of other sites.",
+   "title": "MeTube"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docker-minecraft-server.readthedocs.io/en/latest/commands"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/itzg/minecraft-server/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Game Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/minecraft/",
+   "link": "https://docker-minecraft-server.readthedocs.io",
+   "repo": "sandbox",
+   "role": "minecraft",
+   "status": "outdated",
+   "summary": "a containerized solution that allows users to run a Minecraft server.",
+   "title": "Minecraft Server on Docker"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/itzg/docker-minecraft-bedrock-server"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/itzg/minecraft-bedrock-server/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Game Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/minecraft_bedrock/",
+   "link": "https://github.com/itzg/docker-minecraft-bedrock-server",
+   "repo": "sandbox",
+   "role": "minecraft_bedrock",
+   "status": "",
+   "summary": "a server for the multi-platform version of Minecraft.",
+   "title": "Minecraft Bedrock"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/miniflux/v2"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/miniflux/miniflux/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/miniflux/",
+   "link": "https://miniflux.app",
+   "repo": "sandbox",
+   "role": "miniflux",
+   "status": "",
+   "summary": "a minimalist and opinionated feed reader.",
+   "title": "Miniflux"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://mkvtoolnix.download/docs.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/jlesage/mkvtoolnix/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > File Processing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/mkvtoolnix/",
+   "link": "https://mkvtoolnix.download",
+   "repo": "sandbox",
+   "role": "mkvtoolnix",
+   "status": "",
+   "summary": "a set of tools to create, alter and inspect Matroska files.",
+   "title": "MKVToolNix"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://mosquitto.org/man/mosquitto-conf-5.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/eclipse-mosquitto/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > IoT"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/mqtt/",
+   "link": "https://mosquitto.org/",
+   "repo": "sandbox",
+   "role": "mqtt",
+   "status": "",
+   "summary": "a lightweight messaging protocol that is designed for use in constrained devices and low-bandwidth, high-latency, or unreliable networks. It is commonly used in Internet of Things (IoT) devices/applications for efficient and reliable communication between devices.",
+   "title": "MQTT"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://mylarcomics.com/docs/category/guides"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/mylar3/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://forum.mylarcomics.com"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/mylar3/",
+   "link": "https://mylarcomics.com",
+   "repo": "sandbox",
+   "role": "mylar3",
+   "status": "",
+   "summary": "an automated Comic Book downloader (cbr/cbz) for use with NZB and torrents written in python. It supports SABnzbd, NZBGET, and many torrent clients in addition to DDL.",
+   "title": "Mylar3"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.n8n.io"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/n8nio/n8n/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Automation Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/n8n/",
+   "link": "https://n8n.io/",
+   "repo": "sandbox",
+   "role": "n8n",
+   "status": "",
+   "summary": "a workflow automation platform that gives technical teams the flexibility of code with the speed of no-code. With 400+ integrations, native AI capabilities, and a fair-code license, n8n lets you build powerful automations while maintaining full control over your data and deployments.",
+   "title": "n8n"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/saltydk/nabarr/blob/master/README.md#introduction"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/saltydk/nabarr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/ugfKXpFND8"
+    }
+   ],
+   "categories": [
+    "Accessories > For Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/nabarr/",
+   "link": "https://github.com/saltydk/nabarr",
+   "repo": "sandbox",
+   "role": "nabarr",
+   "status": "",
+   "summary": "the official Saltbox continuation of *Cloudbox/nabarr*, a tool that monitors RSS feeds from Newznab or Torznab indexing services and automatically adds newly discovered TV shows and movies to Sonarr and Radarr, respectively.",
+   "title": "Nabarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.navidrome.org/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/deluan/navidrome/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Audio Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/navidrome/",
+   "link": "https://www.navidrome.org",
+   "repo": "sandbox",
+   "role": "navidrome",
+   "status": "",
+   "summary": "an open source music server and streamer that allows users to listen to their personal music collection from any browser or mobile device, functioning similarly to commercial services like Spotify or Apple Music.",
+   "title": "Navidrome"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.nextcloud.com/server/latest/admin_manual/contents.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/nextcloud/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Collaborative"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/nextcloud/",
+   "link": "https://nextcloud.com/",
+   "repo": "sandbox",
+   "role": "nextcloud",
+   "status": "",
+   "summary": "safe home for all your data. Access & share your files, calendars, contacts, mail & more from any device, on your terms.",
+   "title": "Nextcloud"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.nodered.org/docs/user-guide"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/nodered/node-red/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Automation Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/node_red/",
+   "link": "https://www.nodered.org/",
+   "repo": "sandbox",
+   "role": "node_red",
+   "status": "",
+   "summary": "a flow-based development tool for visual programming developed originally by IBM for wiring together hardware devices, APIs and online services as part of the Internet of Things.",
+   "title": "Node Red"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://notifiarr.wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/golift/notifiarr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://notifiarr.com/discord"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Notification"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/notifiarr/",
+   "link": "https://notifiarr.com/",
+   "repo": "sandbox",
+   "role": "notifiarr",
+   "status": "",
+   "summary": "the unified local application that connects your media server stack to the Notifiarr.com web service, enabling secure, bidirectional communication for notifications, monitoring, and automation.",
+   "title": "Notifiarr Client"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.olivetin.app"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/jamesread/olivetin/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Automation Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/olivetin/",
+   "link": "https://olivetin.app",
+   "repo": "sandbox",
+   "role": "olivetin",
+   "status": "",
+   "summary": "an open-source web interface that provides safe and simple access to predefined Linux shell commands through a user-friendly web browser.",
+   "title": "OliveTin"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.linuxserver.io/general/container-customization"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/ombi/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Request"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/ombi/",
+   "link": "https://ombi.io",
+   "repo": "sandbox",
+   "role": "ombi",
+   "status": "",
+   "summary": "a self-hosted media request, user management, and media discovery web application designed to simplify the process of requesting movies, TV shows, and music for media servers like Jellyfin, Plex, and Emby.",
+   "title": "Ombi"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://openobserve.ai/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://gallery.ecr.aws/zinclabs/openobserve"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Monitoring > Dashboard"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/openobserve/",
+   "link": "https://openobserve.ai/",
+   "repo": "sandbox",
+   "role": "openobserve",
+   "status": "",
+   "summary": "an open-source observability platform for logs, metrics, and traces with 140x lower storage cost than Elasticsearch. Built for petabyte scale with high performance and ~40x compression.",
+   "title": "OpenObserve"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/clusterzx/paperless-ai/wiki/1.-Home"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/clusterzx/paperless-ai/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/AvNekAfK38"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/paperless_ai/",
+   "link": "https://clusterzx.github.io/paperless-ai/",
+   "repo": "sandbox",
+   "role": "paperless_ai",
+   "status": "",
+   "summary": "an AI-enhanced extension for Paperless-ngx that adds automatic classification, smart tagging, and semantic search using OpenAI-compatible APIs. It builds on the community-supported document management system that scans, indexes and archives documents with OCR.",
+   "title": "Paperless AI"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://paperless-ngx.readthedocs.io/en/latest/index.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/paperlessngx/paperless-ngx/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/paperless_ngx/",
+   "link": "https://github.com/paperless-ngx/paperless-ngx#paperless-ngx",
+   "repo": "sandbox",
+   "role": "paperless_ngx",
+   "status": "",
+   "summary": "a simple Django application running in two parts: a Consumer (the thing that does the indexing) and the Web server (the part that lets you search & download already-indexed documents).",
+   "title": "Paperless NGX"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.pgadmin.org/docs/pgadmin4/6.14/getting_started.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/dpage/pgadmin4/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/pgadmin/",
+   "link": "https://www.pgadmin.org/",
+   "repo": "sandbox",
+   "role": "pgadmin",
+   "status": "",
+   "summary": "a popular and feature rich Open Source administration and development platform for PostgreSQL.",
+   "title": "pgAdmin"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.photoprism.app"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/photoprism/photoprism/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > Library Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/photoprism/",
+   "link": "https://photoprism.app/",
+   "repo": "sandbox",
+   "role": "photoprism",
+   "status": "",
+   "summary": "an AI-Powered Photos App for the Decentralized Web. It makes use of the latest technologies to tag and find pictures automatically without getting in your way. You can run it at home, on a private server, or in the cloud.",
+   "title": "Photoprism\u00ae"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://www.phpmyadmin.net/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/phpmyadmin/phpmyadmin/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/phpmyadmin/",
+   "link": "https://www.phpmyadmin.net/",
+   "repo": "sandbox",
+   "role": "phpmyadmin",
+   "status": "",
+   "summary": "a free software tool written in PHP, intended to handle the administration of MySQL over the Web. phpMyAdmin supports a wide range of operations on MySQL and MariaDB. Frequently used operations (managing databases, tables, columns, relations, indexes, users, permissions, etc) can be performed via the user interface, while you still have the ability to directly execute any SQL statement.",
+   "title": "phpMyAdmin"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/RemiRigal/Plex-Auto-Languages"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/remirigal/plex-auto-languages/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/plex_auto_languages/",
+   "link": "https://github.com/RemiRigal/Plex-Auto-Languages",
+   "repo": "sandbox",
+   "role": "plex_auto_languages",
+   "status": "",
+   "summary": "a tool designed to automate the selection of audio and subtitle languages for TV shows in Plex Media Server.",
+   "title": "Plex Auto Languages"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": ""
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/plex_dupefinder/",
+   "link": "https://github.com/l3uddz/plex_dupefinder",
+   "repo": "sandbox",
+   "role": "plex_dupefinder",
+   "status": "",
+   "summary": "a Python script designed to identify duplicate versions of media\u2014such as TV episodes and movies\u2014within a Plex library and remove the lowest-rated versions based on a customizable scoring system, leaving only a single, high-quality file.",
+   "title": "Plex DupeFinder"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/Taxel/PlexTraktSync/blob/main/README.md#setup"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/linuxserver-labs/docker-plextraktsync/pkgs/container/plextraktsync"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/Taxel/PlexTraktSync/discussions"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Integration"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/plextraktsync/",
+   "link": "https://github.com/Taxel/PlexTraktSync",
+   "repo": "sandbox",
+   "role": "plextraktsync",
+   "status": "",
+   "summary": "a two-way synchronization tool between trakt.tv and Plex Media Server, allowing users to sync media collections, ratings, watched status, and watchlists without requiring a Plex Pass or Trakt VIP subscription.",
+   "title": "Plex-Trakt-Sync"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/PrivateBin/PrivateBin/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/privatebin/nginx-fpm-alpine/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Collaborative"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/privatebin/",
+   "link": "https://privatebin.info",
+   "repo": "sandbox",
+   "role": "privatebin",
+   "status": "",
+   "summary": "a minimalist, open source online pastebin where the server has zero knowledge of pasted data.",
+   "title": "PrivateBin"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://dictionarry.dev/profilarr-setup/101"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/dictionarry-hub/profilarr/pkgs/container/profilarr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/XGdTJP5G8a"
+    }
+   ],
+   "categories": [
+    "Accessories > For Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/profilarr/",
+   "link": "https://dictionarry.dev",
+   "repo": "sandbox",
+   "role": "profilarr",
+   "status": "",
+   "summary": "a configuration management and auto-import tool for Radarr/Sonarr custom formats and profiles.",
+   "title": "Profilarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.puddletag.net/docs.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/xirg/docker-puddletag/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > Tag Editor"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/puddletag/",
+   "link": "https://docs.puddletag.net/",
+   "repo": "sandbox",
+   "role": "puddletag",
+   "status": "",
+   "summary": "an audio tag editor (primarily created) for GNU/Linux similar to the Windows program, Mp3tag. Unlike most taggers for GNU/Linux, it uses a spreadsheet-like layout so that all the tags you want to edit by hand are visible and easily editable.",
+   "title": "Puddletag"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/pufferpanel/pufferpanel/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Game Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/pufferpanel/",
+   "link": "https://pufferpanel.com/",
+   "repo": "sandbox",
+   "role": "pufferpanel",
+   "status": "",
+   "summary": "an open-source web-based game server management system designed for both small networks and personal use. It supports Minecraft, Source Dedicated Servers, BungeeCord, and many other game servers.",
+   "title": "PufferPanel"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/pyload/pyload/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/pyload-ng/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/pyload/pyload/discussions"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Download Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/pyload/",
+   "link": "https://pyload.net",
+   "repo": "sandbox",
+   "role": "pyload",
+   "status": "draft2",
+   "summary": "a free and open-source download manager written in Python, designed to be lightweight, easily extensible, and fully manageable via a web interface.",
+   "title": "pyload-ng"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/StuffAnThings/qbit_manage/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/qbitmanage/pkgs/container/qbitmanage"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://notifiarr.com/discord"
+    }
+   ],
+   "categories": [
+    "Accessories > For Download Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/qbit_manage/",
+   "link": "https://github.com/StuffAnThings/qbit_manage",
+   "repo": "sandbox",
+   "role": "qbit_manage",
+   "status": "outdated",
+   "summary": "a program used to manage your qBittorrent instance.",
+   "title": "qBit Manage"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/binhex/arch-qbittorrentvpn"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/binhex/arch-qbittorrentvpn/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > BitTorrent Client > With VPN"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/qbittorrentvpn/",
+   "link": "https://github.com/binhex/arch-qbittorrentvpn",
+   "repo": "sandbox",
+   "role": "qbittorrentvpn",
+   "status": "outdated",
+   "summary": "a qbittorrent container which includes OpenVPN and WireGuard to ensure a secure and private connection to the Internet, including use of iptables to prevent IP leakage when the tunnel is down. It also includes Privoxy to allow unfiltered access to index sites.",
+   "title": "arch-qbittorrentvpn"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/autobrr/qui/blob/main/README.md#configuration"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/autobrr/qui/pkgs/container/qui"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.autobrr.com/qui"
+    }
+   ],
+   "categories": [
+    "Accessories > For Download Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/qui/",
+   "link": "https://github.com/autobrr/qui",
+   "repo": "sandbox",
+   "role": "qui",
+   "status": "",
+   "summary": "a fast, modern web interface for qBittorrent. Supports managing multiple qBittorrent instances from a single, lightweight application.",
+   "title": "qui"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://recyclarr.dev/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/recyclarr/recyclarr/pkgs/container/recyclarr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.com/invite/Vau8dZ3"
+    }
+   ],
+   "categories": [
+    "Accessories > For Collection Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/recyclarr/",
+   "link": "https://recyclarr.dev",
+   "repo": "sandbox",
+   "role": "recyclarr",
+   "status": "outdated",
+   "summary": "a command-line application designed to automatically synchronize recommended settings from the TRaSH Guides to Sonarr and Radarr instances.",
+   "title": "Recyclarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://reposilite.com/guide/about"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/dzikoysk/reposilite/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/reposilite/",
+   "link": "https://reposilite.com/",
+   "repo": "sandbox",
+   "role": "reposilite",
+   "status": "",
+   "summary": "a...",
+   "title": "reposilite"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/thomst08/requestrr/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/thomst08/requestrr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Chat Bot"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/requestrr/",
+   "link": "https://github.com/thomst08/requestrr",
+   "repo": "sandbox",
+   "role": "requestrr",
+   "status": "",
+   "summary": "a chatbot used to simplify using services like Sonarr/Radarr/Ombi via the use of chat. Current platform is Discord only, but the bot was built around the ideology of quick adaptation for new features as well as new platforms.",
+   "title": "Requestrr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://help.resilio.com/hc/en-us/categories/200140177-Get-started-with-Sync"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/resilio/sync/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > File Operation"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/resiliosync/",
+   "link": "https://www.resilio.com/sync",
+   "repo": "sandbox",
+   "role": "resiliosync",
+   "status": "",
+   "summary": "a proprietary peer-to-peer file synchronization tool that enables users to sync files directly between devices using a modified version of the BitTorrent protocol, without relying on centralized cloud storage.",
+   "title": "Resilio Sync"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/rflood/pkgs/container/rflood"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://hotio.dev/discord"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > BitTorrent Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/rflood/",
+   "link": "https://hotio.dev/containers/rflood",
+   "repo": "sandbox",
+   "role": "rflood",
+   "status": "",
+   "summary": "a Docker image with rTorrent and the Flood UI, also optional WireGuard VPN support.",
+   "title": "rflood"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/rocketchat/rocketchat/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Collaborative"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/rocketchat/",
+   "link": "https://rocket.chat",
+   "repo": "sandbox",
+   "role": "rocketchat",
+   "status": "draft2",
+   "summary": "an open-source, secure communications platform designed for real-time messaging, voice, video conferencing, and collaboration.",
+   "title": "Rocket.Chat"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/Novik/ruTorrent/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/kudeta/ru-rtorrent/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/Novik/ruTorrent/discussions"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > BitTorrent Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/rutorrent/",
+   "link": "https://github.com/Novik/ruTorrent",
+   "repo": "sandbox",
+   "role": "rutorrent",
+   "status": "",
+   "summary": "a front-end for the popular, lightweight, and extensible BitTorrent client rTorrent.",
+   "title": "ruTorrent"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/8a8al00ey/sabthrottle#installation"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/8a8al00ey/sabthrottle/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > For Download Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/sabthrottle/",
+   "link": "https://github.com/8a8al00ey/sabthrottle",
+   "repo": "sandbox",
+   "role": "sabthrottle",
+   "status": "",
+   "summary": "a tool designed to dynamically control bandwidth allocation for SABnzbd, based on active streaming sessions from a Plex Media Server.",
+   "title": "SABThrottle"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.semaphoreui.com/user-guide/projects"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/semaphoreui/semaphore/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Automation Engine"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/semaphoreui/",
+   "link": "https://github.com/semaphoreui/semaphore",
+   "repo": "sandbox",
+   "role": "semaphoreui",
+   "status": "",
+   "summary": "an open-source, self-hosted web interface designed to simplify and centralize the management of DevOps automation tools like Ansible, Terraform, OpenTofu, PowerShell, Bash, and Python scripts.",
+   "title": "Semaphore UI"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/calibrain/shelfmark/tree/main/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/calibrain/shelfmark/pkgs/container/shelfmark"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/calibrain/shelfmark/discussions"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/shelfmark/",
+   "link": "https://github.com/calibrain/shelfmark",
+   "repo": "sandbox",
+   "role": "shelfmark",
+   "status": "",
+   "summary": "a unified web interface for searching and aggregating books and audiobook downloads from multiple sources - all in one place.",
+   "title": "Shelfmark"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://siloserver.org/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/Silo-Server/silo-server/pkgs/container/silo-server"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/4RxuUQAEnW"
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Media Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/silo/",
+   "link": "https://siloserver.org",
+   "repo": "sandbox",
+   "role": "silo",
+   "status": "",
+   "summary": "a self-hosted media server for movies, shows, music, and books with direct play, transcoding, and optional Jellyfin-compatible client support.",
+   "title": "Silo"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/slskd/slskd/pkgs/container/slskd"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/slskd/",
+   "link": "",
+   "repo": "sandbox",
+   "role": "slskd",
+   "status": "draft2",
+   "summary": "",
+   "title": "slskd"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/librespeed/speedtest/blob/master/doc.md"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/librespeed/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Diagnostics"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/speedtest/",
+   "link": "https://github.com/librespeed/speedtest",
+   "repo": "sandbox",
+   "role": "speedtest",
+   "status": "",
+   "summary": "a very lightweight Speedtest implemented in Javascript, using XMLHttpRequest and Web Workers.",
+   "title": "Speedtest"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/sqlitebrowser/sqlitebrowser/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/sqlitebrowser/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Database > Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/sqlitebrowser/",
+   "link": "https://sqlitebrowser.org",
+   "repo": "sandbox",
+   "role": "sqlitebrowser",
+   "status": "",
+   "summary": "a high quality, visual, open source tool to create, design, and edit database files compatible with SQLite.",
+   "title": "SQLite Browser"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/nirui/sshwifty"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/niruix/sshwifty/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Remote Access"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/sshwifty/",
+   "link": "https://github.com/nirui/sshwifty",
+   "repo": "sandbox",
+   "role": "sshwifty",
+   "status": "",
+   "summary": "an SSH and Telnet connector made for the Web. It can be deployed on your computer or server to provide SSH and Telnet access interface for any compatible (standard) web browser.",
+   "title": "Sshwifty"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.stashapp.cc"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/hotio/stash/pkgs/container/stash"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://docs.stashapp.cc/#support"
+    }
+   ],
+   "categories": [
+    "Accessories > Library Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/stash/",
+   "link": "https://stashapp.cc",
+   "repo": "sandbox",
+   "role": "stash",
+   "status": "",
+   "summary": "a web-based app that allows you to organize and view your own collection of adult video and image files.",
+   "title": "Stash"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/we-promise/sure/pkgs/container/sure"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/sure/",
+   "link": "",
+   "repo": "sandbox",
+   "role": "sure",
+   "status": "draft2",
+   "summary": "",
+   "title": "sure"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/suwayomi/suwayomi-server/pkgs/container/suwayomi-server"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/suwayomi/",
+   "link": "",
+   "repo": "sandbox",
+   "role": "suwayomi",
+   "status": "draft2",
+   "summary": "",
+   "title": "suwayomi"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.syncthing.net"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/syncthing/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Admin Apps > File Operation"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/syncthing/",
+   "link": "https://syncthing.net",
+   "repo": "sandbox",
+   "role": "syncthing",
+   "status": "",
+   "summary": "a free, open-source, peer-to-peer file synchronization utility designed to sync files between devices on a local network or over the Internet.",
+   "title": "Syncthing"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.tandoor.dev"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/vabene1111/recipes/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Home"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/tandoor/",
+   "link": "https://github.com/TandoorRecipes/recipes",
+   "repo": "sandbox",
+   "role": "tandoor",
+   "status": "",
+   "summary": "an application for managing recipes, planning meals, building shopping lists and much, much more!.",
+   "title": "Tandoor Recipes"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/nwithan8/tauticord"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/nwithan8/tauticord/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Chat Bot"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/tauticord/",
+   "link": "https://github.com/nwithan8/tauticord",
+   "repo": "sandbox",
+   "role": "tauticord",
+   "status": "outdated",
+   "summary": "a Discord bot that will mirror live Tautulli data into a Discord server, including current stream and bandwidth information, library statistics, and live playback control.",
+   "title": "Tauticord"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.tdarr.io/docs/welcome/what"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/haveagitgat/tdarr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > File Processing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/tdarr/",
+   "link": "https://tdarr.io/",
+   "repo": "sandbox",
+   "role": "tdarr",
+   "status": "",
+   "summary": "a cross-platform conditional based transcoding application for automating media library transcode/remux management in order to process your media files as required. For example, you can set rules for the required codecs, containers, languages etc that your media should have which helps keeps things organized and can increase compatability with your devices. A common use for Tdarr is to simply convert video files from h264 to h265 (hevc), saving 40%-50% in size.",
+   "title": "Tdarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.tdarr.io/docs/installation/getting-started"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/haveagitgat/tdarr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > File Processing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/tdarr_node/",
+   "link": "https://tdarr.io/",
+   "repo": "sandbox",
+   "role": "tdarr_node",
+   "status": "",
+   "summary": "a cross-platform conditional based transcoding application for automating media library transcode/remux management in order to process your media files as required.",
+   "title": "Tdarr Node"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.influxdata.com/telegraf/v1.20"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/telegraf/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Monitoring > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/telegraf/",
+   "link": "https://www.influxdata.com/time-series-platform/telegraf/",
+   "repo": "sandbox",
+   "role": "telegraf",
+   "status": "",
+   "summary": "a plugin-driven server agent for collecting and sending metrics and events from databases, systems, and IoT sensors.",
+   "title": "Telegraf"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/teslamate-org/teslamate"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/teslamate/teslamate/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Automation Engine",
+    "Productivity Apps > IoT"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/teslamate/",
+   "link": "https://github.com/teslamate-org/teslamate",
+   "repo": "sandbox",
+   "role": "teslamate",
+   "status": "",
+   "summary": "a powerful, self-hosted data logger for your Tesla.",
+   "title": "Teslamate"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://thelounge.chat/docs"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/thelounge/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://thelounge.chat/community"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/thelounge/",
+   "link": "https://thelounge.chat",
+   "repo": "sandbox",
+   "role": "thelounge",
+   "status": "",
+   "summary": "a self-hosted web IRC client for the modern world.",
+   "title": "The Lounge"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/Threadfin/Threadfin"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/fyb3roptik/threadfin/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > IPTV Proxy"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/threadfin/",
+   "link": "https://github.com/Threadfin/Threadfin",
+   "repo": "sandbox",
+   "role": "threadfin",
+   "status": "",
+   "summary": "a M3U proxy server for Plex, Emby and any client and provider which supports the .TS and .M3U8 (HLS) streaming formats.",
+   "title": "Threadfin"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/tika/tika/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Development"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/tika/",
+   "link": "",
+   "repo": "sandbox",
+   "role": "tika",
+   "status": "draft2",
+   "summary": "a...",
+   "title": "tika"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.tofa.tv"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/orgs/tofatv/packages/container/package/tofa"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://tofa.tv/discord"
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Media Server"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/tofa/",
+   "link": "https://tofa.tv",
+   "repo": "sandbox",
+   "role": "tofa",
+   "status": "",
+   "summary": "a self-hosted media server for streaming your own movie and TV library to web, mobile, and TV apps, with hardware-accelerated transcoding.",
+   "title": "tofa"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://autobrr.com/3rd-party-tools/manage-torrents#tqm"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/autobrr/tqm/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.autobrr.com"
+    }
+   ],
+   "categories": [
+    "Accessories > For Download Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/tqm/",
+   "link": "https://github.com/autobrr/tqm",
+   "repo": "sandbox",
+   "role": "tqm",
+   "status": "",
+   "summary": "a command-line tool designed to manage torrent client queues, with a primary focus on automatically removing torrents that meet specific user-defined criteria.",
+   "title": "tqm"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/traccar/traccar/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/traccar/",
+   "link": "",
+   "repo": "sandbox",
+   "role": "traccar",
+   "status": "draft2",
+   "summary": "",
+   "title": "traccar"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.tracearr.com"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/connorgallopo/Tracearr/pkgs/container/tracearr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/a7n3sFd2Yw"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Monitoring"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/tracearr/",
+   "link": "https://tracearr.com",
+   "repo": "sandbox",
+   "role": "tracearr",
+   "status": "",
+   "summary": "a monitoring platform for Plex, Jellyfin, and Emby that tracks active streams, playback history, and account sharing.",
+   "title": "Tracearr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/mstroecker/zig-robotstxt"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/mstroecker/zig-robotstxt/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Web Publishing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/traefik_robotstxt/",
+   "link": "https://github.com/mstroecker/zig-robotstxt",
+   "repo": "sandbox",
+   "role": "traefik_robotstxt",
+   "status": "",
+   "summary": "a lightweight http-server, just serving a disallow-robots.txt file using the Zig programming language.",
+   "title": "Zig robots.txt"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/transmission/transmission/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/transmission/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > BitTorrent Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/transmission/",
+   "link": "https://transmissionbt.com",
+   "repo": "sandbox",
+   "role": "transmission",
+   "status": "",
+   "summary": "a fast, easy, and free BitTorrent client.",
+   "title": "Transmission"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/haugene/transmission-openvpn/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/haugene/docker-transmission-openvpn/discussions"
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > BitTorrent Client > With VPN"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/transmissionvpn/",
+   "link": "",
+   "repo": "sandbox",
+   "role": "transmissionvpn",
+   "status": "draft2",
+   "summary": "a Docker container configuration that runs the Transmission BitTorrent client securely through an OpenVPN tunnel",
+   "title": "OpenVPN and Transmission with WebUI"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/zadam/trilium/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/zadam/trilium/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/trilium/",
+   "link": "https://github.com/zadam/trilium",
+   "repo": "sandbox",
+   "role": "trilium",
+   "status": "",
+   "summary": "a hierarchical note taking application with focus on building large personal knowledge bases.",
+   "title": "Trilium Notes"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/tubearchivist/tubearchivist/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/bbilly1/tubearchivist/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > Library Management"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/tubearchivist/",
+   "link": "https://www.tubearchivist.com/",
+   "repo": "sandbox",
+   "role": "tubearchivist",
+   "status": "",
+   "summary": "a self-hosted YouTube media server designed to help users download, index, and organize their favorite YouTube content for offline viewing.",
+   "title": "Tube Archivist"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/linuxserver/docker-unifi-network-application/blob/main/README.md"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/unifi-network-application/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Productivity Apps > IoT"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/unifi_network_application/",
+   "link": "https://www.ui.com/download/unifi",
+   "repo": "sandbox",
+   "role": "unifi_network_application",
+   "status": "",
+   "summary": "a powerful, enterprise wireless software engine ideal for high-density client deployments requiring low latency and high uptime performance.",
+   "title": "UniFi Network Application"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/Unmanic/unmanic/blob/master/docs/configuration/README.md"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/josh5/unmanic/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > File Processing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/unmanic/",
+   "link": "https://github.com/Unmanic/unmanic",
+   "repo": "sandbox",
+   "role": "unmanic",
+   "status": "",
+   "summary": "a simple tool for optimising your file library. You can use it to convert your files into a single, uniform format, manage file movements based on timestamps, or execute custom commands against a file based on its file size.",
+   "title": "Unmanic"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/louislam/uptime-kuma/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/louislam/uptime-kuma/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Monitoring > Dashboard"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/uptime_kuma/",
+   "link": "https://github.com/louislam/uptime-kuma",
+   "repo": "sandbox",
+   "role": "uptime_kuma",
+   "status": "",
+   "summary": "a self-hosted monitoring tool like \"Uptime Robot\".",
+   "title": "Uptime Kuma"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": ""
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/thezak48/Varken/pkgs/container/varken"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Monitoring"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/varken/",
+   "link": "https://github.com/thezak48/Varken",
+   "repo": "sandbox",
+   "role": "varken",
+   "status": "",
+   "summary": "a standalone application to aggregate data from the Plex ecosystem into InfluxDB using Grafana for a frontend.",
+   "title": "Varken"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/dani-garcia/vaultwarden/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/vaultwarden/server/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Record Keeping > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/vaultwarden/",
+   "link": "https://github.com/dani-garcia/vaultwarden",
+   "repo": "sandbox",
+   "role": "vaultwarden",
+   "status": "",
+   "summary": "an alternative implementation of the Bitwarden server API written in Rust and compatible with upstream Bitwarden clients*, perfect for self-hosted deployment where running the official resource-heavy service might not be ideal.",
+   "title": "vaultwarden"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/alexandermarston/vnstat-dashboard/blob/master/README.md"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/amarston/vnstat-dashboard/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Admin Apps > Health > Diagnostics"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/vnstat/",
+   "link": "https://github.com/alexandermarston/vnstat-dashboard",
+   "repo": "sandbox",
+   "role": "vnstat",
+   "status": "",
+   "summary": "a user-friendly web dashboard for viewing the following:.",
+   "title": "vnStat Dashboard"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/ArabCoders/watchstate/blob/master/FAQ.md"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/arabcoders/watchstate/pkgs/container/watchstate"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/haUXHJyj6Y"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Integration"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/watchstate/",
+   "link": "https://github.com/arabcoders/watchstate",
+   "repo": "sandbox",
+   "role": "watchstate",
+   "status": "",
+   "summary": "a self-hosted, open-source service designed to sync play states, including watch progress and history, across media servers such as Plex, Jellyfin, and Emby without relying on third-party servers or cloud services.",
+   "title": "WatchState"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.requarks.io"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/requarks/wiki/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Web Publishing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/wikijs/",
+   "link": "https://js.wiki/",
+   "repo": "sandbox",
+   "role": "wikijs",
+   "status": "",
+   "summary": "a modern, lightweight and powerful wiki app built on NodeJS.",
+   "title": "Wikijs"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wg-easy.github.io/wg-easy/edge/guides/setup"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/wg-easy/wg-easy/pkgs/container/wg-easy"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/wg-easy/wg-easy/discussions"
+    }
+   ],
+   "categories": [
+    "Admin Apps > Network Service > VPN"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/wireguard/",
+   "link": "https://www.wireguard.com",
+   "repo": "sandbox",
+   "role": "wireguard",
+   "status": "",
+   "summary": "an extremely simple yet fast and modern VPN that utilizes state-of-the-art cryptography.",
+   "title": "Wireguard"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.wizarr.dev"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/-/wizarrrr/packages/container/package/wizarr"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://discord.gg/wsSTsHGsqu"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Misc"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/wizarr/",
+   "link": "https://github.com/Wizarrrr/wizarr",
+   "repo": "sandbox",
+   "role": "wizarr",
+   "status": "",
+   "summary": "a automatic user invitation system for Plex, Jellyfin and Emby. Create a unique link and share it to a user and they will automatically be invited to your media Server! They will even be guided to download the client and instructions on how to use your requests software!.",
+   "title": "Wizarr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://wordpress.org/support"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/_/wordpress/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Productivity Apps > Web Publishing"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/wordpress/",
+   "link": "https://wordpress.org/",
+   "repo": "sandbox",
+   "role": "wordpress",
+   "status": "",
+   "summary": "open source software you can use to create a beautiful website, blog, or app.",
+   "title": "WordPress"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/aunefyren/wrapperr/wiki"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/aunefyren/wrapperr/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Monitoring"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/wrapperr/",
+   "link": "https://github.com/aunefyren/wrapperr",
+   "repo": "sandbox",
+   "role": "wrapperr",
+   "status": "",
+   "summary": "a website-based platform and API for collecting user stats within a set timeframe using Tautulli. The data is displayed as a statistics-summary, sort of like Spotify Wrapped. Yes, you need Tautulli to have been running beforehand and currently for this to work. Note: Wrapperr is not behind authelia.",
+   "title": "Wrapperr"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://xbackbone.app/clients.html"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/xbackbone/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://github.com/sergix44/XBackBone/discussions"
+    }
+   ],
+   "categories": [
+    "Content Delivery Apps > Collaborative"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/xbackbone/",
+   "link": "https://xbackbone.app",
+   "repo": "sandbox",
+   "role": "xbackbone",
+   "status": "draft2",
+   "summary": "a simple, self-hosted, lightweight PHP file manager designed to integrate with instant sharing tools like ShareX and *NIX systems.",
+   "title": "XBackBone"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://github.com/Yooooomi/your_spotify?tab=readme-ov-file#table-of-contents"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/your_spotify/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Accessories > For Media Server > Monitoring"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/your_spotify/",
+   "link": "https://github.com/Yooooomi/your_spotify",
+   "repo": "sandbox",
+   "role": "your_spotify",
+   "status": "",
+   "summary": "a self-hosted application that tracks your Spotify listening activity and provides a dashboard to explore detailed statistics about your music habits.",
+   "title": "Your Spotify"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://ytdl-sub.readthedocs.io"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://github.com/jmbannon/ytdl-sub/pkgs/container/ytdl-sub"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": ""
+    }
+   ],
+   "categories": [
+    "Content Acquisition Apps > Download Manager"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/ytdl_sub/",
+   "link": "https://github.com/jmbannon/ytdl-sub",
+   "repo": "sandbox",
+   "role": "ytdl_sub",
+   "status": "",
+   "summary": "a lightweight tool to automate downloading and metadata generation with yt-dlp. It uses YAML files to define subscriptions and prepares media for popular media players like Plex, Jellyfin, Kodi, and Emby.",
+   "title": "ytdl-sub"
+  },
+  {
+   "app_links": [
+    {
+     "name": "Manual",
+     "purpose": "manual",
+     "url": "https://docs.linuxserver.io/images/docker-znc"
+    },
+    {
+     "name": "Releases",
+     "purpose": "release",
+     "url": "https://hub.docker.com/r/linuxserver/znc/tags"
+    },
+    {
+     "name": "Community",
+     "purpose": "community",
+     "url": "https://linuxserver.io/discord"
+    }
+   ],
+   "categories": [
+    "Accessories > For Download Client"
+   ],
+   "docs_url": "https://docs.saltbox.dev/sandbox/apps/znc/",
+   "link": "https://wiki.znc.in/ZNC",
+   "repo": "sandbox",
+   "role": "znc",
+   "status": "",
+   "summary": "an advanced IRC bouncer that is left connected so an IRC client can disconnect/reconnect without losing the chat session.",
+   "title": "ZNC"
+  }
+ ]
+}
