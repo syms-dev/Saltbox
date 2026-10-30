@@ -1,3 +1,5 @@
 namespace_sharing:
   remote:
     - rclone
+exclude_paths:
+  - ui/
