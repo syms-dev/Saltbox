@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from typing import Any
 
@@ -120,6 +121,19 @@ def build_parser() -> argparse.ArgumentParser:
     p = run.add_parser("log")
     p.add_argument("job_id")
     run.add_parser("status")
+
+    inst = sub.add_parser("install", help="installer plan and preflight").add_subparsers(
+        dest="action", required=True
+    )
+    inst.add_parser("preflight", help="run the preflight checks")
+    inst.add_parser("plan", help="show the saved install plan (secrets redacted)")
+    inst.add_parser("discard", help="delete the saved install plan")
+    p = inst.add_parser("apply", help="write the saved plan into the config files")
+    p.add_argument("--validate", action="store_true")
+    inst.add_parser("tags", help="print the tags the plan would install")
+
+    tui = sub.add_parser("tui", help="start the terminal UI")
+    tui.add_argument("--installer", action="store_true", default=True)
     return parser
 
 
@@ -129,6 +143,9 @@ def main(argv: list[str] | None = None) -> int:
     layout = Layout.from_env()
     try:
         return _dispatch(args, layout)
+    except BrokenPipeError:  # piped into head and the like
+        sys.stdout = open(os.devnull, "w")  # noqa: SIM115 - keep the interpreter quiet at exit
+        return 0
     except JobRunning as error:
         emit({"error": str(error)})
         return 1
@@ -296,6 +313,46 @@ def _dispatch(args: argparse.Namespace, layout: Layout) -> int:
             sys.stdout.write(runner.log(args.job_id))
         elif args.action == "status":
             emit({"running": runner.is_locked()})
+        return 0
+
+    if args.group == "install":
+        from .installer import InstallerSession, run_preflight
+        from .installer.preflight import summarize
+
+        session = InstallerSession(layout)
+        if args.action == "preflight":
+            checks = run_preflight(layout)
+            emit({"summary": summarize(checks), "checks": [c.as_dict() for c in checks]})
+            return 3 if any(c.blocking for c in checks) else 0
+        if args.action == "plan":
+            emit(
+                {
+                    "path": str(session.plan_path),
+                    "resumable": session.resumable,
+                    "plan": session.plan.redacted(),
+                }
+            )
+        elif args.action == "discard":
+            session.discard()
+            emit({"discarded": True})
+        elif args.action == "apply":
+            touched = session.apply_config()
+            payload = {"written": touched}
+            if args.validate:
+                results = session.validate()
+                payload["issues"] = {
+                    n: [i.as_dict() for i in found] for n, found in results.items()
+                }
+                payload["ok"] = not session.has_errors(results)
+            emit(payload)
+        elif args.action == "tags":
+            emit({"tags": session.plan.install_tags()})
+        return 0
+
+    if args.group == "tui":
+        from .tui.app import run_installer
+
+        run_installer(layout)
         return 0
     return 2
 

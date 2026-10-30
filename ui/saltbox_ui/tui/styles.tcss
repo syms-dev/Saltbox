@@ -1,0 +1,217 @@
+/* Saltbox TUI theme. Mirrors the hybrid web layout: a step header, a body, a nav bar. */
+
+Screen {
+    layout: vertical;
+}
+
+#step-header {
+    height: 3;
+    padding: 1 2;
+    background: $primary-darken-2;
+    color: $text;
+}
+
+#step-header .title {
+    text-style: bold;
+}
+
+#step-header .counter {
+    color: $text-muted;
+    text-align: right;
+}
+
+#body {
+    height: 1fr;
+    padding: 1 2;
+}
+
+#nav {
+    height: 4;
+    padding: 0 2;
+    background: $surface;
+    border-top: tall $panel;
+}
+
+#nav #step-error {
+    content-align: left middle;
+    height: 100%;
+    padding: 0 1;
+}
+
+#nav Button {
+    margin-right: 2;
+    min-width: 12;
+}
+
+#nav .spacer {
+    width: 1fr;
+}
+
+.lede {
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+.section {
+    text-style: bold;
+    color: $accent;
+    margin-top: 1;
+}
+
+.field-label {
+    color: $text-muted;
+    margin-top: 1;
+}
+
+.hint {
+    color: $text-muted;
+}
+
+.error {
+    color: $error;
+    text-style: bold;
+}
+
+.ok {
+    color: $success;
+}
+
+.warn {
+    color: $warning;
+}
+
+Input, Select {
+    width: 60;
+    max-width: 100%;
+}
+
+Input.wide, Select.wide {
+    width: 100%;
+}
+
+RadioSet {
+    width: 100%;
+    background: transparent;
+    border: none;
+}
+
+SelectionList {
+    height: auto;
+    max-height: 12;
+    border: tall $panel;
+}
+
+#check-list {
+    height: 1fr;
+}
+
+.check-row {
+    height: auto;
+    padding-left: 1;
+}
+
+.check-row .glyph {
+    width: 3;
+}
+
+.check-row .check-title {
+    width: 32;
+}
+
+.check-row .check-detail {
+    width: 1fr;
+    color: $text-muted;
+}
+
+Log, RichLog {
+    height: 1fr;
+    border: tall $panel;
+    background: $surface;
+}
+
+#summary {
+    height: auto;
+    max-height: 14;
+}
+
+#issues {
+    height: auto;
+    max-height: 10;
+    color: $error;
+}
+
+.two-col {
+    height: auto;
+}
+
+.two-col > * {
+    width: 1fr;
+}
+
+RcloneQuestionScreen {
+    align: center middle;
+}
+
+RcloneQuestionScreen > #dialog {
+    width: 90%;
+    max-width: 110;
+    height: auto;
+    max-height: 90%;
+    border: thick $primary;
+    background: $surface;
+    padding: 1 2;
+}
+
+#dialog .help {
+    max-height: 12;
+    overflow-y: auto;
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#dialog .authorize {
+    background: $panel;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+#dialog Input {
+    width: 100%;
+}
+
+#dialog #dialog-nav {
+    height: 3;
+    margin-top: 1;
+}
+
+#dialog #dialog-nav Button {
+    margin-right: 2;
+}
+
+Collapsible {
+    margin-bottom: 1;
+}
+
+.remote-card {
+    border: tall $panel;
+    padding: 0 1;
+    margin-bottom: 1;
+    height: auto;
+}
+
+/* Containers inside a step body size to their content, never to the scroll area. */
+#body Vertical, #body Horizontal {
+    height: auto;
+}
+
+#create_row Input {
+    width: 1fr;
+}
+
+#create_row Select {
+    width: 28;
+}
+
+#create_row Button, #remote_box #reload {
+    margin-left: 1;
+}

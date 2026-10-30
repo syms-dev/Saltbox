@@ -155,9 +155,16 @@ Support (diag, sanitized support bundle, config validation, docs links).
 
 0. Engine foundation, no UI (1 week): config service, schema validators,
    role-defaults parser with fixtures, catalog, runner, state, JSON CLI, unit
-   tests, CI job.
+   tests, CI job. **Done.**
 1. TUI installer (2 weeks): the wizard incl. rclone and reboot-and-continue.
-   Verified on a throwaway Ubuntu 24.04 VM and in GitHub Actions.
+   **Built** (`ui/saltbox_ui/installer`, `ui/saltbox_ui/rclone`,
+   `ui/saltbox_ui/tui`): eleven steps, preflight, plan persisted after every
+   step, rclone remotes through `rclone config create --non-interactive`
+   with the headless `rclone authorize` flow, resume after the preinstall
+   reboot, `--serve` for a browser. Covered by pilot tests against a fake
+   `sb` and `rclone`. **Still to do:** a run on a throwaway Ubuntu 24.04 VM
+   against the real `sb`, and the install-time packaging (pipx/uv tool line
+   in the fork's bootstrap).
 2. Daemon and web face (2 weeks): systemd, socket API, WebSocket jobs,
    Traefik file-provider route behind Authelia, React Overview/Apps/Jobs/
    Settings. TUI switches to the API.
