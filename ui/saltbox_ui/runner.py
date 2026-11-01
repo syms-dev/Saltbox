@@ -71,6 +71,8 @@ class SbRunner:
         self.env = env
         self.jobs_dir = layout.jobs_dir
         self.lock_file = layout.lock_file
+        self._process: subprocess.Popen[str] | None = None
+        self._cancelled = False
 
     # -- command builders --------------------------------------------------
     def install_command(
@@ -114,16 +116,20 @@ class SbRunner:
 
     # -- job persistence ---------------------------------------------------
     def _save(self, job: Job) -> None:
+        """Persist the record atomically so a concurrent reader never sees a partial file."""
         self.jobs_dir.mkdir(parents=True, exist_ok=True)
-        (self.jobs_dir / f"{job.id}.json").write_text(
-            json.dumps(job.as_dict(), indent=1), encoding="utf-8"
-        )
+        path = self.jobs_dir / f"{job.id}.json"
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(job.as_dict(), indent=1), encoding="utf-8")
+        tmp.replace(path)
 
     def jobs(self, limit: int = 50) -> list[Job]:
         if not self.jobs_dir.exists():
             return []
         records = sorted(
-            self.jobs_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True
+            (p for p in self.jobs_dir.glob("*.json") if not p.name.endswith(".tmp")),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
         )
         result = []
         for path in records[:limit]:
@@ -144,6 +150,16 @@ class SbRunner:
         return path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
 
     # -- execution ---------------------------------------------------------
+    def prepare(
+        self, command: list[str], *, kind: str = "command", tags: Iterable[str] = ()
+    ) -> Job:
+        """Create and persist a pending job without starting it."""
+        job = Job(id=uuid.uuid4().hex[:12], command=list(command), kind=kind, tags=list(tags))
+        self.jobs_dir.mkdir(parents=True, exist_ok=True)
+        job.log_path = str(self.jobs_dir / f"{job.id}.log")
+        self._save(job)
+        return job
+
     def run(
         self,
         command: list[str],
@@ -154,11 +170,14 @@ class SbRunner:
         cwd: Path | None = None,
     ) -> Job:
         """Run ``command`` to completion, streaming merged output line by line."""
-        job = Job(id=uuid.uuid4().hex[:12], command=list(command), kind=kind, tags=list(tags))
-        self.jobs_dir.mkdir(parents=True, exist_ok=True)
+        return self.execute(self.prepare(command, kind=kind, tags=tags), on_line=on_line, cwd=cwd)
+
+    def execute(
+        self, job: Job, *, on_line: LineCallback | None = None, cwd: Path | None = None
+    ) -> Job:
+        """Run a prepared job. Raises ``JobRunning`` when another job holds the lock."""
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
-        log_path = self.jobs_dir / f"{job.id}.log"
-        job.log_path = str(log_path)
+        log_path = Path(job.log_path or self.jobs_dir / f"{job.id}.log")
         with open(self.lock_file, "a+", encoding="utf-8") as lock:
             try:
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -197,6 +216,7 @@ class SbRunner:
                     self._save(job)
                     return job
                 assert process.stdout is not None
+                self._process, self._cancelled = process, False
                 try:
                     for line in process.stdout:
                         log.write(line)
@@ -205,20 +225,40 @@ class SbRunner:
                             on_line(line.rstrip("\n"))
                     returncode = process.wait()
                 except KeyboardInterrupt:
-                    process.terminate()
-                    try:
-                        process.wait(timeout=10)
-                    except subprocess.TimeoutExpired:
-                        process.kill()
+                    self._stop(process)
                     job.status, job.returncode, job.finished_at = "interrupted", 130, _now()
                     self._save(job)
                     raise
-            job.returncode = returncode
-            job.status = "succeeded" if returncode == 0 else "failed"
+                finally:
+                    self._process = None
+                if self._cancelled:
+                    log.write("cancelled\n")
+            if self._cancelled:
+                job.status, job.returncode = "interrupted", returncode
+            else:
+                job.returncode = returncode
+                job.status = "succeeded" if returncode == 0 else "failed"
             job.finished_at = _now()
             self._save(job)
             fcntl.flock(lock, fcntl.LOCK_UN)
         return job
+
+    @staticmethod
+    def _stop(process: subprocess.Popen[str]) -> None:
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+
+    def cancel(self) -> bool:
+        """Stop the job this runner is executing, if any. Returns whether one was stopped."""
+        process = self._process
+        if process is None or process.poll() is not None:
+            return False
+        self._cancelled = True
+        self._stop(process)
+        return True
 
     def install(
         self, tags: Iterable[str], *, on_line: LineCallback | None = None, **options: Any

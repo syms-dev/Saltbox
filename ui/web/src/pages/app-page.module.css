@@ -1,0 +1,12 @@
+.title {
+  margin: 0;
+}
+
+.form {
+  margin-top: var(--space-3);
+}
+
+.help {
+  font-size: var(--text-xs);
+  white-space: pre-wrap;
+}

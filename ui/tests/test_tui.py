@@ -268,3 +268,28 @@ async def test_storage_existing_without_remotes_blocks(session: InstallerSession
         await settle(app, pilot)
         await next_step(app, pilot)
         assert isinstance(app.screen, StorageScreen)  # blocked: nothing in rclone.conf
+
+
+async def test_done_screen_enables_web(
+    session: InstallerSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session.plan = InstallPlan(phase="done", user_name="seed", domain="example.com")
+    session.save()
+    calls: list[str] = []
+
+    def fake_enable() -> dict:
+        calls.append("enable")
+        return {"url": "https://saltbox.example.com", "started": True}
+
+    monkeypatch.setattr(session, "enable_web", fake_enable)
+    app = make_app(session)
+    async with app.run_test(size=(120, 50)) as pilot:
+        app.show_step(STEPS.index(DoneScreen))  # a finished install is not resumable
+        await pilot.pause()
+        assert isinstance(app.screen, DoneScreen)
+        await click(pilot, "#enable_web")
+        await settle(app, pilot)
+        assert calls == ["enable"]
+        status = str(app.screen.query_one("#web_status", Static).content)
+        assert "https://saltbox.example.com" in status
+        assert app.screen.query_one("#enable_web", Button).disabled

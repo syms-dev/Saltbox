@@ -59,3 +59,42 @@ jobs:
           .venv/bin/sbx catalog apps | python3 -c 'import json,sys; a=json.load(sys.stdin); assert len(a) > 50, a; print(len(a), "apps")'
           .venv/bin/sbx catalog fields sonarr > /dev/null
           .venv/bin/sbx run install core --dry-run
+          .venv/bin/sbx install preflight > /dev/null
+          .venv/bin/sbx daemon unit | grep -q ExecStart
+
+  web:
+    name: Web app lint, tests and build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/web/package-lock.json
+
+      - name: Install
+        working-directory: ui/web
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint and typecheck
+        working-directory: ui/web
+        run: |
+          npx prettier --check "src/**/*.{ts,tsx,css}"
+          npm run lint
+          npm run typecheck
+
+      - name: Test
+        working-directory: ui/web
+        run: npm test
+
+      - name: Build
+        working-directory: ui/web
+        run: npm run build
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: saltbox-web-dist
+          path: ui/web/dist
+          retention-days: 14

@@ -134,6 +134,23 @@ def build_parser() -> argparse.ArgumentParser:
 
     tui = sub.add_parser("tui", help="start the terminal UI")
     tui.add_argument("--installer", action="store_true", default=True)
+
+    daemon = sub.add_parser("daemon", help="the web daemon: unit, route, status")
+    daemon_sub = daemon.add_subparsers(dest="action", required=True)
+    p = daemon_sub.add_parser("install", help="write the systemd unit and enable the daemon")
+    p.add_argument("--web", help="directory with the built web app")
+    p.add_argument("--no-start", action="store_true")
+    p = daemon_sub.add_parser("enable", help="token, Traefik route, unit and start: the web face")
+    p.add_argument("--subdomain", default="saltbox")
+    p.add_argument("--web", help="directory with the built web app")
+    p.add_argument("--no-start", action="store_true")
+    p = daemon_sub.add_parser("route", help="write the Traefik route for saltbox.<domain>")
+    p.add_argument("--subdomain", default="saltbox")
+    p.add_argument("--traefik-dir", help="Traefik config directory (default: <appdata>/traefik)")
+    daemon_sub.add_parser("unit", help="print the systemd unit")
+    daemon_sub.add_parser("url", help="print the web URL")
+    daemon_sub.add_parser("token", help="print the API token (root)")
+    daemon_sub.add_parser("status", help="systemd status of the daemon")
     return parser
 
 
@@ -155,6 +172,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _dispatch(args: argparse.Namespace, layout: Layout) -> int:
+    if args.group == "daemon":
+        return _daemon(args, layout)
     if args.group == "layout":
         emit(layout.as_dict())
         return 0
@@ -359,3 +378,56 @@ def _dispatch(args: argparse.Namespace, layout: Layout) -> int:
 
 if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())
+
+
+def _daemon(args: argparse.Namespace, layout: Layout) -> int:
+    from pathlib import Path
+
+    from .daemon.app import ensure_token, read_token
+    from .daemon.install import (
+        UNIT_NAME,
+        enable_web,
+        install_unit,
+        systemctl,
+        systemd_unit,
+        url_for,
+        write_route,
+    )
+
+    if args.action == "unit":
+        print(systemd_unit(), end="")
+        return 0
+    if args.action == "url":
+        emit({"url": url_for(layout)})
+        return 0
+    if args.action == "token":
+        token = read_token(layout)
+        emit({"token": token, "path": str(layout.state_dir / "api-token")})
+        return 0 if token else 1
+    if args.action == "status":
+        code, output = systemctl("status", "--no-pager", UNIT_NAME)
+        emit({"active": code == 0, "output": output})
+        return 0
+    if args.action == "enable":
+        web = Path(args.web) if args.web else None
+        emit(enable_web(layout, subdomain=args.subdomain, web=web, start=not args.no_start))
+        return 0
+    if args.action == "route":
+        token = ensure_token(layout)
+        traefik_dir = Path(args.traefik_dir) if args.traefik_dir else None
+        path = write_route(layout, token, subdomain=args.subdomain, traefik_dir=traefik_dir)
+        emit({"route": str(path), "url": url_for(layout, args.subdomain)})
+        return 0
+    if args.action == "install":
+        ensure_token(layout)
+        web = Path(args.web) if args.web else None
+        unit = install_unit(web=web)
+        steps = {"unit": str(unit)}
+        code, output = systemctl("daemon-reload")
+        steps["daemon-reload"] = output or ("ok" if code == 0 else f"exit {code}")
+        if not args.no_start:
+            code, output = systemctl("enable", "--now", UNIT_NAME)
+            steps["enable"] = output or ("ok" if code == 0 else f"exit {code}")
+        emit(steps)
+        return 0
+    return 1

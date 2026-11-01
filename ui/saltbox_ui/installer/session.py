@@ -19,6 +19,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from ..catalog import Catalog
 from ..config import ConfigService, Inventory
@@ -146,6 +147,15 @@ class InstallerSession:
         else:
             self.save()
         return job
+
+    def enable_web(self) -> dict[str, Any]:
+        """Set up the web face for this install; replaceable in tests."""
+        from ..daemon.install import enable_web
+
+        result = enable_web(self.layout)
+        self.plan.notes.append(f"web UI enabled at {result['url']}")
+        self.save()
+        return result
 
     def run_tag(self, tags: list[str], on_line: LineCallback | None = None) -> Job:
         job = self.runner.install(tags, on_line=on_line)

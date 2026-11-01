@@ -898,6 +898,15 @@ class DoneScreen(StepScreen):
             f"User: {plan.user_name}   Password: the one you entered. "
             "Several apps use it as their first login."
         )
+        yield Static("Web UI", classes="section")
+        yield Static(
+            f"Manage this server from a browser at https://saltbox.{plan.domain}, behind "
+            "Authelia. This writes a Traefik route and starts the saltbox-ui service.",
+            classes="hint",
+        )
+        with Horizontal():
+            yield Button("Enable the web UI", id="enable_web", variant="primary")
+            yield Static("", id="web_status", classes="hint")
         yield Static("Next steps", classes="section")
         yield Static(
             "1. sudo reboot\n"
@@ -910,3 +919,29 @@ class DoneScreen(StepScreen):
             yield Static("Notes", classes="section")
             for note in plan.notes:
                 yield Static(f"· {note}", classes="hint")
+
+    @on(Button.Pressed, "#enable_web")
+    def _enable_web(self) -> None:
+        self.query_one("#enable_web", Button).disabled = True
+        self.query_one("#web_status", Static).update("enabling…")
+        self.enable_web()
+
+    @work(thread=True, exclusive=True)
+    def enable_web(self) -> None:
+        session = _session(self)
+        try:
+            result = session.enable_web()
+        except (OSError, ValueError) as error:
+            self.app.call_from_thread(self._web_done, f"failed: {error}", False)
+            return
+        started = result.get("started", True)
+        text = (
+            f"ready at {result['url']}" if started else "unit written but the service did not start"
+        )
+        self.app.call_from_thread(self._web_done, text, started)
+
+    def _web_done(self, text: str, ok: bool) -> None:
+        status = self.query_one("#web_status", Static)
+        status.update(text)
+        status.set_classes("ok" if ok else "error")
+        self.query_one("#enable_web", Button).disabled = ok

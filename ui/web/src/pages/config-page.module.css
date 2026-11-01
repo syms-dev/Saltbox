@@ -1,0 +1,62 @@
+.layout {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 16rem 1fr;
+}
+
+.files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.file {
+  border-radius: var(--radius-sm);
+  color: var(--color-fg);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  word-break: break-all;
+}
+
+.file:hover {
+  background: var(--color-surface-2);
+  text-decoration: none;
+}
+
+.file:global(.active) {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+}
+
+.editor {
+  min-height: 60vh;
+  resize: vertical;
+  width: 100%;
+}
+
+.issues {
+  display: grid;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.error {
+  color: var(--color-danger);
+}
+
+.warning {
+  color: var(--color-warn);
+}
+
+.ok {
+  color: var(--color-ok);
+}
+
+@media (max-width: 48rem) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

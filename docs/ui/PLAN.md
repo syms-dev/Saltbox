@@ -167,7 +167,16 @@ Support (diag, sanitized support bundle, config validation, docs links).
    in the fork's bootstrap).
 2. Daemon and web face (2 weeks): systemd, socket API, WebSocket jobs,
    Traefik file-provider route behind Authelia, React Overview/Apps/Jobs/
-   Settings. TUI switches to the API.
+   Settings. **Built** (`ui/saltbox_ui/daemon`, `ui/web`): FastAPI over the
+   engine, bearer token injected by the Traefik route after Authelia, jobs
+   in a background thread with a WebSocket log stream and cancel, React
+   pages for overview (needs-attention list), apps (tiles plus installed
+   table, per-app overrides editor and role defaults), jobs (run, history,
+   live log) and config (editor with schema validation, inventory). The
+   installer's done screen enables it. The TUI still uses the engine
+   directly; sharing the runner lock keeps the two from colliding, so the
+   switch to the API is deferred. **Still to do:** the VM run, and
+   packaging the web build so the server does not need node.
 3. Day-two depth (2 weeks): Storage, Backup and Restore, Support, setup
    checklists for the Saltbox selection, instances, Sandbox catalog.
 4. Ongoing: upstream merge routine, docs, release process, security review.

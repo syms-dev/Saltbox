@@ -13,6 +13,8 @@ dependencies = [
     "ruamel.yaml>=0.18,<0.20",
     "tld>=0.13",
     "textual>=8.0,<9",
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30,<1",
 ]
 
 [project.optional-dependencies]
@@ -22,11 +24,13 @@ dev = [
     "pytest>=8",
     "pytest-asyncio>=0.24",
     "ruff>=0.6",
+    "httpx>=0.27",
 ]
 
 [project.scripts]
 sbx = "saltbox_ui.cli:main"
 saltbox-ui = "saltbox_ui.tui.app:main"
+saltbox-uid = "saltbox_ui.daemon.main:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["saltbox_ui"]
