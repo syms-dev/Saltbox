@@ -132,6 +132,33 @@ SALTBOX_UI_STATE=/tmp/state SB_BINARY=/tmp/fake-sb .venv/bin/saltbox-ui
 The TUI tests drive every screen with Textual's pilot against a fake `sb` and
 a fake `rclone` that speaks the config-create protocol.
 
+## Connecting the apps
+
+After the install, `sudo saltbox-ui --setup` (or "Connect the apps" on the
+installer's last screen) makes the connections the Saltbox app docs describe:
+
+- qBittorrent saves to `/mnt/unionfs/downloads/torrents/qbittorrent/completed/`
+  with incomplete files in `incoming/`.
+- Sonarr, Radarr and Lidarr get root folders under `/mnt/unionfs/Media`,
+  qBittorrent (and SABnzbd when installed) as download clients with a
+  category per app, and an Autoscan webhook with only the file events
+  Autoscan understands.
+- Prowlarr syncs its indexers to each of them and gets qBittorrent too.
+- Plex gets Movies, TV Shows and Music libraries on the same paths, each
+  scanned once so Autoscan can update them.
+
+It reads API keys from each app's own config under `/opt`, the qBittorrent
+and Autoscan login from `accounts.yml`, and the Plex token from
+`/opt/saltbox/plex.ini`, and reaches the containers by name through the
+`/etc/hosts` entries Saltbox's sdhm service maintains. Each connection is
+checked before anything is added, so running it again changes nothing.
+Bazarr and Seerr are listed as manual steps with the exact values to enter:
+Seerr needs a Plex sign-in in the browser, and Bazarr has no stable API for
+its settings.
+
+The same is scriptable with `sbx setup status` and `sbx setup apply`, and
+the daemon serves it at `GET /api/setup` and `POST /api/setup/apply`.
+
 ## Daemon and web app
 
 The daemon runs as root under systemd. It listens on 127.0.0.1 and on the

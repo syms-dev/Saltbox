@@ -179,6 +179,10 @@ Support (diag, sanitized support bundle, config validation, docs links).
    packaging the web build so the server does not need node.
 3. Day-two depth (2 weeks): Storage, Backup and Restore, Support, setup
    checklists for the Saltbox selection, instances, Sandbox catalog.
+   **Started:** app setup (`ui/saltbox_ui/appsetup`) connects qBittorrent,
+   Sonarr, Radarr, Lidarr, Prowlarr, Autoscan and Plex through their APIs,
+   idempotently, from the TUI, `sbx setup` and the daemon; Bazarr and Seerr
+   are manual checklist items with the values filled in.
 4. Ongoing: upstream merge routine, docs, release process, security review.
 
 ## Decisions needed

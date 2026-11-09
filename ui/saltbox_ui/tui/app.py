@@ -15,6 +15,7 @@ from pathlib import Path
 from textual.app import App
 from textual.binding import Binding
 
+from ..appsetup import AppSetup
 from ..installer import InstallerSession
 from ..installer.preflight import Probe, can_reach_ipv6
 from ..layout import Layout
@@ -75,11 +76,13 @@ class InstallerApp(App[None]):
         probe_factory: Callable[[Layout], Probe] | None = None,
         auto_resume: bool = True,
         ipv6_check: Callable[[], bool] | None = None,
+        app_setup_factory: Callable[[Layout], AppSetup] | None = None,
     ) -> None:
         super().__init__()
         self.session = session
         self.probe_factory = probe_factory or Probe.from_host
         self.ipv6_check = ipv6_check or can_reach_ipv6
+        self.app_setup_factory = app_setup_factory or AppSetup
         self.auto_resume = auto_resume
         self.step_index = 0
 
@@ -142,12 +145,18 @@ def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
     if "--help" in args or "-h" in args:
         print(
-            "saltbox-ui [--installer] [--serve [HOST:PORT]]\n\nRuns the Saltbox installer wizard."
+            "saltbox-ui [--installer | --setup] [--serve [HOST:PORT]]\n\n"
+            "Runs the Saltbox installer wizard. --setup connects the installed apps."
         )
         return 0
     ensure_root(args)
     if "--serve" in args:
         return serve(args)
+    if "--setup" in args:
+        from .setup_screen import run_setup
+
+        run_setup()
+        return 0
     run_installer()
     return 0
 

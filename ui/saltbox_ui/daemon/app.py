@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hmac
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -36,6 +38,7 @@ class Services:
     jobs: JobManager = field(init=False)
     token: str | None = None
     web_dir: Path | None = None
+    app_setup_factory: Callable[[Layout], Any] | None = None
 
     def __post_init__(self) -> None:
         self.config = ConfigService(self.layout)

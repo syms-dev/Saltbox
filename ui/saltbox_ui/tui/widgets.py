@@ -13,8 +13,29 @@ from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Button, Input, Label, SelectionList, Static
 
-CHECK_GLYPHS = {"pass": "✓", "warn": "!", "fail": "✗", "skip": "-", "running": "…"}
-CHECK_CLASSES = {"pass": "ok", "warn": "warn", "fail": "error", "skip": "hint", "running": "hint"}
+CHECK_GLYPHS = {
+    "pass": "✓",
+    "warn": "!",
+    "fail": "✗",
+    "skip": "-",
+    "running": "…",
+    # app setup statuses
+    "done": "✓",
+    "todo": "○",
+    "manual": "!",
+    "error": "✗",
+}
+CHECK_CLASSES = {
+    "pass": "ok",
+    "warn": "warn",
+    "fail": "error",
+    "skip": "hint",
+    "running": "hint",
+    "done": "ok",
+    "todo": "hint",
+    "manual": "warn",
+    "error": "error",
+}
 
 
 class StepScreen(Screen):

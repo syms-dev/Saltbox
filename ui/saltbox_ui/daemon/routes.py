@@ -279,6 +279,31 @@ def host(request: Request) -> dict[str, Any]:
     }
 
 
+# -- app setup ---------------------------------------------------------------
+def _app_setup(request: Request):
+    from ..appsetup import AppSetup
+
+    svc = services(request)
+    factory = getattr(svc, "app_setup_factory", None) or AppSetup
+    return factory(svc.layout)
+
+
+@router.get("/setup")
+def setup_status(request: Request) -> dict[str, Any]:
+    from ..appsetup import summarize
+
+    tasks = _app_setup(request).status()
+    return {"summary": summarize(tasks), "tasks": [t.as_dict() for t in tasks]}
+
+
+@router.post("/setup/apply")
+def setup_apply(request: Request) -> dict[str, Any]:
+    from ..appsetup import summarize
+
+    tasks = _app_setup(request).apply()
+    return {"summary": summarize(tasks), "tasks": [t.as_dict() for t in tasks]}
+
+
 # -- jobs ------------------------------------------------------------------
 class JobRequest(BaseModel):
     kind: str = "install"

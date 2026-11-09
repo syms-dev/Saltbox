@@ -1123,6 +1123,13 @@ class DoneScreen(StepScreen):
             f"User: {plan.user_name}   Password: the one you entered. "
             "Several apps use it as their first login."
         )
+        yield Static("Connect your apps", classes="section")
+        yield Static(
+            "Links Sonarr, Radarr and Lidarr to qBittorrent, Autoscan and Prowlarr and adds your "
+            "Plex libraries. Run it any time with: sudo saltbox-ui --setup",
+            classes="hint",
+        )
+        yield Button("Connect the apps", id="connect_apps", variant="primary")
         yield Static("Web UI", classes="section")
         yield Static(
             f"Manage this server from a browser at https://saltbox.{plan.domain}, behind "
@@ -1144,6 +1151,13 @@ class DoneScreen(StepScreen):
             yield Static("Notes", classes="section")
             for note in plan.notes:
                 yield Static(f"· {note}", classes="hint")
+
+    @on(Button.Pressed, "#connect_apps")
+    def _connect_apps(self) -> None:
+        from ..setup_screen import SetupScreen
+
+        factory = self.app.app_setup_factory  # type: ignore[attr-defined]
+        self.app.push_screen(SetupScreen(factory(_session(self).layout)))
 
     @on(Button.Pressed, "#enable_web")
     def _enable_web(self) -> None:

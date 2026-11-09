@@ -135,6 +135,11 @@ def build_parser() -> argparse.ArgumentParser:
     tui = sub.add_parser("tui", help="start the terminal UI")
     tui.add_argument("--installer", action="store_true", default=True)
 
+    setup = sub.add_parser("setup", help="connect the installed apps to each other")
+    setup_sub = setup.add_subparsers(dest="action", required=True)
+    setup_sub.add_parser("status", help="check every connection")
+    setup_sub.add_parser("apply", help="make the missing connections")
+
     daemon = sub.add_parser("daemon", help="the web daemon: unit, route, status")
     daemon_sub = daemon.add_subparsers(dest="action", required=True)
     p = daemon_sub.add_parser("install", help="write the systemd unit and enable the daemon")
@@ -175,6 +180,8 @@ def main(argv: list[str] | None = None) -> int:
 def _dispatch(args: argparse.Namespace, layout: Layout) -> int:
     if args.group == "daemon":
         return _daemon(args, layout)
+    if args.group == "setup":
+        return _setup(args, layout)
     if args.group == "layout":
         emit(layout.as_dict())
         return 0
@@ -456,3 +463,13 @@ def _build_web(layout: Layout) -> int:
             return 1
     emit({"built": str(source / "dist")})
     return 0
+
+
+def _setup(args: argparse.Namespace, layout: Layout) -> int:
+    from .appsetup import AppSetup, summarize
+
+    setup = AppSetup(layout)
+    tasks = setup.apply() if args.action == "apply" else setup.status()
+    counts = summarize(tasks)
+    emit({"summary": counts, "tasks": [task.as_dict() for task in tasks]})
+    return 3 if counts["error"] else 0
