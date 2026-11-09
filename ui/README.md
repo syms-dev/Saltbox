@@ -76,13 +76,33 @@ sudo git fetch origin claude/saltbox-gui-tui-bxul3c
 sudo git checkout -B claude/saltbox-gui-tui-bxul3c origin/claude/saltbox-gui-tui-bxul3c
 
 sudo apt install -y pipx
-sudo PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install /srv/git/saltbox/ui
+sudo PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install --editable /srv/git/saltbox/ui
 sudo saltbox-ui
 ```
 
 `PIPX_HOME` and `PIPX_BIN_DIR` put the commands in `/usr/local/bin`, which is
 on sudo's path. A plain `sudo -H pipx install` puts them in
-`/root/.local/bin`, which is not. Tested on Ubuntu 26.04 with Python 3.14.
+`/root/.local/bin`, which is not. `--editable` makes the installed commands
+run the code in the checkout, so updating the checkout updates the UI too.
+Tested on Ubuntu 26.04 with Python 3.14.
+
+### Updating
+
+Keep using `sb update`. It fetches the checkout's current branch and resets
+to it (`git reset --hard @{u}`), so with the branch tracking the fork it
+pulls the fork, never saltyorg. When it asks whether to reset to `master`,
+answer `n`; answering `y` moves the checkout back to upstream Saltbox and
+the UI disappears. Run without a terminal, as the daemon's update job does,
+it stays on the current branch without asking. After an update that changes
+the UI's dependencies, refresh them with:
+
+```
+sudo PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install --force --editable /srv/git/saltbox/ui
+```
+
+Upstream Saltbox changes reach the server only through the fork: sync the
+fork's `master` with saltyorg on GitHub, then merge `master` into the UI
+branch.
 
 `saltbox-ui` re-executes itself through sudo when needed, keeping the
 `SALTBOX_*` variables. Progress is saved to `/var/lib/saltbox-ui/install-plan.json`
