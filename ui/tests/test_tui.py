@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from textual.widgets import (
     Button,
+    Collapsible,
     Input,
     Log,
     RadioButton,
@@ -457,10 +458,8 @@ def test_extra_app_choices_hide_tools_and_label_included(repo_layout) -> None:
     assert "plex" not in roles  # picked with the media server list instead
     titles = [a.title.lower() for a in apps]
     assert titles == sorted(titles)
-    sonarr = next(a for a in apps if a.role == "sonarr")
-    assert "(included with" in extra_app_label(sonarr)
     bazarr = next(a for a in apps if a.role == "bazarr")
-    assert "included" not in extra_app_label(bazarr)
+    assert extra_app_label(bazarr).startswith("Bazarr  ·  ")
 
 
 @pytest.mark.parametrize("ipv6", [False, True])
@@ -484,3 +483,25 @@ async def test_dns_step_checks_ipv6_before_enabling_it(
             assert app.screen.TITLE == "DNS and certificates"
             assert "no working IPv6" in str(app.screen.query_one("#step-error", Static).content)
             assert session.plan.dns_ipv6 is False
+
+
+async def test_extras_hide_apps_the_install_type_includes(session: InstallerSession) -> None:
+    app = make_app(session)
+    async with app.run_test(size=(120, 60)) as pilot:
+        app.show_step(STEPS.index(AppsScreen))
+        await pilot.pause()
+        extras = app.screen.query_one("#extra_apps", FilterableSelection)
+        offered = {value for _, value in extras.items}
+        assert "bazarr" in offered
+        assert not offered & {"sonarr", "radarr", "autoscan", "seerr", "tautulli"}
+        extras.selected_values.add("bazarr")
+
+        await pick_radio(app, "profile", "core", pilot)
+        offered = {value for _, value in extras.items}
+        assert {"sonarr", "radarr", "bazarr"} <= offered
+        assert "bazarr" in extras.selected_values  # kept across the switch
+        assert str(len(offered)) in str(app.screen.query_one("#extras_box", Collapsible).title)
+
+        extras.selected_values.add("sonarr")
+        await pick_radio(app, "profile", "saltbox", pilot)
+        assert "sonarr" not in extras.selected_values  # dropped: saltbox includes it

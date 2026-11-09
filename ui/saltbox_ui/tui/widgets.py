@@ -172,6 +172,16 @@ class FilterableSelection(Vertical):
         yield Input(placeholder=self.placeholder, id="filter")
         yield SelectionList[str](*self._entries(""), id="list")
 
+    def set_items(self, items: Iterable[tuple[str, str]]) -> None:
+        """Replace the choices, dropping selections that are no longer offered."""
+        self.items = list(items)
+        self.selected_values &= {value for _, value in self.items}
+        if not self.is_mounted:
+            return
+        lst = self.query_one("#list", SelectionList)
+        lst.clear_options()
+        lst.add_options(self._entries(self.query_one("#filter", Input).value))
+
     def _entries(self, needle: str) -> list[tuple[str, str, bool]]:
         needle = needle.lower()
         return [

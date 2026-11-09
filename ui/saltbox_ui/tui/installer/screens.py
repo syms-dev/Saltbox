@@ -90,8 +90,6 @@ def extra_app_choices(apps: list) -> list:
 
 def extra_app_label(app) -> str:
     label = app.title
-    if app.main_tags:
-        label += f" (included with {'/'.join(app.main_tags)})"
     if app.summary:
         label += f"  ·  {app.summary[:60]}"
     return label
@@ -449,12 +447,11 @@ class AppsScreen(StepScreen):
             *[(label, value, value in plan.download_indexers) for label, value in INDEXERS],
             id="download_indexers",
         )
-        apps = extra_app_choices(session.catalog.apps())
-        with Collapsible(
-            title=f"More Saltbox apps, on top of the install type ({len(apps)})", collapsed=True
-        ):
+        self._extra_apps = extra_app_choices(session.catalog.apps())
+        shown = self._extras_for(plan.profile)
+        with Collapsible(title=self._extras_title(shown), collapsed=True, id="extras_box"):
             yield FilterableSelection(
-                [(extra_app_label(a), a.sb_tag or a.role) for a in apps],
+                [(extra_app_label(a), a.sb_tag or a.role) for a in shown],
                 plan.extra_apps,
                 id="extra_apps",
                 placeholder="Filter apps…",
@@ -473,7 +470,14 @@ class AppsScreen(StepScreen):
             )
         yield Static("Authelia single sign-on", classes="section")
         yield Checkbox(
-            "This server runs Authelia (master)", plan.authelia_master, id="authelia_master"
+            "Run Authelia on this server (the login page in front of every app)",
+            plan.authelia_master,
+            id="authelia_master",
+        )
+        yield Static(
+            "Keep this ticked. Untick it only when another Saltbox server already runs "
+            "Authelia and this one should use that.",
+            classes="hint",
         )
         yield FieldRow(
             "Authelia subdomain", Input(plan.authelia_subdomain, id="authelia_subdomain")
@@ -498,6 +502,20 @@ class AppsScreen(StepScreen):
                 "pick below."
             )
         self.query_one("#profile_includes", Static).update(text)
+        shown = self._extras_for(profile)
+        self.query_one("#extra_apps", FilterableSelection).set_items(
+            [(extra_app_label(a), a.sb_tag or a.role) for a in shown]
+        )
+        self.query_one("#extras_box", Collapsible).title = self._extras_title(shown)
+
+    def _extras_for(self, profile: str) -> list:
+        """Extras not already installed by ``profile``."""
+        included = set(self.included(profile))
+        return [a for a in self._extra_apps if a.role not in included]
+
+    @staticmethod
+    def _extras_title(shown: list) -> str:
+        return f"More Saltbox apps, on top of the install type ({len(shown)})"
 
     def on_mount(self) -> None:
         self._show_included(_plan(self).profile)
