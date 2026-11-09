@@ -24,24 +24,81 @@
       - "HEAD"
   register: git_version
 
-- name: Repository | Check Git Origin Hash
-  ansible.builtin.include_tasks: "{{ resources_tasks_path }}/git/github_api_request.yml"
-  vars:
-    github_api_url: "https://api.github.com/repos/saltyorg/Saltbox/commits?sha={{ git_branch.stdout }}"
-    github_api_result_var: git_origin_commits_api
-    github_api_timeout: 3
-    github_api_headers:
+# The status below is informational, so nothing here may fail the run. The
+# repository is read from the origin remote so a fork is compared with its own
+# branch; asking saltyorg/Saltbox for a branch that only exists on a fork
+# returns 404.
+- name: Repository | Get Git Origin URL
+  ansible.builtin.command:
+    argv:
+      - "git"
+      - "remote"
+      - "get-url"
+      - "origin"
+  register: git_origin_url
+  changed_when: false
+  failed_when: false
+
+- name: Repository | Set Git Origin Repository
+  ansible.builtin.set_fact:
+    git_origin_repo: "{{ git_origin_url.stdout | default('')
+                         | regex_replace('\\.git$', '')
+                         | regex_search('github\\.com[:/]+([^/]+/[^/]+)$', '\\1')
+                         | default(['saltyorg/Saltbox'], true)
+                         | first }}"
+
+- name: Repository | Set Git Origin Commits URL
+  ansible.builtin.set_fact:
+    git_origin_commits_url: "https://api.github.com/repos/{{ git_origin_repo }}/commits?sha={{ git_branch.stdout }}"
+
+- name: Repository | Check Git Origin Hash using svm proxy
+  ansible.builtin.uri:
+    url: "{{ svm }}{{ git_origin_commits_url }}"
+    method: GET
+    return_content: true
+    timeout: 3
+    headers:
       Accept: application/vnd.github+json
       X-GitHub-Api-Version: "2022-11-28"
+  register: git_origin_commits_svm
+  changed_when: false
+  failed_when: false
+
+- name: Repository | Check Git Origin Hash directly
+  ansible.builtin.uri:
+    url: "{{ git_origin_commits_url }}"
+    method: GET
+    return_content: true
+    timeout: 3
+    headers:
+      Accept: application/vnd.github+json
+      X-GitHub-Api-Version: "2022-11-28"
+  register: git_origin_commits_direct
+  changed_when: false
+  failed_when: false
+  when: (git_origin_commits_svm.status | default(0) | int != 200)
 
 - name: Repository | Resolve Git Origin Hash
   ansible.builtin.set_fact:
     git_origin_version:
-      stdout: "{{ (git_origin_commits_api.content | from_json
-                   | selectattr('sha', 'defined')
-                   | map(attribute='sha')
-                   | first
-                   | default('')) }}"
+      stdout: "{{ _git_origin_commits
+                  | selectattr('sha', 'defined')
+                  | map(attribute='sha')
+                  | first
+                  | default('') }}"
+  vars:
+    _git_origin_response: "{{ git_origin_commits_svm
+                              if (git_origin_commits_svm.status | default(0) | int == 200)
+                              else (git_origin_commits_direct | default({})) }}"
+    _git_origin_body: "{{ _git_origin_response.content | default('', true) | trim }}"
+    _git_origin_parsed: "{{ (_git_origin_body | from_json)
+                            if ((_git_origin_response.status | default(0) | int == 200) and (_git_origin_body | length > 0))
+                            else [] }}"
+    _git_origin_commits: "{{ _git_origin_parsed
+                             if ((_git_origin_parsed is sequence)
+                                 and (_git_origin_parsed is not string)
+                                 and (_git_origin_parsed is not mapping))
+                             else [] }}"
   changed_when: false
 
 - name: Repository | Print Git Hash
