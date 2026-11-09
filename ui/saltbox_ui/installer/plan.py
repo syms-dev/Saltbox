@@ -121,6 +121,10 @@ class InstallPlan:
     backup_rclone: bool = False
     backup_rclone_destination: str = "google:/Backups/Saltbox"
     backup_cron: str = "weekly"
+    # Plex account, linked before the install so the Plex role never prompts
+    plex_client_id: str = ""
+    plex_token: str = ""
+    plex_username: str = ""
     # Progress
     jobs: dict[str, str] = field(default_factory=dict)
     preinstall_started_at: float | None = None
@@ -154,7 +158,13 @@ class InstallPlan:
 
     def redacted(self) -> dict[str, Any]:
         data = self.as_dict()
-        for key in ("user_pass", "cloudflare_token", "cloudflare_api", "dockerhub_token"):
+        for key in (
+            "user_pass",
+            "cloudflare_token",
+            "cloudflare_api",
+            "dockerhub_token",
+            "plex_token",
+        ):
             if data.get(key):
                 data[key] = "•" * 8
         data["provider_credentials"] = {k: "•" * 8 for k in self.provider_credentials}
@@ -168,6 +178,19 @@ class InstallPlan:
     @property
     def rclone_enabled(self) -> bool:
         return self.storage_mode in {"existing", "create"} and bool(self.remotes)
+
+    def _installs(self, role: str) -> bool:
+        if self.profile in {"saltbox", "mediabox"}:
+            return role in self.media_servers
+        return role in self.extra_apps
+
+    @property
+    def installs_plex(self) -> bool:
+        return self._installs("plex")
+
+    @property
+    def installs_jellyfin(self) -> bool:
+        return self._installs("jellyfin")
 
     def install_tags(self) -> list[str]:
         """Tags for the main install run, after preinstall."""

@@ -215,3 +215,10 @@ Collapsible {
 #create_row Button, #remote_box #reload {
     margin-left: 1;
 }
+
+.code-box {
+    background: $panel;
+    padding: 1 2;
+    margin: 1 0;
+    height: auto;
+}

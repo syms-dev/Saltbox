@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+import time
 from typing import Any
 
 from textual import on, work
@@ -22,6 +24,7 @@ from textual.widgets import (
 
 from ...installer.plan import DNS_MODES, PROFILES, PROVIDER_FIELDS, Remote
 from ...installer.preflight import run_preflight, summarize
+from ...plex import Pin, PlexError
 from ...rclone import RcloneError
 from ...schema import validators as v
 from ...schema.api_checks import check_cloudflare
@@ -450,6 +453,12 @@ class AppsScreen(StepScreen):
         if profile == "custom":
             selected = plan.media_servers + plan.download_clients + plan.download_indexers
             plan.extra_apps = [a for a in selected if a not in plan.extra_apps] + plan.extra_apps
+        if plan.installs_jellyfin:
+            return (
+                "Jellyfin stops mid-install for its browser setup wizard, which this installer "
+                "can't wait for yet. Untick it here and run 'sudo sb install jellyfin' in a "
+                "terminal after the install."
+            )
         plan.authelia_master = self.query_one("#authelia_master", Checkbox).value
         subdomain = self.query_one("#authelia_subdomain", Input).value.strip()
         try:
@@ -666,7 +675,6 @@ class InstallScreen(RunScreen):
 # ---------------------------------------------------------------------------
 class StorageScreen(StepScreen):
     TITLE = "Storage"
-    NEXT_LABEL = "Continue to install"
 
     def body(self) -> ComposeResult:
         plan = _plan(self)
@@ -872,6 +880,130 @@ def _template_for(remote_type: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+class PlexScreen(StepScreen):
+    """Link a Plex account so the Plex role finds a token and never stops to ask."""
+
+    TITLE = "Plex account"
+    NEXT_LABEL = "Continue to install"
+    POLL_SECONDS = 2.0
+    PIN_WAIT_SECONDS = 15 * 60  # plex.tv expires link codes after about 15 minutes
+
+    def __init__(self, index: int, total: int, **kwargs: Any) -> None:
+        super().__init__(index, total, **kwargs)
+        self._cancel = threading.Event()
+
+    def body(self) -> ComposeResult:
+        plan = _plan(self)
+        if not plan.installs_plex:
+            yield Static("Plex isn't part of this install, so there's nothing to link.")
+            return
+        yield Static(
+            "Saltbox claims your Plex server with your Plex account. Link it now, so the "
+            "install doesn't stop halfway to ask.",
+            classes="lede",
+        )
+        yield Static("", id="plex_status")
+        yield Static("", id="plex_code", classes="code-box")
+        with Horizontal():
+            yield Button("Link Plex account", id="plex_link", variant="primary")
+            yield Button("Cancel", id="plex_cancel")
+
+    def on_mount(self) -> None:
+        plan = _plan(self)
+        if not plan.installs_plex:
+            return
+        self.query_one("#plex_code").display = False
+        self.query_one("#plex_cancel").display = False
+        if plan.plex_token:
+            self._status(f"Linked to Plex as {plan.plex_username or 'your account'}.", True)
+            self.query_one("#plex_link", Button).label = "Link a different account"
+        else:
+            self._status("Not linked yet.", None)
+            self.set_next_enabled(False)
+
+    def on_unmount(self) -> None:
+        self._cancel.set()
+
+    def _status(self, text: str, ok: bool | None) -> None:
+        widget = self.query_one("#plex_status", Static)
+        widget.update(text)
+        widget.set_classes("ok" if ok else ("error" if ok is False else "hint"))
+
+    @on(Button.Pressed, "#plex_link")
+    def _link(self) -> None:
+        self._cancel.set()
+        self._cancel = threading.Event()
+        self.query_one("#plex_link", Button).disabled = True
+        self._status("Asking plex.tv for a link code…", None)
+        self.link(self._cancel)
+
+    @on(Button.Pressed, "#plex_cancel")
+    def _cancel_link(self) -> None:
+        self._cancel.set()
+        self._reset("Cancelled. Press Link to get a new code.", None)
+
+    @work(thread=True, exclusive=True)
+    def link(self, cancel: threading.Event) -> None:
+        session = _session(self)
+        call = self.app.call_from_thread
+        try:
+            client = session.plex_client()
+            pin = client.create_pin()
+        except PlexError as error:
+            call(self._reset, str(error), False)
+            return
+        call(self._show_pin, pin)
+        deadline = time.monotonic() + self.PIN_WAIT_SECONDS
+        while not cancel.is_set() and time.monotonic() < deadline:
+            try:
+                token = client.check_pin(pin)
+                if token:
+                    username = client.username(token)
+                    session.save_plex_link(client.client_id, token, username)
+                    call(self._linked, username)
+                    return
+            except PlexError as error:
+                call(self._reset, str(error), False)
+                return
+            cancel.wait(self.POLL_SECONDS)
+        if not cancel.is_set():
+            call(self._reset, "The code expired. Press Link to get a new one.", False)
+
+    def _show_pin(self, pin: Pin) -> None:
+        code = self.query_one("#plex_code", Static)
+        code.update(
+            f"On any device, open {pin.link_url} and enter this code:\n\n"
+            f"        {pin.code}\n\n"
+            f"Or open this link instead:\n{pin.auth_url}"
+        )
+        code.display = True
+        self.query_one("#plex_cancel").display = True
+        self._status("Waiting for you to link the code…", None)
+
+    def _linked(self, username: str) -> None:
+        self.query_one("#plex_code").display = False
+        self.query_one("#plex_cancel").display = False
+        link = self.query_one("#plex_link", Button)
+        link.disabled = False
+        link.label = "Link a different account"
+        self._status(f"Linked to Plex as {username or 'your account'}.", True)
+        self.set_next_enabled(True)
+
+    def _reset(self, text: str, ok: bool | None) -> None:
+        self.query_one("#plex_code").display = False
+        self.query_one("#plex_cancel").display = False
+        self.query_one("#plex_link", Button).disabled = False
+        self._status(text, ok)
+        self.set_next_enabled(bool(_plan(self).plex_token))
+
+    def commit(self) -> str | None:
+        plan = _plan(self)
+        if plan.installs_plex and not plan.plex_token:
+            return "Link your Plex account first, or go back to Apps and untick Plex."
+        return None
+
+
+# ---------------------------------------------------------------------------
 class DoneScreen(StepScreen):
     TITLE = "Done"
     SHOW_BACK = False
@@ -938,6 +1070,8 @@ class DoneScreen(StepScreen):
         text = (
             f"ready at {result['url']}" if started else "unit written but the service did not start"
         )
+        if result.get("warning"):
+            text += f"; {result['warning']}"
         self.app.call_from_thread(self._web_done, text, started)
 
     def _web_done(self, text: str, ok: bool) -> None:

@@ -5,11 +5,21 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from textual.widgets import Button, Input, Log, RadioButton, RadioSet, Select, Static
+from textual.widgets import (
+    Button,
+    Input,
+    Log,
+    RadioButton,
+    RadioSet,
+    Select,
+    SelectionList,
+    Static,
+)
 
 from saltbox_ui.installer import InstallerSession
 from saltbox_ui.installer.plan import InstallPlan
 from saltbox_ui.layout import Layout
+from saltbox_ui.plex import Pin, PlexError, read_plex_facts
 from saltbox_ui.rclone import RcloneService
 from saltbox_ui.tui.app import STEPS, InstallerApp
 from saltbox_ui.tui.installer.rclone_screen import RcloneQuestionScreen
@@ -18,6 +28,7 @@ from saltbox_ui.tui.installer.screens import (
     AppsScreen,
     DoneScreen,
     InstallScreen,
+    PlexScreen,
     PreflightScreen,
     PreinstallScreen,
     ReviewScreen,
@@ -31,12 +42,53 @@ from tests.test_preflight import good_probe
 GIB = 1024**3
 
 
+class FakePlex:
+    """plex.tv stand-in: the code is linked on the second check."""
+
+    instances: list[FakePlex] = []
+
+    def __init__(self, *, fail_create: bool = False, polls_before_link: int = 1):
+        self.client_id = f"Saltboxtest{len(FakePlex.instances):04d}"
+        self.fail_create = fail_create
+        self.polls_before_link = polls_before_link
+        self.checks = 0
+        FakePlex.instances.append(self)
+
+    def create_pin(self) -> Pin:
+        if self.fail_create:
+            raise PlexError("cannot reach plex.tv: offline")
+        return Pin(id=42, code="AB12", client_id=self.client_id)
+
+    def check_pin(self, pin: Pin) -> str | None:
+        self.checks += 1
+        return "plex-token" if self.checks > self.polls_before_link else None
+
+    def username(self, token: str) -> str:
+        assert token == "plex-token"
+        return "seedling"
+
+
+@pytest.fixture(autouse=True)
+def fast_plex_polling(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(PlexScreen, "POLL_SECONDS", 0.02)
+    FakePlex.instances = []
+
+
 @pytest.fixture
 def session(scratch_layout: Layout, fake_sb: Path, fake_rclone: Path, tmp_path: Path):
     def rclone_factory(user: str) -> RcloneService:
         return RcloneService(fake_rclone, config_path=tmp_path / "rclone.conf")
 
-    return InstallerSession(scratch_layout, rclone_factory=rclone_factory)
+    return InstallerSession(scratch_layout, rclone_factory=rclone_factory, plex_factory=FakePlex)
+
+
+async def link_plex(app: InstallerApp, pilot) -> None:
+    assert isinstance(app.screen, PlexScreen)
+    assert app.screen.query_one("#next", Button).disabled
+    await click(pilot, "#plex_link")
+    await settle(app, pilot)
+    assert "Linked to Plex as seedling" in str(app.screen.query_one("#plex_status", Static).content)
+    assert not app.screen.query_one("#next", Button).disabled
 
 
 def make_app(session: InstallerSession, probe=None) -> InstallerApp:
@@ -131,6 +183,9 @@ async def test_full_wizard(session: InstallerSession) -> None:
         assert not app.screen.query_one("#remote_box").display
         await next_step(app, pilot)
 
+        await link_plex(app, pilot)
+        await next_step(app, pilot)
+
         assert isinstance(app.screen, InstallScreen)
         assert "sb install saltbox" in str(app.screen.query(".hint").first(Static).content)
         await click(pilot, "#run")
@@ -150,6 +205,8 @@ async def test_full_wizard(session: InstallerSession) -> None:
     adv = load_plain(session.layout.config_file("adv_settings"))
     assert adv["system"]["timezone"] == "Europe/Copenhagen"
     assert InstallPlan.load(session.plan_path).phase == "done"
+    facts = read_plex_facts(session.layout, "plex")
+    assert facts == {"client_identifier": "Saltboxtest0000", "token": "plex-token"}
 
 
 async def test_preflight_failure_blocks(session: InstallerSession) -> None:
@@ -247,6 +304,8 @@ async def test_storage_creates_remote_through_rclone(session: InstallerSession) 
         assert session.rclone().list_dirs("google") == ["Media"]
 
         await next_step(app, pilot)
+        await link_plex(app, pilot)
+        await next_step(app, pilot)
         assert isinstance(app.screen, InstallScreen)
         assert session.plan.storage_mode == "create"
         assert session.plan.rclone_enabled
@@ -293,3 +352,73 @@ async def test_done_screen_enables_web(
         status = str(app.screen.query_one("#web_status", Static).content)
         assert "https://saltbox.example.com" in status
         assert app.screen.query_one("#enable_web", Button).disabled
+
+
+async def test_plex_step_blocks_until_linked(session: InstallerSession) -> None:
+    session.plan = InstallPlan(phase="storage", user_name="seed", domain="example.com")
+    session.save()
+    app = make_app(session)
+    async with app.run_test(size=(120, 50)) as pilot:
+        app.show_step(STEPS.index(PlexScreen))
+        await pilot.pause()
+        assert app.screen.query_one("#next", Button).disabled
+        await next_step(app, pilot)
+        assert isinstance(app.screen, PlexScreen)
+        assert "Link your Plex account" in (app.screen.commit() or "")
+
+
+async def test_plex_step_shows_code_and_cancels(session: InstallerSession) -> None:
+    session._plex_factory = lambda: FakePlex(polls_before_link=10_000)
+    session.plan = InstallPlan(phase="storage", user_name="seed", domain="example.com")
+    app = make_app(session)
+    async with app.run_test(size=(120, 50)) as pilot:
+        app.show_step(STEPS.index(PlexScreen))
+        await pilot.pause()
+        await click(pilot, "#plex_link")
+        code = str(app.screen.query_one("#plex_code", Static).content)
+        assert "plex.tv/link" in code and "AB12" in code
+        assert "clientID=Saltboxtest0000" in code
+        await click(pilot, "#plex_cancel")
+        await settle(app, pilot)
+        assert "Cancelled" in str(app.screen.query_one("#plex_status", Static).content)
+        assert not app.screen.query_one("#plex_code").display
+        assert app.screen.query_one("#next", Button).disabled
+        assert session.plan.plex_token == ""
+
+
+async def test_plex_step_reports_errors(session: InstallerSession) -> None:
+    session._plex_factory = lambda: FakePlex(fail_create=True)
+    session.plan = InstallPlan(phase="storage", user_name="seed", domain="example.com")
+    app = make_app(session)
+    async with app.run_test(size=(120, 50)) as pilot:
+        app.show_step(STEPS.index(PlexScreen))
+        await pilot.pause()
+        await click(pilot, "#plex_link")
+        await settle(app, pilot)
+        status = str(app.screen.query_one("#plex_status", Static).content)
+        assert "offline" in status
+        assert not app.screen.query_one("#plex_link", Button).disabled
+
+
+async def test_plex_step_skipped_without_plex(session: InstallerSession) -> None:
+    session.plan = InstallPlan(phase="storage", profile="feederbox", user_name="seed")
+    app = make_app(session)
+    async with app.run_test(size=(120, 50)) as pilot:
+        app.show_step(STEPS.index(PlexScreen))
+        await pilot.pause()
+        assert not app.screen.query("#plex_link")
+        await next_step(app, pilot)
+        assert isinstance(app.screen, InstallScreen)
+
+
+async def test_apps_step_refuses_jellyfin(session: InstallerSession) -> None:
+    app = make_app(session)
+    async with app.run_test(size=(120, 60)) as pilot:
+        app.show_step(STEPS.index(AppsScreen))
+        await pilot.pause()
+        servers = app.screen.query_one("#media_servers", SelectionList)
+        servers.select("jellyfin")
+        await pilot.pause()
+        await next_step(app, pilot)
+        assert isinstance(app.screen, AppsScreen)
+        assert "Jellyfin" in str(app.screen.query_one("#step-error", Static).content)

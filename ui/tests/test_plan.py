@@ -175,3 +175,16 @@ def test_apply_local_storage_drops_remotes(scratch_layout: Layout) -> None:
     settings = load_plain(scratch_layout.config_file("settings"))
     assert settings["rclone"]["enabled"] == "no"
     assert "remotes" not in settings["rclone"]
+
+
+def test_installs_plex_and_jellyfin() -> None:
+    assert make_plan().installs_plex
+    assert not make_plan(media_servers=["emby"]).installs_plex
+    assert make_plan(profile="mediabox", media_servers=["plex", "jellyfin"]).installs_jellyfin
+    assert not make_plan(profile="feederbox").installs_plex
+    assert make_plan(profile="custom", extra_apps=["plex"]).installs_plex
+    assert not make_plan(profile="core").installs_plex
+
+
+def test_plex_token_is_redacted() -> None:
+    assert make_plan(plex_token="secret").redacted()["plex_token"] != "secret"

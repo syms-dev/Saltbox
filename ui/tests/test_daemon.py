@@ -311,3 +311,31 @@ def test_enable_web_writes_everything(scratch_layout: Layout, tmp_path: Path) ->
         in (tmp_path / "systemd" / "saltbox-ui.service").read_text()
     )
     assert result["steps"] == {}
+
+
+def test_default_web_dir_prefers_the_checkout(scratch_layout: Layout) -> None:
+    from saltbox_ui.daemon.app import default_web_dir
+    from saltbox_ui.daemon.install import enable_web
+
+    dist = scratch_layout.repo / "ui" / "web" / "dist"
+    bundled = Path(__file__).resolve().parents[1] / "web" / "dist"
+    assert default_web_dir(scratch_layout) in (None, bundled)
+    dist.mkdir(parents=True)
+    (dist / "index.html").write_text("<html></html>")
+    assert default_web_dir(scratch_layout) == dist
+
+    from saltbox_ui.config import ConfigService
+
+    config = ConfigService(scratch_layout)
+    config.ensure_exists("accounts")
+    config.set("accounts", "user.domain", "example.com")
+    result = enable_web(
+        scratch_layout,
+        unit_dir=scratch_layout.state_dir / "systemd",
+        traefik_dir=scratch_layout.state_dir / "traefik",
+        start=False,
+    )
+    assert result["web"] == str(dist)
+    assert "warning" not in result
+    unit = (scratch_layout.state_dir / "systemd" / "saltbox-ui.service").read_text()
+    assert f"--web {dist}" in unit

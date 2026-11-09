@@ -25,6 +25,7 @@ from .installer.screens import (
     DnsScreen,
     DoneScreen,
     InstallScreen,
+    PlexScreen,
     PreflightScreen,
     PreinstallScreen,
     ReviewScreen,
@@ -43,6 +44,7 @@ STEPS: list[type[StepScreen]] = [
     ReviewScreen,
     PreinstallScreen,
     StorageScreen,
+    PlexScreen,
     InstallScreen,
     DoneScreen,
 ]

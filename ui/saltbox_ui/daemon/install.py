@@ -182,12 +182,20 @@ def enable_web(
     Returns what was done; ``url`` is where the web app will answer once
     Traefik has picked up the route and issued a certificate.
     """
-    from .app import ensure_token
+    from .app import default_web_dir, ensure_token
 
+    web = web or default_web_dir(layout)
     token = ensure_token(layout)
     route = write_route(layout, token, subdomain=subdomain, traefik_dir=traefik_dir)
     unit = install_unit(unit_dir, web=web)
-    result: dict[str, Any] = {"route": str(route), "unit": str(unit), "steps": {}}
+    result: dict[str, Any] = {
+        "route": str(route),
+        "unit": str(unit),
+        "web": str(web) if web else None,
+        "steps": {},
+    }
+    if web is None:
+        result["warning"] = "the web app is not built yet; run: sudo sbx daemon build-web"
     if start:
         code, output = systemctl("daemon-reload")
         result["steps"]["daemon-reload"] = output or ("ok" if code == 0 else f"exit {code}")

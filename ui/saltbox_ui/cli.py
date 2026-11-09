@@ -147,6 +147,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = daemon_sub.add_parser("route", help="write the Traefik route for saltbox.<domain>")
     p.add_argument("--subdomain", default="saltbox")
     p.add_argument("--traefik-dir", help="Traefik config directory (default: <appdata>/traefik)")
+    daemon_sub.add_parser("build-web", help="build the web app with npm (needs nodejs and npm)")
     daemon_sub.add_parser("unit", help="print the systemd unit")
     daemon_sub.add_parser("url", help="print the web URL")
     daemon_sub.add_parser("token", help="print the API token (root)")
@@ -397,6 +398,8 @@ def _daemon(args: argparse.Namespace, layout: Layout) -> int:
     if args.action == "unit":
         print(systemd_unit(), end="")
         return 0
+    if args.action == "build-web":
+        return _build_web(layout)
     if args.action == "url":
         emit({"url": url_for(layout)})
         return 0
@@ -431,3 +434,25 @@ def _daemon(args: argparse.Namespace, layout: Layout) -> int:
         emit(steps)
         return 0
     return 1
+
+
+def _build_web(layout: Layout) -> int:
+    """npm ci and npm run build in the checkout's ui/web, output on stderr."""
+    import shutil
+    import subprocess
+
+    source = layout.repo / "ui" / "web"
+    npm = shutil.which("npm")
+    if npm is None:
+        emit({"error": "npm not found; install it with: sudo apt install -y nodejs npm"})
+        return 1
+    if not (source / "package.json").exists():
+        emit({"error": f"no web app source at {source}"})
+        return 1
+    for step in (["ci", "--no-audit", "--no-fund"], ["run", "build"]):
+        result = subprocess.run([npm, *step], cwd=source, stdout=sys.stderr, check=False)
+        if result.returncode != 0:
+            emit({"error": f"npm {' '.join(step)} failed with exit code {result.returncode}"})
+            return 1
+    emit({"built": str(source / "dist")})
+    return 0

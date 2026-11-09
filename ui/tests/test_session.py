@@ -129,3 +129,22 @@ def test_run_tag_records_job(session: InstallerSession) -> None:
     job = session.run_tag(["plex", "radarr"])
     assert job.status == "succeeded"
     assert session.plan.jobs["plex,radarr"] == job.id
+
+
+def test_run_install_writes_plex_facts(session: InstallerSession) -> None:
+    from saltbox_ui.plex import read_plex_facts
+
+    session.save_plex_link("Saltboxabc12345", "tok", "seedling")
+    lines: list[str] = []
+    session.run_install(on_line=lines.append)
+    assert read_plex_facts(session.layout, "plex") == {
+        "client_identifier": "Saltboxabc12345",
+        "token": "tok",
+    }
+    assert any("saved the linked Plex token" in line for line in lines)
+
+
+def test_no_plex_facts_without_plex(session: InstallerSession) -> None:
+    session.plan.profile = "feederbox"
+    session.save_plex_link("Saltboxabc12345", "tok", "seedling")
+    assert session.write_plex_facts() is None

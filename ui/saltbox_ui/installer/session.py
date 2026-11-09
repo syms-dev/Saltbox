@@ -24,6 +24,7 @@ from typing import Any
 from ..catalog import Catalog
 from ..config import ConfigService, Inventory
 from ..layout import Layout
+from ..plex import PlexClient, write_plex_facts
 from ..rclone import RcloneService
 from ..runner import Job, SbRunner
 from ..schema import Issue
@@ -42,6 +43,7 @@ class InstallerSession:
         runner: SbRunner | None = None,
         config: ConfigService | None = None,
         rclone_factory: Callable[[str], RcloneService] | None = None,
+        plex_factory: Callable[[], PlexClient] | None = None,
     ):
         self.layout = layout
         self.plan_path = layout.state_dir / PLAN_FILENAME
@@ -53,6 +55,7 @@ class InstallerSession:
         self._rclone_factory = rclone_factory or (
             lambda user: RcloneService(layout.rclone_binary, user=user)
         )
+        self._plex_factory = plex_factory or PlexClient
 
     # -- plan ------------------------------------------------------------------
     def _load_plan(self) -> InstallPlan:
@@ -137,8 +140,37 @@ class InstallerSession:
             return True
         return False
 
+    # -- plex --------------------------------------------------------------------
+    def plex_client(self) -> PlexClient:
+        """A client with a fresh identifier, for a new link."""
+        return self._plex_factory()
+
+    def plex_instance(self) -> str:
+        return (self.inventory.instances("plex", ["plex"]) or ["plex"])[0]
+
+    def save_plex_link(self, client_id: str, token: str, username: str) -> None:
+        self.plan.plex_client_id = client_id
+        self.plan.plex_token = token
+        self.plan.plex_username = username
+        self.save()
+
+    def write_plex_facts(self) -> Path | None:
+        """Put the linked token where the plex_auth_token role reads it."""
+        if not (self.plan.installs_plex and self.plan.plex_token):
+            return None
+        return write_plex_facts(
+            self.layout,
+            instance=self.plex_instance(),
+            client_id=self.plan.plex_client_id,
+            token=self.plan.plex_token,
+            owner=self.plan.user_name,
+        )
+
     def run_install(self, on_line: LineCallback | None = None) -> Job:
         self.set_phase("install")
+        written = self.write_plex_facts()
+        if written and on_line:
+            on_line(f"saved the linked Plex token to {written}")
         tags = self.plan.install_tags()
         job = self.runner.install(tags, on_line=on_line)
         self.plan.jobs["install"] = job.id

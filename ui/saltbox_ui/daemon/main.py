@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 from ..layout import Layout
-from .app import create_app, ensure_token
+from .app import create_app, default_web_dir, ensure_token
 
 DEFAULT_PORT = 8701
 DEFAULT_SOCKET = "/run/saltbox-ui/api.sock"
@@ -77,11 +77,10 @@ def bind_sockets(hosts: list[str], port: int, uds: str | None) -> list[socket.so
     return sockets
 
 
-def web_dir(explicit: str | None) -> Path | None:
+def web_dir(explicit: str | None, layout: Layout) -> Path | None:
     if explicit:
         return Path(explicit)
-    bundled = Path(__file__).resolve().parents[2] / "web" / "dist"
-    return bundled if bundled.exists() else None
+    return default_web_dir(layout)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -93,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
 
     layout = Layout.from_env()
     token = None if args.no_token else ensure_token(layout)
-    app = create_app(layout, token=token, web_dir=web_dir(args.web))
+    app = create_app(layout, token=token, web_dir=web_dir(args.web, layout))
     hosts = args.host or default_hosts()
     port = args.port or DEFAULT_PORT
     try:

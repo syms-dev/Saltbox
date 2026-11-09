@@ -109,6 +109,18 @@ def _mount_web(app: FastAPI, web_dir: Path) -> None:
         return FileResponse(root / "index.html")
 
 
+def default_web_dir(layout: Layout) -> Path | None:
+    """The built web app: the repo checkout first, then next to the package."""
+    candidates = [
+        layout.repo / "ui" / "web" / "dist",
+        Path(__file__).resolve().parents[2] / "web" / "dist",
+    ]
+    for candidate in candidates:
+        if (candidate / "index.html").exists():
+            return candidate
+    return None
+
+
 def read_token(layout: Layout) -> str | None:
     path = layout.state_dir / TOKEN_FILENAME
     try:
