@@ -62,12 +62,27 @@ SALTBOX_REPO=$PWD/.. .venv/bin/sbx config validate
 ## Installer
 
 On a server that already ran the Saltbox bootstrap (`sb` and
-`/srv/git/saltbox` present):
+`/srv/git/saltbox` present), point the checkout at the fork and install the
+package. The bootstrap makes a shallow clone that only tracks `master`, so
+widen the fetch refspec first; without it the branch is fetched but never
+gets an `origin/` name and the checkout fails. The wider refspec also lets
+`sb update` follow the fork's branch afterwards.
 
 ```
-sudo -H pipx install /srv/git/saltbox/ui      # or: uv tool install
-saltbox-ui
+cd /srv/git/saltbox
+sudo git remote set-url origin https://github.com/syms-dev/Saltbox.git
+sudo git config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
+sudo git fetch origin claude/saltbox-gui-tui-bxul3c
+sudo git checkout -B claude/saltbox-gui-tui-bxul3c origin/claude/saltbox-gui-tui-bxul3c
+
+sudo apt install -y pipx
+sudo PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install /srv/git/saltbox/ui
+sudo saltbox-ui
 ```
+
+`PIPX_HOME` and `PIPX_BIN_DIR` put the commands in `/usr/local/bin`, which is
+on sudo's path. A plain `sudo -H pipx install` puts them in
+`/root/.local/bin`, which is not. Tested on Ubuntu 26.04 with Python 3.14.
 
 `saltbox-ui` re-executes itself through sudo when needed, keeping the
 `SALTBOX_*` variables. Progress is saved to `/var/lib/saltbox-ui/install-plan.json`
