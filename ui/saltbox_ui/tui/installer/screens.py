@@ -39,6 +39,13 @@ DOWNLOAD_CLIENTS = [
     ("Deluge (torrents)", "deluge"),
 ]
 INDEXERS = [("Jackett", "jackett"), ("NZBHydra2", "nzbhydra2"), ("Prowlarr", "prowlarr")]
+PROFILE_ROLE_LISTS = {
+    "saltbox": "saltbox_roles",
+    "mediabox": "mediabox_roles",
+    "feederbox": "feederbox_roles",
+}
+# Entries in the profile lists that stand for the pickers below, not single apps.
+SELECTOR_GROUPS = {"media_server", "download_clients", "download_indexers"}
 SELECTOR_ROLES = {
     "plex",
     "emby",
@@ -383,6 +390,7 @@ class AppsScreen(StepScreen):
         with RadioSet(id="profile"):
             for key, label in self.PROFILE_LABELS:
                 yield RadioButton(label, value=(plan.profile == key), name=key)
+        yield Static("", id="profile_includes", classes="hint")
         yield Static("Media server", classes="section")
         yield SelectionList[str](
             *[(label, value, value in plan.media_servers) for label, value in MEDIA_SERVERS],
@@ -403,7 +411,9 @@ class AppsScreen(StepScreen):
             for a in session.catalog.apps()
             if a.repo == "saltbox" and a.role not in SELECTOR_ROLES
         ]
-        with Collapsible(title=f"More Saltbox apps ({len(apps)})", collapsed=True):
+        with Collapsible(
+            title=f"More Saltbox apps, on top of the install type ({len(apps)})", collapsed=True
+        ):
             yield FilterableSelection(
                 [
                     (
@@ -436,6 +446,33 @@ class AppsScreen(StepScreen):
             "Authelia subdomain", Input(plan.authelia_subdomain, id="authelia_subdomain")
         )
 
+    def included(self, profile: str) -> list[str]:
+        """Apps the install type already installs, besides the pickers below."""
+        var = PROFILE_ROLE_LISTS.get(profile)
+        roles = _session(self).catalog.profiles.get(var, []) if var else []
+        return [role for role in roles if role not in SELECTOR_GROUPS]
+
+    def _show_included(self, profile: str) -> None:
+        roles = self.included(profile)
+        if roles:
+            text = (
+                f"Already included: {', '.join(roles)}. Pick the media server, download "
+                "clients and indexers below; add anything else under More Saltbox apps."
+            )
+        else:
+            text = (
+                "Installs Docker, Traefik, Authelia and the mounts, plus only the apps you "
+                "pick below."
+            )
+        self.query_one("#profile_includes", Static).update(text)
+
+    def on_mount(self) -> None:
+        self._show_included(_plan(self).profile)
+
+    @on(RadioSet.Changed, "#profile")
+    def _profile_changed(self, event: RadioSet.Changed) -> None:
+        self._show_included(event.pressed.name or "saltbox")
+
     def commit(self) -> str | None:
         plan = _plan(self)
         pressed = self.query_one("#profile", RadioSet).pressed_button
@@ -448,7 +485,12 @@ class AppsScreen(StepScreen):
         plan.download_indexers = list(self.query_one("#download_indexers", SelectionList).selected)
         if profile in {"saltbox", "mediabox"} and not plan.media_servers:
             return "Pick at least one media server, or choose a different install type"
-        plan.extra_apps = self.query_one("#extra_apps", FilterableSelection).selected
+        already = set(self.included(profile))
+        plan.extra_apps = [
+            app
+            for app in self.query_one("#extra_apps", FilterableSelection).selected
+            if app not in already
+        ]
         plan.sandbox_apps = self.query_one("#sandbox_apps", FilterableSelection).selected
         if profile == "custom":
             selected = plan.media_servers + plan.download_clients + plan.download_indexers

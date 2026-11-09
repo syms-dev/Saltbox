@@ -35,7 +35,7 @@ from saltbox_ui.tui.installer.screens import (
     StorageScreen,
     WelcomeScreen,
 )
-from saltbox_ui.tui.widgets import CheckRow
+from saltbox_ui.tui.widgets import CheckRow, FilterableSelection
 from saltbox_ui.yamlio import load_plain
 from tests.test_preflight import good_probe
 
@@ -422,3 +422,19 @@ async def test_apps_step_refuses_jellyfin(session: InstallerSession) -> None:
         await next_step(app, pilot)
         assert isinstance(app.screen, AppsScreen)
         assert "Jellyfin" in str(app.screen.query_one("#step-error", Static).content)
+
+
+async def test_apps_step_shows_included_apps_and_drops_duplicates(
+    session: InstallerSession,
+) -> None:
+    app = make_app(session)
+    async with app.run_test(size=(120, 60)) as pilot:
+        app.show_step(STEPS.index(AppsScreen))
+        await pilot.pause()
+        included = str(app.screen.query_one("#profile_includes", Static).content)
+        assert "sonarr" in included and "radarr" in included and "autoscan" in included
+        extras = app.screen.query_one("#extra_apps", FilterableSelection)
+        extras.selected_values.update({"sonarr", "bazarr"})
+        await next_step(app, pilot)
+        assert session.plan.extra_apps == ["bazarr"]
+        assert session.plan.install_tags() == ["saltbox", "bazarr"]
