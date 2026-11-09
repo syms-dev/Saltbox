@@ -91,8 +91,10 @@ async def link_plex(app: InstallerApp, pilot) -> None:
     assert not app.screen.query_one("#next", Button).disabled
 
 
-def make_app(session: InstallerSession, probe=None) -> InstallerApp:
-    return InstallerApp(session, probe_factory=lambda layout: probe or good_probe())
+def make_app(session: InstallerSession, probe=None, ipv6: bool = False) -> InstallerApp:
+    return InstallerApp(
+        session, probe_factory=lambda layout: probe or good_probe(), ipv6_check=lambda: ipv6
+    )
 
 
 async def settle(app: InstallerApp, pilot) -> None:
@@ -132,7 +134,9 @@ async def test_full_wizard(session: InstallerSession) -> None:
         await settle(app, pilot)
         rows = app.screen.query(CheckRow)
         assert len(rows) >= 10
-        assert all(row.status == "pass" for row in rows)
+        statuses = {row.check_id: row.status for row in rows}
+        assert statuses.pop("ipv6") == "skip"  # informational only
+        assert set(statuses.values()) == {"pass"}
         assert not app.screen.query_one("#next", Button).disabled
         await next_step(app, pilot)
 
@@ -457,3 +461,26 @@ def test_extra_app_choices_hide_tools_and_label_included(repo_layout) -> None:
     assert "(included with" in extra_app_label(sonarr)
     bazarr = next(a for a in apps if a.role == "bazarr")
     assert "included" not in extra_app_label(bazarr)
+
+
+@pytest.mark.parametrize("ipv6", [False, True])
+async def test_dns_step_checks_ipv6_before_enabling_it(
+    session: InstallerSession, ipv6: bool
+) -> None:
+    from textual.widgets import Checkbox
+
+    session.plan.cloudflare_token = "cf-token"
+    app = make_app(session, ipv6=ipv6)
+    async with app.run_test(size=(120, 60)) as pilot:
+        app.show_step(STEPS.index(AppsScreen) - 1)
+        await pilot.pause()
+        assert app.screen.TITLE == "DNS and certificates"
+        app.screen.query_one("#ipv6", Checkbox).value = True
+        await next_step(app, pilot)
+        if ipv6:
+            assert isinstance(app.screen, AppsScreen)
+            assert session.plan.dns_ipv6 is True
+        else:
+            assert app.screen.TITLE == "DNS and certificates"
+            assert "no working IPv6" in str(app.screen.query_one("#step-error", Static).content)
+            assert session.plan.dns_ipv6 is False

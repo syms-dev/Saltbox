@@ -16,7 +16,7 @@ from textual.app import App
 from textual.binding import Binding
 
 from ..installer import InstallerSession
-from ..installer.preflight import Probe
+from ..installer.preflight import Probe, can_reach_ipv6
 from ..layout import Layout
 from .installer.screens import (
     AccountScreen,
@@ -74,10 +74,12 @@ class InstallerApp(App[None]):
         *,
         probe_factory: Callable[[Layout], Probe] | None = None,
         auto_resume: bool = True,
+        ipv6_check: Callable[[], bool] | None = None,
     ) -> None:
         super().__init__()
         self.session = session
         self.probe_factory = probe_factory or Probe.from_host
+        self.ipv6_check = ipv6_check or can_reach_ipv6
         self.auto_resume = auto_resume
         self.step_index = 0
 

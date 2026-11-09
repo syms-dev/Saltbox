@@ -64,6 +64,7 @@ class Probe:
     configs_present: bool = False
     existing_install: bool = False
     internet: bool = True
+    ipv6: bool = False
 
     @classmethod
     def from_host(cls, layout: Layout) -> Probe:
@@ -87,6 +88,7 @@ class Probe:
             configs_present=layout.config_file("accounts").exists(),
             existing_install=layout.facts_dir.exists() or (layout.appdata / "traefik").exists(),
             internet=can_reach("github.com", 443),
+            ipv6=can_reach_ipv6(),
         )
 
 
@@ -283,6 +285,15 @@ def run_preflight(layout: Layout, probe: Probe | None = None) -> list[Check]:
             "" if p.internet else "the install downloads packages and images",
         )
     )
+    checks.append(
+        Check(
+            "ipv6",
+            "IPv6 internet",
+            "pass" if p.ipv6 else "skip",
+            "available" if p.ipv6 else "not available on this connection",
+            "" if p.ipv6 else "leave 'Manage IPv6' off on the DNS step",
+        )
+    )
     return checks
 
 
@@ -364,6 +375,18 @@ def sb_version(binary: Path) -> str | None:
     if code != 0:
         return "installed"
     return output.splitlines()[0] if output else "installed"
+
+
+IPV6_PROBE = ("2606:4700:4700::1111", 443)  # Cloudflare's public resolver
+
+
+def can_reach_ipv6(timeout: float = 3.0) -> bool:
+    """True when this host can open an IPv6 connection to the internet.
+
+    Saltbox's IPv6 records need a public IPv6 address; without one the
+    Cloudflare DNS tasks fail during the install.
+    """
+    return can_reach(*IPV6_PROBE, timeout=timeout)
 
 
 def can_reach(host: str, port: int, timeout: float = 3.0) -> bool:

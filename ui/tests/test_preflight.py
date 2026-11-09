@@ -107,3 +107,10 @@ def test_probe_from_host_runs(scratch_layout: Layout) -> None:
     assert probe.sb_version is None  # scratch layout has no sb binary
     assert probe.repo_ok is True
     assert probe.configs_present is False
+
+
+def test_ipv6_check_is_informational(scratch_layout: Layout) -> None:
+    without = by_id(run_preflight(scratch_layout, good_probe(ipv6=False)))["ipv6"]
+    assert without.status == "skip"
+    assert "DNS step" in without.hint
+    assert by_id(run_preflight(scratch_layout, good_probe(ipv6=True)))["ipv6"].status == "pass"

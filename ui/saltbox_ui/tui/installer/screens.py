@@ -403,6 +403,12 @@ class DnsScreen(StepScreen):
                 return f"Enter the {provider} credentials"
         plan.dns_proxied = self.query_one("#proxied", Checkbox).value
         plan.dns_ipv6 = self.query_one("#ipv6", Checkbox).value
+        if plan.dns_ipv6 and not self.app.ipv6_check():  # type: ignore[attr-defined]
+            plan.dns_ipv6 = False
+            return (
+                "This server has no working IPv6 internet connection, so Saltbox can't create "
+                "IPv6 records and the install would fail. Untick the IPv6 option."
+            )
         plan.zerossl = self.query_one("#zerossl", Checkbox).value
         _session(self).save()
         return None
