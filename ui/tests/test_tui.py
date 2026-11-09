@@ -438,3 +438,22 @@ async def test_apps_step_shows_included_apps_and_drops_duplicates(
         await next_step(app, pilot)
         assert session.plan.extra_apps == ["bazarr"]
         assert session.plan.install_tags() == ["saltbox", "bazarr"]
+
+
+def test_extra_app_choices_hide_tools_and_label_included(repo_layout) -> None:
+    from saltbox_ui.catalog import Catalog
+    from saltbox_ui.tui.installer.screens import extra_app_choices, extra_app_label
+
+    apps = extra_app_choices(Catalog(repo_layout).apps())
+    roles = [a.role for a in apps]
+    for hidden in ("mainline", "plex_db", "arr_db", "cloudplow_disable", "authelia", "redis"):
+        assert hidden not in roles, hidden
+    for offered in ("bazarr", "unpackerr", "scrutiny", "dozzle", "ddns", "sonarr"):
+        assert offered in roles, offered
+    assert "plex" not in roles  # picked with the media server list instead
+    titles = [a.title.lower() for a in apps]
+    assert titles == sorted(titles)
+    sonarr = next(a for a in apps if a.role == "sonarr")
+    assert "(included with" in extra_app_label(sonarr)
+    bazarr = next(a for a in apps if a.role == "bazarr")
+    assert "included" not in extra_app_label(bazarr)

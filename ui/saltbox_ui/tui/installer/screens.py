@@ -60,6 +60,43 @@ SELECTOR_ROLES = {
 }
 
 
+# Docs categories whose entries are not apps someone picks during an install:
+# databases arrive with the apps that need them, Authelia comes with core and
+# Authentik replaces it, and Admin Apps > Misc holds system tools such as the
+# Mainline kernel installer.
+HIDDEN_CATEGORY_PREFIXES = (
+    "Admin Apps > Database",
+    "Admin Apps > Misc",
+    "Admin Apps > Access Control",
+)
+
+
+def extra_app_choices(apps: list) -> list:
+    """Saltbox apps worth offering as extras, sorted by title.
+
+    Entries without a docs category are maintenance tags (Plex Db, Arr Db,
+    Cloudplow Disable) rather than apps, so they are left out too.
+    """
+    chosen = [
+        a
+        for a in apps
+        if a.repo == "saltbox"
+        and a.role not in SELECTOR_ROLES
+        and a.categories
+        and not any(c.startswith(HIDDEN_CATEGORY_PREFIXES) for c in a.categories)
+    ]
+    return sorted(chosen, key=lambda a: a.title.lower())
+
+
+def extra_app_label(app) -> str:
+    label = app.title
+    if app.main_tags:
+        label += f" (included with {'/'.join(app.main_tags)})"
+    if app.summary:
+        label += f"  ·  {app.summary[:60]}"
+    return label
+
+
 def _session(screen: StepScreen):
     return screen.app.session  # type: ignore[attr-defined]
 
@@ -406,22 +443,12 @@ class AppsScreen(StepScreen):
             *[(label, value, value in plan.download_indexers) for label, value in INDEXERS],
             id="download_indexers",
         )
-        apps = [
-            a
-            for a in session.catalog.apps()
-            if a.repo == "saltbox" and a.role not in SELECTOR_ROLES
-        ]
+        apps = extra_app_choices(session.catalog.apps())
         with Collapsible(
             title=f"More Saltbox apps, on top of the install type ({len(apps)})", collapsed=True
         ):
             yield FilterableSelection(
-                [
-                    (
-                        f"{a.title}  ·  {a.summary[:60]}" if a.summary else a.title,
-                        a.sb_tag or a.role,
-                    )
-                    for a in apps
-                ],
+                [(extra_app_label(a), a.sb_tag or a.role) for a in apps],
                 plan.extra_apps,
                 id="extra_apps",
                 placeholder="Filter apps…",
