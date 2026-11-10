@@ -266,6 +266,29 @@ test.describe('system and setup', () => {
     await expect(page.getByRole('region', { name: 'Saltbox services' })).toBeVisible();
   });
 
+  test('shows resource use, Tailscale and backups, and backs up on request', async ({ page }) => {
+    await page.goto('/system');
+    const busiest = page.getByRole('table', { name: 'Busiest containers' });
+    await expect(busiest.getByRole('row').nth(1)).toContainText('plex');
+    await expect(busiest.getByRole('row').nth(1)).toContainText('31.5%');
+    const tailscale = page.getByRole('region', { name: 'Tailscale' });
+    await expect(tailscale).toContainText('Connected');
+    await expect(tailscale).toContainText('ssh seed@saltbox');
+    const backups = page.getByRole('region', { name: 'Backups' });
+    await expect(backups).toContainText('weekly');
+    await backups.getByRole('button', { name: 'Back up now' }).click();
+    expect(await confirm(page, 'Back up Saltbox now?', 'Back up now')).toContain('stops your apps');
+    await expect(page.getByRole('status').getByText('Backup started')).toBeVisible();
+    await page.getByRole('status').getByRole('link', { name: 'Watch the log' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('sb install backup');
+    expect(await jobOutcome(page)).toBe('succeeded');
+  });
+
+  test('an app page shows what its container uses', async ({ page }) => {
+    await page.goto('/apps/saltbox/plex');
+    await expect(page.getByRole('row', { name: /plex/ })).toContainText('31.5% CPU');
+  });
+
   test('Connect apps lists every check per app without failing as a whole', async ({ page }) => {
     await page.goto('/connect');
     await expect(page.getByRole('region', { name: 'qBittorrent' })).toContainText('Login');

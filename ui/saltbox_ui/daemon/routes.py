@@ -44,6 +44,7 @@ from ..state import (
     systemd_units,
 )
 from ..state.containers import CONTAINER_ACTIONS, container_action, container_logs
+from ..state.system import backup_summary, container_stats, host_stats, tailscale_status
 from ..yamlio import coerce_scalar, find_duplicate_keys, load_text, write_atomic
 
 router = APIRouter()
@@ -65,7 +66,16 @@ def meta(request: Request) -> dict[str, Any]:
         "saltbox": _git_describe(svc.layout.repo),
         "web": bool(svc.web_dir and (svc.web_dir / "index.html").exists()),
         "domain": _domain(svc),
+        "user": _account(svc, "user.name"),
     }
+
+
+def _account(svc, dotted: str) -> str | None:
+    try:
+        value = svc.config.get("accounts", dotted)
+    except Exception:  # missing or unreadable accounts.yml
+        return None
+    return str(value) if value else None
 
 
 def _domain(svc) -> str | None:
@@ -453,6 +463,58 @@ def _container_view(container: dict[str, Any], update: dict[str, Any] | None) ->
         "update": (update or {}).get("status", "unknown"),
         "update_detail": (update or {}).get("detail", ""),
     }
+
+
+# -- system -----------------------------------------------------------------------
+RESOURCES_TTL_SECONDS = 5.0
+
+
+@router.get("/resources")
+def resources(request: Request) -> dict[str, Any]:
+    """Host load and memory, and CPU and memory per container (refreshed every 5 s)."""
+    svc = services(request)
+    cached = svc.__dict__.get("_resources")
+    if cached is not None and time.monotonic() - cached[0] < RESOURCES_TTL_SECONDS:
+        return cached[1]
+    data: dict[str, Any] = {"host": host_stats(), "containers": [], "error": ""}
+    try:
+        data["containers"] = container_stats()
+    except RuntimeError as error:
+        data["error"] = str(error)
+    svc.__dict__["_resources"] = (time.monotonic(), data)
+    return data
+
+
+@router.get("/tailscale")
+def tailscale(request: Request) -> dict[str, Any]:
+    return tailscale_status()
+
+
+@router.get("/backups")
+def backups(request: Request) -> dict[str, Any]:
+    svc = services(request)
+    try:
+        config = (
+            svc.config.load_plain("backup_config") if svc.config.exists("backup_config") else {}
+        )
+        user = str(svc.config.get("accounts", "user.name") or "")
+    except Exception:  # an unreadable file shows as "not configured"
+        config, user = {}, ""
+    summary = backup_summary(config, user)
+    runs = [j for j in svc.runner.jobs(limit=200) if "backup" in j.tags or "backup2" in j.tags]
+    summary["last_job"] = _job_view(svc, runs[0]) if runs else None
+    return summary
+
+
+@router.post("/backups/run", status_code=202)
+def run_backup(request: Request) -> dict[str, Any]:
+    """``sb install backup``: Saltbox stops the apps, archives /opt, starts them again."""
+    svc = services(request)
+    try:
+        job = svc.jobs.start("install", tags=["backup"])
+    except JobRunning as error:
+        raise HTTPException(409, str(error)) from error
+    return _job_view(svc, job)
 
 
 # -- containers ----------------------------------------------------------------

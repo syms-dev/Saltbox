@@ -19,11 +19,14 @@ import type {
   JobRequest,
   JobsResponse,
   Meta,
+  BackupSummary,
   ContainerAction,
   ContainerLogs,
   ContainerState,
   Overview,
+  Resources,
   SetupResponse,
+  TailscaleStatus,
   UpdatesResponse,
 } from './types';
 
@@ -33,6 +36,7 @@ export const QUERY_KEYS = {
   INVENTORY: 'inventory',
   JOBS: 'jobs',
   META: 'meta',
+  BACKUPS: 'backups',
   LOGS: 'logs',
   OVERVIEW: 'overview',
   SETUP: 'setup',
@@ -285,5 +289,40 @@ export function useApplySetup(): UseMutationResult<SetupResponse, Error, void> {
   return useMutation({
     mutationFn: () => apiPost<SetupResponse>(API_ROUTES.SETUP_APPLY),
     onSuccess: () => void client.invalidateQueries({ queryKey: [QUERY_KEYS.SETUP] }),
+  });
+}
+
+const RESOURCES_REFRESH_MS = 10_000;
+
+export function useResources(): UseQueryResult<Resources> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<Resources>(API_ROUTES.RESOURCES, { signal }),
+    queryKey: ['resources'],
+    refetchInterval: RESOURCES_REFRESH_MS,
+  });
+}
+
+export function useTailscale(): UseQueryResult<TailscaleStatus> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<TailscaleStatus>(API_ROUTES.TAILSCALE, { signal }),
+    queryKey: ['tailscale'],
+  });
+}
+
+export function useBackups(): UseQueryResult<BackupSummary> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<BackupSummary>(API_ROUTES.BACKUPS, { signal }),
+    queryKey: [QUERY_KEYS.BACKUPS],
+  });
+}
+
+export function useRunBackup(): UseMutationResult<Job, Error, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPost<Job>(API_ROUTES.BACKUPS_RUN),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: [QUERY_KEYS.JOBS] });
+      void client.invalidateQueries({ queryKey: [QUERY_KEYS.BACKUPS] });
+    },
   });
 }

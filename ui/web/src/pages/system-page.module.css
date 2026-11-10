@@ -46,3 +46,125 @@
   display: grid;
   min-width: 0;
 }
+
+.iconTitle {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.flush {
+  margin: 0;
+}
+
+.gauges {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  margin-bottom: var(--space-4);
+}
+
+.gauges > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.gaugeHead {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+}
+
+.uptime {
+  font-size: var(--text-lg);
+}
+
+.busiest td {
+  vertical-align: middle;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.memCell {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.memBar {
+  background: var(--color-surface-3);
+  border-radius: var(--radius-full);
+  flex: 1;
+  height: 0.4rem;
+  min-width: 4rem;
+  overflow: hidden;
+}
+
+.memBar span {
+  background: var(--color-info);
+  border-radius: var(--radius-full);
+  display: block;
+  height: 100%;
+}
+
+.facts {
+  display: grid;
+  gap: var(--space-2) var(--space-4);
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--color-fg-muted);
+  font-size: var(--text-sm);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.tip {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.destinations {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.destinations li {
+  align-items: center;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 3.5rem 4rem minmax(0, 1fr);
+}
+
+.destKind {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.destPath {
+  overflow-wrap: anywhere;
+}
+
+.pair {
+  align-items: start;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+}
+
+.memCell .num {
+  min-width: 5.5rem;
+}

@@ -108,6 +108,13 @@ elif args[:1] in (["start"], ["stop"], ["restart"]):
                 c["State"]["Health"]["Status"] = "healthy"
     json.dump(containers, open({inspect!r}, "w"))
     print(name)
+elif args[:1] == ["stats"]:
+    for i, c in enumerate(c for c in containers if c["State"]["Status"] == "running"):
+        cpu = 31.5 if c["Name"] == "/plex" else 0.4 * (i + 1)
+        mem = 1500 if c["Name"] == "/plex" else 120 + 40 * i
+        print(json.dumps({{"Name": c["Name"][1:], "CPUPerc": f"{{cpu:.2f}}%",
+                          "MemUsage": f"{{mem}}MiB / 15.5GiB", "MemPerc": f"{{mem / 158.72:.2f}}%",
+                          "PIDs": "20"}}))
 elif args[:1] == ["logs"]:
     name = args[-1]
     for i in range(1, 41):
@@ -115,6 +122,22 @@ elif args[:1] == ["logs"]:
         print(f"2026-11-10T06:{{i:02d}}:00.000000000Z [{{level}}] {{name}}: e2e log line {{i}}")
 else:
     sys.exit("fake docker: unsupported " + " ".join(args))
+"""
+
+FAKE_TAILSCALE = """#!{python}
+import json, sys
+if sys.argv[1:3] == ["status", "--json"]:
+    print(json.dumps({{
+        "BackendState": "Running", "Version": "1.90.0",
+        "Self": {{"HostName": "saltbox", "DNSName": "saltbox.tail-e2e.ts.net.",
+                  "TailscaleIPs": ["100.64.0.5", "fd7a:115c:a1e0::5"],
+                  "Online": True, "UserID": 1}},
+        "User": {{"1": {{"LoginName": "owner@example.com"}}}},
+        "Peer": {{"phone": {{"Online": True}}, "laptop": {{"Online": False}}}},
+        "CurrentTailnet": {{"MagicDNSEnabled": True}},
+    }}))
+else:
+    sys.exit("fake tailscale: unsupported " + " ".join(sys.argv[1:]))
 """
 
 FAKE_SB = """#!/bin/sh
@@ -179,6 +202,14 @@ def build_box(root: Path) -> Layout:
     for name in ("accounts", "settings"):
         text = (repo / "defaults" / f"{name}.yml.default").read_text()
         (repo / f"{name}.yml").write_text(text.replace("testsaltbox.ml", DOMAIN))
+    backups = root / "backups"
+    backups.mkdir()
+    (backups / "saltbox_backup.tar").write_bytes(b"0" * 4096)
+    (repo / "backup_config.yml").write_text(
+        (repo / "defaults" / "backup_config.yml.default")
+        .read_text()
+        .replace("/home/{{ user.name }}/Backups/Saltbox", str(backups))
+    )
 
     # A checkout one commit behind the branch it tracks.
     upstream = root / "upstream.git"
@@ -209,7 +240,9 @@ def build_box(root: Path) -> Layout:
     docker.write_text(FAKE_DOCKER.format(python=sys.executable, inspect=str(inspect)))
     sb = bin_dir / "sb"
     sb.write_text(FAKE_SB)
-    for path in (docker, sb):
+    tailscale = bin_dir / "tailscale"
+    tailscale.write_text(FAKE_TAILSCALE.format(python=sys.executable))
+    for path in (docker, sb, tailscale):
         path.chmod(0o755)
     os.environ["PATH"] = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
     return Layout(repo=repo, appdata=appdata, sb_binary=sb, state_dir=root / "state")

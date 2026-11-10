@@ -191,6 +191,7 @@ export type Meta = {
   domain?: string | null;
   layout: Record<string, string>;
   saltbox: { branch: string | null; commit: string | null; remote: string | null };
+  user?: string | null;
   version: string;
   web: boolean;
 };
@@ -208,3 +209,50 @@ export type SetupTask = { app: string; detail: string; id: string; status: Setup
 export type SetupResponse = { summary: Partial<Record<SetupStatus, number>>; tasks: SetupTask[] };
 
 export type AppLink = { name: string; purpose: string; url: string };
+
+export type HostStats = {
+  cores: number;
+  load: number[];
+  load_percent: number | null;
+  memory_percent: number | null;
+  memory_total: number;
+  memory_used: number;
+  swap_total?: number;
+  swap_used?: number;
+  uptime: number | null;
+};
+
+export type ContainerStats = {
+  cpu_percent: number;
+  memory: number;
+  memory_limit: number;
+  memory_percent: number;
+  name: string;
+  pids: number;
+};
+
+export type Resources = { containers: ContainerStats[]; error: string; host: HostStats };
+
+export type TailscaleStatus = {
+  addresses?: string[];
+  dns_name?: string;
+  error?: string;
+  hostname?: string;
+  installed: boolean;
+  magic_dns?: boolean;
+  online?: boolean;
+  owner?: string;
+  peers?: number;
+  peers_online?: number;
+  running?: boolean;
+  state?: string;
+  version?: string;
+};
+
+export type BackupSummary = {
+  configured: boolean;
+  destinations: { destination: string; enabled: boolean; kind: string }[];
+  last_job: Job | null;
+  latest: { age_seconds: number; modified: number; path: string; size: number } | null;
+  schedule: string;
+};

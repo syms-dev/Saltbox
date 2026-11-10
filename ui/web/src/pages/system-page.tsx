@@ -6,6 +6,7 @@ import { ErrorMessage, Loading } from '../components/query-state';
 import { SaltboxUpdates } from '../components/saltbox-updates';
 import { StatusDot } from '../components/status-dot';
 import { formatBytes } from '../format';
+import { BackupsCard, ResourcesCard, TailscaleCard } from './system-sections';
 import styles from './system-page.module.css';
 
 const MOUNT_KINDS: Record<string, string> = {
@@ -25,6 +26,8 @@ export function SystemPage(): React.ReactNode {
     <div className="stack">
       <h1>System</h1>
       {reboot ? <p className="note warn">Ubuntu installed updates that need a restart of the server.</p> : null}
+
+      <ResourcesCard />
 
       <section aria-labelledby="storage-title" className="card">
         <h2 id="storage-title">Storage</h2>
@@ -52,7 +55,7 @@ export function SystemPage(): React.ReactNode {
         )}
       </section>
 
-      <div className="grid">
+      <div className={styles['pair']}>
         <section aria-labelledby="mounts-title" className="card">
           <h2 id="mounts-title">Mounts</h2>
           {mounts.length === 0 ? (
@@ -97,6 +100,11 @@ export function SystemPage(): React.ReactNode {
             </ul>
           )}
         </section>
+      </div>
+
+      <div className={styles['pair']}>
+        <TailscaleCard />
+        <BackupsCard />
       </div>
 
       <SaltboxUpdates />

@@ -87,3 +87,10 @@
 .secrets span {
   flex: 1 1 16rem;
 }
+
+.usage {
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+  white-space: nowrap;
+}

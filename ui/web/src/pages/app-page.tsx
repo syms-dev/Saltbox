@@ -13,7 +13,7 @@ import {
 import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
-import { useAppDetail, useContainerLogs, useJobs, useUpdateOverrides } from '../api/queries';
+import { useAppDetail, useContainerLogs, useJobs, useResources, useUpdateOverrides } from '../api/queries';
 import type { App, AppDetail, ContainerState, Field } from '../api/types';
 import { AppAvatar } from '../components/app-avatar';
 import { UpdateBadge } from '../components/app-links';
@@ -21,6 +21,7 @@ import { useToast } from '../components/feedback';
 import { LogView } from '../components/log-view';
 import { ErrorMessage, Loading } from '../components/query-state';
 import { StatusDot } from '../components/status-dot';
+import { formatBytes } from '../format';
 import { appTag, useContainerActions, useJobActions } from '../lib/actions';
 import { appHealth, containerHealth, hostOf } from '../lib/status';
 import styles from './app-page.module.css';
@@ -53,6 +54,11 @@ function asApp(detail: AppDetail, installed: boolean): App {
 // -- overview -------------------------------------------------------------------------------
 function ContainerTable({ containers }: { containers: ContainerState[] }): React.ReactNode {
   const actions = useContainerActions();
+  const resources = useResources();
+  const usage = (name: string): string => {
+    const stats = resources.data?.containers.find((c) => c.name === name);
+    return stats === undefined ? '' : `${stats.cpu_percent.toFixed(1)}% CPU · ${formatBytes(stats.memory)}`;
+  };
   return (
     <table>
       <thead>
@@ -74,6 +80,9 @@ function ContainerTable({ containers }: { containers: ContainerState[] }): React
             </td>
             <td>
               <StatusDot health={containerHealth(c)} />
+              {c.status === 'running' && usage(c.name) !== '' ? (
+                <div className={`muted ${styles['usage']}`}>{usage(c.name)}</div>
+              ) : null}
             </td>
             <td className="muted">
               <code>{c.image}</code>

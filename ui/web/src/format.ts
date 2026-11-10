@@ -61,3 +61,15 @@ export function formatRelative(when: string | number | null, now: number = Date.
   }
   return format.format(Math.round(value), 'year');
 }
+
+/** "3 days, 4 hours" from seconds; the two largest units. */
+export function formatUptime(seconds: number | null): string {
+  if (seconds === null) return '';
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
+  const part = (n: number, unit: string): string => `${n} ${unit}${n === 1 ? '' : 's'}`;
+  if (days > 0) return `${part(days, 'day')}, ${part(hours, 'hour')}`;
+  if (hours > 0) return `${part(hours, 'hour')}, ${part(minutes, 'minute')}`;
+  return part(minutes, 'minute');
+}
