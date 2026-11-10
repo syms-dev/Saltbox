@@ -75,6 +75,26 @@ def _record(attrs: dict[str, Any], image: str = "") -> dict[str, Any]:
     }
 
 
+def name_network_modes(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """``container:<id>`` → ``container:<name>``.
+
+    Docker records the container another one shares the network of by its ID
+    (qBittorrent inside Gluetun shows as ``container:3f2a…``), whatever name the
+    compose file or Ansible used.
+    """
+    for record in records:
+        mode = str(record.get("network_mode", ""))
+        if not mode.startswith("container:"):
+            continue
+        target = mode.split(":", 1)[1]
+        for other in records:
+            other_id = str(other.get("id", ""))
+            if other_id and target.startswith(other_id):
+                record["network_mode"] = f"container:{other['name']}"
+                break
+    return records
+
+
 def list_containers_cli(runner: Runner | None = None) -> list[dict[str, Any]]:
     """``docker ps -aq`` then ``docker inspect``: full labels and health, no SDK needed."""
     run = runner or _run
@@ -89,7 +109,8 @@ def list_containers_cli(runner: Runner | None = None) -> list[dict[str, Any]]:
     code, output = run(["docker", "inspect", *ids])
     if code != 0:
         raise RuntimeError(output.strip() or "docker inspect failed")
-    return sorted((_record(item) for item in json.loads(output or "[]")), key=lambda c: c["name"])
+    records = [_record(item) for item in json.loads(output or "[]")]
+    return sorted(name_network_modes(records), key=lambda c: c["name"])
 
 
 def list_containers(*, all_containers: bool = True) -> list[dict[str, Any]]:
@@ -106,7 +127,7 @@ def list_containers(*, all_containers: bool = True) -> list[dict[str, Any]]:
     for container in containers:
         image = ", ".join(container.image.tags) if container.image else ""
         result.append(_record(container.attrs or {}, image))
-    return sorted(result, key=lambda c: c["name"])
+    return sorted(name_network_modes(result), key=lambda c: c["name"])
 
 
 # -- actions -------------------------------------------------------------------

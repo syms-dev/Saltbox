@@ -76,6 +76,20 @@ def docker_logs(name: str) -> str:
     return result.stdout + result.stderr
 
 
+def _mark_running(found: Discovery) -> None:
+    """Apps that keep no folder under /opt (FlareSolverr) count as installed when running."""
+    try:
+        from ..state.containers import list_containers
+
+        running = {c["name"] for c in list_containers() if c.get("status") == "running"}
+    except Exception:  # no Docker: the folders are all there is to go on
+        return
+    for services in found.services.values():
+        for service in services:
+            if not service.installed and service.name in running:
+                service.installed = True
+
+
 class AppSetup:
     def __init__(
         self,
@@ -100,6 +114,7 @@ class AppSetup:
 
     def discover(self) -> Discovery:
         found = discover(self.layout)
+        _mark_running(found)
         resolve_hosts(found, self.resolver)
         return found
 

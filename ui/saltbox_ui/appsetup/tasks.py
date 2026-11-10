@@ -618,6 +618,64 @@ def prowlarr_app_task(ctx: SetupContext, prowlarr: Service, arr: Service) -> Tas
     )
 
 
+FLARESOLVERR_TAG = "flaresolverr"
+
+
+def prowlarr_flaresolverr_task(ctx: SetupContext, prowlarr: Service, solver: Service) -> Task:
+    """Prowlarr sends indexers tagged ``flaresolverr`` through FlareSolverr.
+
+    Running FlareSolverr does nothing on its own: Prowlarr needs it as an indexer
+    proxy, and only uses it for indexers carrying the proxy's tag.
+    """
+    address = f"{solver.url}/"
+
+    def tag_id(client: Client) -> int | None:
+        for tag in client.get("/tag") or []:
+            if str(tag.get("label", "")).lower() == FLARESOLVERR_TAG:
+                return int(tag["id"])
+        return None
+
+    def tagged_indexers(client: Client, tag: int | None) -> list[str]:
+        if tag is None:
+            return []
+        return [
+            str(i.get("name", ""))
+            for i in client.get("/indexer") or []
+            if tag in (i.get("tags") or [])
+        ]
+
+    def check() -> tuple[str, str]:
+        client = ctx.arr(prowlarr)
+        for proxy in client.get("/indexerProxy") or []:
+            if str(proxy.get("implementation", "")).lower() == "flaresolverr":
+                tag = tag_id(client)
+                tagged = tagged_indexers(client, tag)
+                hint = (
+                    f"Indexers using it: {', '.join(tagged)}."
+                    if tagged
+                    else "No indexer uses it yet."
+                )
+                return (
+                    "done",
+                    f"FlareSolverr at {field_value(proxy, 'host') or address}. {hint} Give an "
+                    f"indexer blocked by Cloudflare the '{FLARESOLVERR_TAG}' tag (Indexers, edit, "
+                    "Tags) to send it through FlareSolverr.",
+                )
+        return "todo", f"will add FlareSolverr ({address}) as Prowlarr's indexer proxy"
+
+    def apply() -> None:
+        client = ctx.arr(prowlarr)
+        tag = tag_id(client)
+        if tag is None:
+            tag = int(client.post("/tag", {"label": FLARESOLVERR_TAG})["id"])
+        item = schema_item(client, "indexerProxy", "FlareSolverr")
+        set_fields(item, {"host": address, "requestTimeout": 60})
+        item.update(name="FlareSolverr", tags=[tag])
+        client.post("/indexerProxy", item)
+
+    return Task(f"{prowlarr.name}:flaresolverr", "Prowlarr", "FlareSolverr", check, apply)
+
+
 def plex_library_task(ctx: SetupContext, plex: Service, role: str) -> Task:
     title_name, kind, agent, scanner = PLEX_LIBRARIES[role]
     folder = f"{MEDIA_ROOT}/{ROOT_FOLDERS[role]}"
@@ -1024,6 +1082,9 @@ def build_tasks(ctx: SetupContext) -> list[Task]:
             for arr in found.installed(role):
                 if arr.api_key:
                     tasks.append(prowlarr_app_task(ctx, prowlarr, arr))
+        solver = found.first("flaresolverr")
+        if solver:
+            tasks.append(prowlarr_flaresolverr_task(ctx, prowlarr, solver))
         if qbit:
             tasks.append(
                 download_client_task(

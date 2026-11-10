@@ -35,6 +35,7 @@ DEFAULT_PORTS = {
     "plex": 32400,
     "bazarr": 6767,
     "seerr": 5055,
+    "flaresolverr": 8191,
 }
 API_VERSION = {"sonarr": "v3", "radarr": "v3", "lidarr": "v1", "prowlarr": "v1"}
 ARR_ROLES = ("sonarr", "radarr", "lidarr")
