@@ -51,7 +51,7 @@ class Services:
         self.updates = UpdateService(self.layout)
         # An install job pulls new images; check again once it has finished.
         self.jobs.on_finish.append(
-            lambda job: self.updates.refresh() if job.kind == "install" else None
+            lambda job: self.updates.refresh() if job.kind in {"install", "update"} else None
         )
 
 

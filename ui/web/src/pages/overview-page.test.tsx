@@ -86,6 +86,11 @@ describe('OverviewPage', () => {
     );
   });
 
+  it('says when the Saltbox checkout is behind its branch', async () => {
+    renderPage(overview({ updates: { checked_at: 1, pending: [], running: false, saltbox: ['saltbox'] } }));
+    expect(await screen.findByText('Saltbox update available (saltbox): run sb update below')).toBeInTheDocument();
+  });
+
   it('flags Docker being unreachable', async () => {
     renderPage(overview({ containers: { available: false, running: 0, stopped: [], total: 0, unhealthy: [] } }));
     expect(await screen.findByText(/Docker isn't reachable from the daemon/)).toBeInTheDocument();

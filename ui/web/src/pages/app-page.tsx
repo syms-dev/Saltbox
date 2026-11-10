@@ -6,6 +6,7 @@ import { useAppDetail, useJobs, useStartJob, useUpdateApp, useUpdateOverrides } 
 import type { Field } from '../api/types';
 import { OpenLinks, UpdateBadge, overallUpdate } from '../components/app-links';
 import { ErrorMessage, Loading } from '../components/query-state';
+import { StatusBadge } from '../components/status-badge';
 import styles from './app-page.module.css';
 
 /** The parser keeps the whole `key: value` source line; show only the value part. */
@@ -167,6 +168,13 @@ export function AppPage(): React.ReactNode {
       </div>
       {app.summary !== '' ? <p className="muted">{app.summary}</p> : null}
       <section className="card">
+        {detail.data.containers.length > 0 ? (
+          <div className={`row ${styles['containers']}`}>
+            {detail.data.containers.map((c) => (
+              <StatusBadge key={c.name} label={`${c.name} ${c.health ?? c.status}`} status={c.health ?? c.status} />
+            ))}
+          </div>
+        ) : null}
         <div className="row">
           {detail.data.containers.length > 0 ? (
             <UpdateBadge

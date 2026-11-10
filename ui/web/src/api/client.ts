@@ -10,6 +10,7 @@ export const API_ROUTES = {
   JOBS: '/jobs',
   META: '/meta',
   OVERVIEW: '/overview',
+  SALTBOX_UPDATE: '/saltbox/update',
   UPDATES: '/updates',
   UPDATES_APPLY: '/updates/apply',
   UPDATES_CHECK: '/updates/check',

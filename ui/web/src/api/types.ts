@@ -83,12 +83,25 @@ export type ContainerState = {
   urls: string[];
 };
 
-export type UpdatesSummary = { checked_at: number | null; pending: string[]; running: boolean };
+export type UpdatesSummary = { checked_at: number | null; pending: string[]; running: boolean; saltbox?: string[] };
+
+/** A Saltbox checkout (saltbox, sandbox, saltbox_mod) compared with the branch it tracks. */
+export type RepoStatus = {
+  branch: string;
+  commit: string;
+  detail: string;
+  name: string;
+  path: string;
+  remote_commit: string;
+  source: string;
+  status: UpdateState;
+};
 
 export type UpdatesResponse = {
   checked_at: number | null;
   error: string;
   images: Record<string, { containers: string[]; detail: string; image: string; status: UpdateState }>;
+  repos?: RepoStatus[];
   running: boolean;
 };
 

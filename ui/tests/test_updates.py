@@ -12,6 +12,7 @@ from saltbox_ui.daemon import routes as daemon_routes
 from saltbox_ui.daemon.updates import UpdateService
 from saltbox_ui.layout import Layout
 from saltbox_ui.state.containers import web_urls
+from saltbox_ui.state.repos import RepoStatus
 from saltbox_ui.state.updates import (
     ImageStatus,
     Registry,
@@ -165,6 +166,27 @@ def test_update_service_cache_and_staleness(scratch_layout: Layout) -> None:
     assert calls == [1, 1]
 
 
+def test_cache_from_an_older_daemon_is_refreshed(scratch_layout: Layout) -> None:
+    scratch_layout.state_dir.mkdir(parents=True, exist_ok=True)
+    (scratch_layout.state_dir / "updates.json").write_text(
+        json.dumps({"checked_at": 1000.0, "images": {}})
+    )
+    checks = []
+    service = UpdateService(
+        scratch_layout,
+        containers=lambda: [],
+        checker=lambda c: (checks.append(1), {})[1],
+        repos=lambda: [],
+        clock=lambda: 1001.0,
+    )
+    service.ensure_fresh()
+    service.wait()
+    assert checks == [1]
+    service.ensure_fresh()
+    service.wait()
+    assert checks == [1]
+
+
 def test_update_service_keeps_last_result_on_error(scratch_layout: Layout) -> None:
     service = UpdateService(
         scratch_layout,
@@ -179,7 +201,7 @@ def test_update_service_keeps_last_result_on_error(scratch_layout: Layout) -> No
     service.containers = broken
     service.refresh(wait=True)
     data = service.cached()
-    assert data["error"] == "docker is down"
+    assert data["error"] == "images: docker is down"
     assert data["images"]["img"]["status"] == "current"
 
 
@@ -235,6 +257,12 @@ def client(scratch_layout: Layout, fake_sb: Path, monkeypatch: pytest.MonkeyPatc
                 "saltydk/qbittorrent:latest", "current", containers=["qbittorrent"]
             ),
         },
+        repos=lambda: [
+            RepoStatus(
+                "saltbox", "/srv/git/saltbox", "main", "1111111", "2222222", status="update"
+            ),
+            RepoStatus("sandbox", "/opt/sandbox", "master", "3333333", "3333333", status="current"),
+        ],
     )
     services.updates.refresh(wait=True)
     return TestClient(create_app(services=services)), services
@@ -292,3 +320,21 @@ def test_update_all_and_recheck_after_job(client) -> None:
     assert checks  # the finished install triggered a fresh check
     assert http.post("/api/updates/check").status_code == 202
     assert http.get("/api/updates").json()["images"]
+
+
+def test_saltbox_checkouts_are_reported_and_updated_with_sb_update(client) -> None:
+    http, services = client
+    assert http.get("/api/overview").json()["updates"]["saltbox"] == ["saltbox"]
+    repos = http.get("/api/updates").json()["repos"]
+    assert [(r["name"], r["status"]) for r in repos] == [
+        ("saltbox", "update"),
+        ("sandbox", "current"),
+    ]
+    checks = []
+    services.updates.repos = lambda: (checks.append(1), [])[1]
+    job = http.post("/api/saltbox/update").json()
+    assert job["kind"] == "update" and job["command"][-1] == "update"
+    assert wait_job(http, job["id"])["status"] == "succeeded"
+    services.updates.wait(5)
+    assert checks  # sb update triggered a fresh check
+    assert http.get("/api/overview").json()["updates"]["saltbox"] == []

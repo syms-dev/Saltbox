@@ -341,6 +341,17 @@ def update_all(request: Request) -> dict[str, Any]:
     return _start_update(svc, apps)
 
 
+@router.post("/saltbox/update", status_code=202)
+def update_saltbox(request: Request) -> dict[str, Any]:
+    """Run ``sb update``: reset the checkouts to their branches and refresh settings."""
+    svc = services(request)
+    try:
+        job = svc.jobs.start("update")
+    except JobRunning as error:
+        raise HTTPException(409, str(error)) from error
+    return job.as_dict()
+
+
 def _start_update(svc, apps: list) -> dict[str, Any]:
     """Re-run each app's tag, which pulls its image and recreates its container.
 
@@ -389,6 +400,9 @@ def _updates_summary(svc) -> dict[str, Any]:
         "checked_at": cached.get("checked_at"),
         "running": cached["running"],
         "pending": pending,
+        "saltbox": [
+            repo["name"] for repo in cached.get("repos", []) if repo.get("status") == "update"
+        ],
     }
 
 

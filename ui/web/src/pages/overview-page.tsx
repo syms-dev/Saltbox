@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useOverview } from '../api/queries';
 import type { Issue, Overview } from '../api/types';
 import { ErrorMessage, Loading } from '../components/query-state';
+import { SaltboxUpdates } from '../components/saltbox-updates';
 import { StatusBadge } from '../components/status-badge';
 import { formatBytes, formatWhen } from '../format';
 import styles from './overview-page.module.css';
@@ -20,6 +21,10 @@ export function attentionItems(data: Overview): Attention[] {
       text: `${pendingUpdates.length} app update${pendingUpdates.length === 1 ? '' : 's'} available: ${pendingUpdates.join(', ')}`,
       tone: 'warn',
     });
+  }
+  const saltbox = data.updates?.saltbox ?? [];
+  if (saltbox.length > 0) {
+    items.push({ text: `Saltbox update available (${saltbox.join(', ')}): run sb update below`, tone: 'warn' });
   }
   if (!data.containers.available) {
     items.push({ text: "Docker isn't reachable from the daemon, so app status is unknown", tone: 'danger' });
@@ -78,6 +83,7 @@ export function OverviewPage(): React.ReactNode {
         )}
       </section>
       <div className="grid">
+        <SaltboxUpdates />
         <section className="card">
           <h3>Containers</h3>
           {data.containers.available ? (

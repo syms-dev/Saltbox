@@ -1,4 +1,4 @@
-"""Image update checks for the daemon: cached on disk, refreshed in the background."""
+"""Update checks for the daemon (app images and the Saltbox checkouts), cached on disk."""
 
 from __future__ import annotations
 
@@ -10,9 +10,11 @@ from typing import Any
 
 from ..layout import Layout
 from ..state.containers import list_containers
+from ..state.repos import RepoStatus, check_repos
 from ..state.updates import ImageStatus, check_updates
 
 CACHE_FILE = "updates.json"
+CACHE_VERSION = 2  # 2: added the Saltbox checkouts
 MAX_AGE = 6 * 3600
 
 
@@ -23,12 +25,16 @@ class UpdateService:
         *,
         containers: Callable[[], list[dict[str, Any]]] | None = None,
         checker: Callable[[list[dict[str, Any]]], dict[str, ImageStatus]] | None = None,
+        repos: Callable[[], list[RepoStatus]] | None = None,
         clock: Callable[[], float] = time.time,
         max_age: float = MAX_AGE,
     ):
         self.path = layout.state_dir / CACHE_FILE
         self.containers = containers or list_containers
         self.checker = checker or check_updates
+        self.repos = repos or (
+            lambda: check_repos([layout.repo, layout.sandbox_repo, layout.saltbox_mod_repo])
+        )
         self.clock = clock
         self.max_age = max_age
         self._lock = threading.Lock()
@@ -41,16 +47,19 @@ class UpdateService:
             data = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             data = {"checked_at": None, "images": {}}
+        data.setdefault("repos", [])
         data["running"] = self.running
         data["error"] = self.error
         return data
 
-    def _write(self, images: dict[str, ImageStatus]) -> None:
+    def _write(self, images: dict[str, Any], repos: list[dict[str, Any]]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".tmp")
         payload = {
+            "version": CACHE_VERSION,
             "checked_at": self.clock(),
-            "images": {ref: status.as_dict() for ref, status in images.items()},
+            "images": images,
+            "repos": repos,
         }
         tmp.write_text(json.dumps(payload, indent=1), encoding="utf-8")
         tmp.replace(self.path)
@@ -78,15 +87,29 @@ class UpdateService:
             thread.join(timeout)
 
     def _run(self) -> None:
+        """Check images and checkouts; a part that fails keeps its last good result."""
+        previous = self.cached()
+        errors: list[str] = []
+        images, repos = previous.get("images", {}), previous.get("repos", [])
         try:
-            self._write(self.checker(self.containers()))
-            self.error = ""
-        except Exception as error:  # keep the last good result, report why this one failed
-            self.error = str(error)
+            images = {ref: s.as_dict() for ref, s in self.checker(self.containers()).items()}
+        except Exception as error:
+            errors.append(f"images: {error}")
+        try:
+            repos = [status.as_dict() for status in self.repos()]
+        except Exception as error:
+            errors.append(f"saltbox: {error}")
+        try:
+            self._write(images, repos)
+        except OSError as error:
+            errors.append(f"cache: {error}")
+        self.error = "; ".join(errors)
 
     def ensure_fresh(self) -> None:
-        checked = self.cached().get("checked_at")
-        if not checked or self.clock() - float(checked) > self.max_age:
+        cached = self.cached()
+        checked = cached.get("checked_at")
+        stale = not checked or self.clock() - float(checked) > self.max_age
+        if stale or cached.get("version") != CACHE_VERSION:
             self.refresh()
 
     # -- lookups -----------------------------------------------------------------

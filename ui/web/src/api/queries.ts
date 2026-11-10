@@ -203,3 +203,12 @@ export function useUpdateAll(): UseMutationResult<Job, Error, void> {
     onSuccess: () => invalidateUpdates(client),
   });
 }
+
+/** `sb update`: brings the Saltbox checkouts up to their branches. */
+export function useUpdateSaltbox(): UseMutationResult<Job, Error, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPost<Job>(API_ROUTES.SALTBOX_UPDATE),
+    onSuccess: () => invalidateUpdates(client),
+  });
+}

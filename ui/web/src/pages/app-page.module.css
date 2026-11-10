@@ -10,3 +10,7 @@
   font-size: var(--text-xs);
   white-space: pre-wrap;
 }
+
+.containers {
+  margin-bottom: var(--space-3);
+}
