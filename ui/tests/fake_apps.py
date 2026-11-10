@@ -197,7 +197,9 @@ class FakeQbit:
         cookie_name: str = "SID",
         status_on_fail=401,
         temporary: str = "",
+        status_on_success: int = 200,
     ):
+        self.status_on_success = status_on_success
         self.user = user
         self.password = password
         self.temporary = temporary  # qBittorrent >= 4.6.1 with no password set
@@ -213,7 +215,8 @@ class FakeQbit:
             if form.get("username") == self.user and form.get("password") == expected:
                 self.logins += 1
                 cookies = f"theme=dark; path=/\n{self.cookie_name}=s3cr3t; HttpOnly; path=/"
-                return Response(200, b"Ok.", {"set-cookie": cookies})
+                body_text = b"Ok." if self.status_on_success == 200 else b""
+                return Response(self.status_on_success, body_text, {"set-cookie": cookies})
             if self.status_on_fail == 200:
                 return Response(200, b"Fails.", {})
             return Response(self.status_on_fail, b"Unauthorized", {})
@@ -335,7 +338,24 @@ class FakePlex:
                 return Response(404, b"Not Found", {})
             if method == "GET":
                 return _json(200, self._settings(self.library_prefs[key]))
-            self._apply(self.library_prefs[key], query)
+            return Response(200, b"", {})  # accepted and ignored, like the real server
+        section_path = url.path.split("/")
+        if (
+            method == "PUT"
+            and len(section_path) == 4
+            and url.path.startswith("/library/sections/")
+            and section_path[3] in self.library_prefs
+        ):
+            if not query.get("agent"):
+                return Response(400, b"Bad Request", {})
+            self._apply(
+                self.library_prefs[section_path[3]],
+                {
+                    k[6:-1]: v
+                    for k, v in query.items()
+                    if k.startswith("prefs[") and k.endswith("]")
+                },
+            )
             return Response(200, b"", {})
         if url.path == "/library/sections" and method == "POST":
             key = str(len(self.sections) + 1)

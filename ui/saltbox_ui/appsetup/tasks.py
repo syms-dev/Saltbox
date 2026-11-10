@@ -229,7 +229,7 @@ class SetupContext:
             "/api/v2/auth/login",
             form={"username": user, "password": password},
             headers={"Referer": service.host_url},
-            ok=(200, 401, 403),
+            ok=(200, 204, 401, 403),
         )
         if response.status == 403:
             raise SetupError(
@@ -237,7 +237,10 @@ class SetupContext:
                 "logins; restart qBittorrent to lift the ban"
             )
         cookie = session_cookie(response.headers.get("set-cookie", ""))
-        if response.status != 200 or "Ok" not in response.text:
+        # qBittorrent answers "200 Ok." up to 5.0 and "204 No Content" from 5.1 on success;
+        # a failed login is "200 Fails." on older versions and 401 on newer ones.
+        succeeded = response.status == 204 or (response.status == 200 and "Ok" in response.text)
+        if not succeeded:
             cookie = ""
         return cookie, response.status
 
@@ -606,11 +609,10 @@ def plex_library_task(ctx: SetupContext, plex: Service, role: str) -> Task:
             client.request("GET", f"/library/sections/{found.get('key')}/refresh")
         changes = pref_changes(str(found.get("key")))
         if changes:
-            client.request(
-                "PUT",
-                f"/library/sections/{found.get('key')}/prefs",
-                params={k: plex_value(v) for k, v in changes.items()},
-            )
+            # What Plex's own "Edit library" sends: the library, its agent and prefs[...].
+            params = {"agent": str(found.get("agent") or agent)}
+            params.update({f"prefs[{k}]": plex_value(v) for k, v in changes.items()})
+            client.request("PUT", f"/library/sections/{found.get('key')}", params=params)
 
     return Task(f"{plex.name}:{role}", "Plex", f"{title_name} library", check, apply)
 

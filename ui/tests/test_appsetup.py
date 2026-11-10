@@ -250,10 +250,12 @@ def test_qbittorrent_changed_password_is_left_alone(box, status_on_fail) -> None
     assert apps["qbittorrent"].password == "changed-in-the-ui"  # never overwritten
 
 
-def test_qbittorrent_temporary_password_is_replaced(box) -> None:
+@pytest.mark.parametrize("success_status", [200, 204])
+def test_qbittorrent_temporary_password_is_replaced(box, success_status) -> None:
     setup, apps, *_ = box
     qbit = apps["qbittorrent"]
     qbit.user, qbit.password, qbit.temporary = "admin", None, "HeQUhwCLP"
+    qbit.status_on_success = success_status
     status = by_id(setup.status())
     assert status["qbittorrent:login"].status == "todo"
     assert "temporary 'admin' password" in status["qbittorrent:login"].detail
@@ -444,6 +446,7 @@ def test_existing_library_gets_thumbnails_turned_off(box) -> None:
             "key": "9",
             "title": "My Movies",
             "type": "movie",
+            "agent": "tv.plex.agents.movie",
             "Location": [{"id": 9, "path": "/mnt/unionfs/Media/Movies"}],
         }
     )
