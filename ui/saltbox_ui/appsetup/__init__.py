@@ -113,6 +113,7 @@ class AppSetup:
             container_reader=self.container_reader,
             unit_dir=self.unit_dir,
             systemctl=self.systemctl,
+            appdata=self.layout.appdata,
         )
 
     def tasks(self) -> list[Task]:

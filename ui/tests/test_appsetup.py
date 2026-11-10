@@ -603,3 +603,94 @@ def test_resolver_takes_only_ip_addresses(monkeypatch) -> None:
 
         monkeypatch.setattr(discover.subprocess, "run", run)
         assert discover.default_resolver("qbittorrent") == expected
+
+
+# -- steps done by hand, checked from the apps' settings files ---------------------------
+def _hand_ctx(tmp_path):
+    from saltbox_ui.appsetup.discover import Discovery, Service
+    from saltbox_ui.appsetup.tasks import SetupContext
+
+    found = Discovery(
+        services={
+            "sonarr": [Service("sonarr", "sonarr", 8989, True, api_key="sonarrkey")],
+            "radarr": [Service("radarr", "radarr", 7878, True, api_key="radarrkey")],
+            "bazarr": [Service("bazarr", "bazarr", 6767, True)],
+            "seerr": [Service("seerr", "seerr", 5055, True)],
+        }
+    )
+    return SetupContext(found, appdata=tmp_path), found
+
+
+def test_bazarr_is_checked_from_its_settings(tmp_path) -> None:
+    from saltbox_ui.appsetup.tasks import bazarr_task
+
+    ctx, found = _hand_ctx(tmp_path)
+    task = bazarr_task(ctx, found.first("bazarr"))
+    assert task.refresh().status == "manual" and "not saved its settings" in task.detail
+    config = tmp_path / "bazarr" / "config" / "config.yaml"
+    config.parent.mkdir(parents=True)
+    config.write_text(
+        "general:\n  use_sonarr: true\n  use_radarr: false\n  enabled_providers: []\n"
+        "sonarr:\n  apikey: sonarrkey\nradarr:\n  apikey: ''\n"
+    )
+    task.refresh()
+    assert task.status == "manual"
+    assert "Radarr is not linked" in task.detail and "no subtitle provider" in task.detail
+    assert "Sonarr is not linked" not in task.detail
+    config.write_text(
+        "general:\n  use_sonarr: true\n  use_radarr: true\n"
+        "  enabled_providers: [opensubtitlescom]\n"
+        "sonarr:\n  apikey: sonarrkey\nradarr:\n  apikey: radarrkey\n"
+    )
+    assert task.refresh().status == "done"
+    assert "Sonarr and Radarr" in task.detail
+
+
+def test_bazarr_reads_the_older_ini_settings(tmp_path) -> None:
+    from saltbox_ui.appsetup.tasks import bazarr_task
+
+    ctx, found = _hand_ctx(tmp_path)
+    ini = tmp_path / "bazarr" / "config" / "config.ini"
+    ini.parent.mkdir(parents=True)
+    ini.write_text(
+        "[general]\nuse_sonarr = True\nuse_radarr = True\nenabled_providers = ['podnapisi']\n"
+        "[sonarr]\napikey = wrongkey\n[radarr]\napikey = radarrkey\n"
+    )
+    task = bazarr_task(ctx, found.first("bazarr")).refresh()
+    assert task.status == "manual" and "API key in Bazarr is not sonarr's" in task.detail
+
+
+def test_seerr_is_checked_from_its_settings(tmp_path) -> None:
+    import json
+
+    from saltbox_ui.appsetup.tasks import seerr_task
+
+    ctx, found = _hand_ctx(tmp_path)
+    task = seerr_task(ctx, found.first("seerr"))
+    assert task.refresh().status == "manual" and "Sign in with your Plex account" in task.detail
+    settings = tmp_path / "seerr" / "settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(
+        json.dumps(
+            {
+                "public": {"initialized": True},
+                "plex": {"ip": "plex", "libraries": [{"name": "Movies", "enabled": False}]},
+                "radarr": [{"hostname": "radarr"}],
+                "sonarr": [],
+            }
+        )
+    )
+    task.refresh()
+    assert task.status == "manual"
+    assert "no Plex library is switched on" in task.detail and "no Sonarr server" in task.detail
+    settings.write_text(
+        json.dumps(
+            {
+                "public": {"initialized": True},
+                "plex": {"ip": "plex", "libraries": [{"name": "Movies", "enabled": True}]},
+                "radarr": [{"hostname": "radarr"}],
+                "sonarr": [{"hostname": "sonarr"}],
+            }
+        )
+    )
+    assert task.refresh().status == "done"

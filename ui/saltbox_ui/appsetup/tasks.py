@@ -13,6 +13,7 @@ reported as manual, with the exact values to enter.
 
 from __future__ import annotations
 
+import configparser
 import json
 import re
 from collections.abc import Callable
@@ -206,6 +207,7 @@ class SetupContext:
     container_reader: Callable[[str, str], str] | None = None
     unit_dir: Path = Path("/etc/systemd/system")
     systemctl: Callable[..., tuple[int, str]] | None = None
+    appdata: Path = Path("/opt")
     _qbit_cookie: str = field(default="", repr=False)
     _sab_servers: dict[str, int] = field(default_factory=dict, repr=False)
 
@@ -841,6 +843,98 @@ def seerr_text(found: Discovery) -> str:
     return "\n".join(lines)
 
 
+# -- steps done by hand, checked from the apps' own settings files -------------------
+def _truthy(value: object) -> bool:
+    return value is True or str(value).strip().lower() in {"true", "yes", "1"}
+
+
+def read_bazarr_settings(directory: Path) -> dict[str, Any] | None:
+    """Bazarr's settings: config/config.yaml (Bazarr 1.4+) or config/config.ini (older)."""
+    for candidate in ("config/config.yaml", "config.yaml", "data/config/config.yaml"):
+        path = directory / candidate
+        if path.is_file():
+            from ..yamlio import load_plain
+
+            try:
+                data = load_plain(path)
+            except Exception:  # half-written by Bazarr: treat as not readable yet
+                return None
+            return data if isinstance(data, dict) else None
+    for candidate in ("config/config.ini", "config.ini"):
+        path = directory / candidate
+        if path.is_file():
+            parser = configparser.ConfigParser(interpolation=None)
+            try:
+                parser.read(path, encoding="utf-8")
+            except configparser.Error:
+                return None
+            return {section: dict(parser.items(section)) for section in parser.sections()}
+    return None
+
+
+def bazarr_task(ctx: SetupContext, bazarr: Service) -> Task:
+    """Bazarr linked to every installed Sonarr and Radarr, with a subtitle provider."""
+
+    def check() -> tuple[str, str]:
+        settings = read_bazarr_settings(ctx.appdata / bazarr.name)
+        if settings is None:
+            return "manual", f"Bazarr has not saved its settings yet.\n{bazarr_text(ctx.found)}"
+        general = settings.get("general") or {}
+        missing = []
+        for role in ("sonarr", "radarr"):
+            service = ctx.found.first(role)
+            if service is None:
+                continue
+            section = settings.get(role) or {}
+            if not _truthy(general.get(f"use_{role}")) or not section.get("apikey"):
+                missing.append(f"{role.capitalize()} is not linked")
+            elif service.api_key and str(section.get("apikey")) != service.api_key:
+                missing.append(f"{role.capitalize()}'s API key in Bazarr is not {service.name}'s")
+        providers = general.get("enabled_providers") or []
+        if isinstance(providers, str):
+            providers = [p for p in providers.strip("[]").replace("'", "").split(",") if p.strip()]
+        if not providers:
+            missing.append("no subtitle provider is enabled")
+        if not missing:
+            linked = [r.capitalize() for r in ("sonarr", "radarr") if ctx.found.first(r)]
+            return (
+                "done",
+                f"linked to {' and '.join(linked)}, {len(providers)} subtitle provider(s)",
+            )
+        return "manual", "Still to do: " + "; ".join(missing) + ".\n" + bazarr_text(ctx.found)
+
+    return Task("bazarr", "Bazarr", "Link apps", check)
+
+
+def seerr_task(ctx: SetupContext, seerr: Service) -> Task:
+    """Seerr set up: signed in, a Plex server with libraries, Sonarr and Radarr added."""
+
+    def check() -> tuple[str, str]:
+        path = ctx.appdata / seerr.name / "settings.json"
+        try:
+            settings = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return "manual", seerr_text(ctx.found)
+        missing = []
+        if not _truthy((settings.get("public") or {}).get("initialized")):
+            missing.append("the first-run setup is not finished")
+        plex = settings.get("plex") or {}
+        if not plex.get("ip"):
+            missing.append("no Plex server is chosen")
+        elif not any(lib.get("enabled") for lib in plex.get("libraries") or []):
+            missing.append("no Plex library is switched on")
+        for role in ("radarr", "sonarr"):
+            if ctx.found.first(role) and not settings.get(role):
+                missing.append(f"no {role.capitalize()} server is added")
+        if not missing:
+            return "done", "set up with Plex, " + " and ".join(
+                r.capitalize() for r in ("radarr", "sonarr") if settings.get(r)
+            )
+        return "manual", "Still to do: " + "; ".join(missing) + ".\n" + seerr_text(ctx.found)
+
+    return Task("seerr", "Seerr", "First run", check)
+
+
 # -- plan ----------------------------------------------------------------------
 def build_tasks(ctx: SetupContext) -> list[Task]:
     found = ctx.found
@@ -953,10 +1047,11 @@ def build_tasks(ctx: SetupContext) -> list[Task]:
         for role in ("radarr", "sonarr", "lidarr"):
             if found.installed(role):
                 tasks.append(plex_library_task(ctx, plex, role))
-    if found.first("bazarr"):
-        tasks.append(manual_task("bazarr", "Bazarr", "Link apps", bazarr_text(found)))
-    if found.first("seerr"):
-        tasks.append(manual_task("seerr", "Seerr", "First run", seerr_text(found)))
+    bazarr, seerr = found.first("bazarr"), found.first("seerr")
+    if bazarr:
+        tasks.append(bazarr_task(ctx, bazarr))
+    if seerr:
+        tasks.append(seerr_task(ctx, seerr))
     return tasks
 
 
