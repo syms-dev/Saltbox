@@ -1,5 +1,7 @@
 import { HardDrive } from 'lucide-react';
 
+import { Link } from 'react-router-dom';
+
 import { useOverview } from '../api/queries';
 import { Meter } from '../components/meter';
 import { ErrorMessage, Loading } from '../components/query-state';
@@ -24,7 +26,13 @@ export function SystemPage(): React.ReactNode {
   const { disks, mounts, reboot_required: reboot, units } = overview.data.host;
   return (
     <div className="stack">
-      <h1>System</h1>
+      <div className="row">
+        <h1 className={styles['flush']}>System</h1>
+        <span className="spacer" />
+        <Link className="button small" to="/automation">
+          Alerts and nightly maintenance
+        </Link>
+      </div>
       {reboot ? <p className="note warn">Ubuntu installed updates that need a restart of the server.</p> : null}
 
       <ResourcesCard />

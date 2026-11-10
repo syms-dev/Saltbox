@@ -1,4 +1,15 @@
-import { Activity, Cable, FileCog, House, LayoutGrid, LoaderCircle, Search, Server, TriangleAlert } from 'lucide-react';
+import {
+  Activity,
+  BellRing,
+  Cable,
+  FileCog,
+  House,
+  LayoutGrid,
+  LoaderCircle,
+  Search,
+  Server,
+  TriangleAlert,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 
@@ -17,12 +28,13 @@ const NAV = [
   { icon: <LayoutGrid size={ICON} />, label: 'Apps', short: 'Apps', to: '/apps' },
   { icon: <Activity size={ICON} />, label: 'Activity', short: 'Activity', to: '/activity' },
   { icon: <Server size={ICON} />, label: 'System', short: 'System', to: '/system' },
+  { icon: <BellRing size={ICON} />, label: 'Automation', short: 'Automation', to: '/automation' },
   { icon: <Cable size={ICON} />, label: 'Connect apps', short: 'Connect', to: '/connect' },
   { icon: <FileCog size={ICON} />, label: 'Config', short: 'Config', to: '/config' },
 ] as const;
 
-/** The bottom bar has room for five; Connect lives on the Apps page and in search there. */
-const TABS = NAV.filter((item) => item.to !== '/connect');
+/** The bottom bar has room for five; Connect and Automation are linked from Apps and System. */
+const TABS = NAV.filter((item) => item.to !== '/connect' && item.to !== '/automation');
 
 function navClass({ isActive }: { isActive: boolean }): string {
   return isActive ? `${styles['navLink']} ${styles['active']}` : (styles['navLink'] ?? '');

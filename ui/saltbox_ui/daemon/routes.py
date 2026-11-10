@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import subprocess
 import time
 from pathlib import Path
@@ -22,6 +23,7 @@ from ..catalog.catalog import is_listed_app
 from ..config.service import CONFIG_FILES
 from ..runner import JobRunning
 from ..secrets import (
+    HIDDEN,
     Redactor,
     UnknownPlaceholder,
     mask_text,
@@ -602,6 +604,65 @@ def recyclarr_sync(request: Request, body: RecyclarrSync) -> dict[str, Any]:
     except JobRunning as error:
         raise HTTPException(409, str(error)) from error
     return _job_view(svc, job)
+
+
+# -- automation -------------------------------------------------------------------------
+class AutomationSettings(BaseModel):
+    alerts: dict[str, Any] = Field(default_factory=dict)
+    maintenance: dict[str, Any] = Field(default_factory=dict)
+
+
+def _automation_view(svc, settings: dict[str, Any], reveal: bool = False) -> dict[str, Any]:
+    from .automation import EVENTS
+
+    automation = svc.automation
+    own = str(settings["alerts"].get("url") or "")
+    view = json.loads(json.dumps(settings))
+    if own and not reveal:
+        view["alerts"]["url"] = HIDDEN
+    from_accounts = not own and bool(automation.apprise_url(settings))
+    return {
+        "settings": view,
+        "events": EVENTS,
+        "apprise_available": automation.notifier.available(),
+        "url_from_accounts": from_accounts,
+        "next_maintenance": automation.next_maintenance(),
+        "history": automation.history(),
+    }
+
+
+@router.get("/automation")
+def automation_status(request: Request, reveal: bool = False) -> dict[str, Any]:
+    svc = services(request)
+    return _automation_view(svc, svc.automation.settings(), reveal)
+
+
+@router.put("/automation")
+def automation_save(request: Request, body: AutomationSettings) -> dict[str, Any]:
+    svc = services(request)
+    data = body.model_dump()
+    if data["alerts"].get("url") == HIDDEN:  # the masked value came back unchanged
+        data["alerts"].pop("url")
+    try:
+        saved = svc.automation.save(data)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
+    return _automation_view(svc, saved)
+
+
+@router.post("/automation/test")
+def automation_test(request: Request) -> dict[str, Any]:
+    ok, message = services(request).automation.test()
+    return {"ok": ok, "message": _redactor(services(request))(message)}
+
+
+@router.post("/automation/maintenance", status_code=202)
+def automation_maintenance_now(request: Request) -> dict[str, Any]:
+    """Run tonight's maintenance now."""
+    started = services(request).automation.start_maintenance()
+    if not started:
+        raise HTTPException(409, "maintenance is already running")
+    return {"started": True}
 
 
 # -- containers ----------------------------------------------------------------

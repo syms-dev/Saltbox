@@ -373,6 +373,52 @@ test.describe('secrets', () => {
   });
 });
 
+test.describe('automation', () => {
+  test('saves alert settings, hides the URL and sends a test', async ({ page }) => {
+    await page.goto('/automation');
+    const alerts = page.getByRole('region', { exact: true, name: 'Alerts' });
+    await alerts.getByLabel('Send alerts').check();
+    await alerts.getByLabel('Send to (Apprise URL)').fill('ntfy://e2e-secret-topic');
+    await alerts.getByLabel('A disk is over 90% full').uncheck();
+    await alerts.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('status').getByText('Alert settings saved')).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('region', { exact: true, name: 'Alerts' })).toContainText('\u2039hidden\u203a');
+    expect(await page.content()).not.toContain('e2e-secret-topic');
+    await expect(
+      page.getByRole('region', { exact: true, name: 'Alerts' }).getByLabel('A disk is over 90% full'),
+    ).not.toBeChecked();
+    await page
+      .getByRole('region', { exact: true, name: 'Alerts' })
+      .getByRole('button', { name: 'Send a test alert' })
+      .click();
+    await expect(page.getByRole('status').getByText('Test alert sent')).toBeVisible();
+  });
+
+  test('runs maintenance now, skipping excluded apps', async ({ page }) => {
+    await page.goto('/automation');
+    const maintenance = page.getByRole('region', { name: 'Nightly maintenance' });
+    await maintenance.getByLabel('Run every night').check();
+    await maintenance.getByLabel('Gluetun').check();
+    await maintenance.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('status').getByText('Maintenance settings saved')).toBeVisible();
+    await expect(maintenance).toContainText('Next run');
+    await page.reload();
+    await page.getByRole('region', { name: 'Nightly maintenance' }).getByRole('button', { name: 'Run now' }).click();
+    await confirm(page, 'Run maintenance now?', 'Run maintenance');
+    await expect(page.getByRole('status').getByText('Maintenance started')).toBeVisible();
+    await expect(async () => {
+      await page.reload();
+      await expect(page.getByRole('region', { name: 'Nightly maintenance' })).toContainText('succeeded', {
+        timeout: 1_000,
+      });
+    }).toPass({ timeout: 30_000 });
+    const last = page.getByRole('region', { name: 'Nightly maintenance' });
+    await expect(last.getByRole('link', { name: /update Sonarr/ })).toBeVisible();
+    await expect(last).not.toContainText('update Gluetun');
+  });
+});
+
 test.describe('config', () => {
   test('edits, reverts and validates config files', async ({ page }) => {
     await page.goto('/config');

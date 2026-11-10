@@ -326,3 +326,29 @@ export type RecyclarrStatus = {
   running: boolean;
   selected: Record<RecyclarrApp, string[]>;
 };
+
+export type AlertEvent = 'disk' | 'job_failed' | 'maintenance' | 'unhealthy' | 'updates' | 'vpn';
+
+export type MaintenanceRun = {
+  date: string;
+  finished_at?: number;
+  started_at: number;
+  status?: 'failed' | 'nothing' | 'succeeded';
+  steps: { detail?: string; job?: string; status: string; what: string }[];
+};
+
+export type AutomationSettings = {
+  alerts: { enabled: boolean; events: Record<AlertEvent, boolean>; url: string };
+  maintenance: { enabled: boolean; exclude: string[]; last_run?: MaintenanceRun; saltbox: boolean; time: string };
+};
+
+export type AlertEntry = { at: number; body: string; event: AlertEvent; result?: string; sent: boolean; title: string };
+
+export type AutomationStatus = {
+  apprise_available: boolean;
+  events: Record<AlertEvent, string>;
+  history: AlertEntry[];
+  next_maintenance: string | null;
+  settings: AutomationSettings;
+  url_from_accounts: boolean;
+};

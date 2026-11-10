@@ -21,6 +21,7 @@ from ..catalog import Catalog
 from ..config import ConfigService, Inventory
 from ..layout import Layout
 from ..runner import SbRunner
+from .automation import AutomationService
 from .jobs import JobManager
 from .routes import router
 from .updates import UpdateService
@@ -44,6 +45,7 @@ class Services:
     web_dir: Path | None = None
     app_setup_factory: Callable[[Layout], Any] | None = None
     updates: UpdateService = field(init=False)
+    automation: AutomationService = field(init=False)
 
     def __post_init__(self) -> None:
         self.config = ConfigService(self.layout)
@@ -56,6 +58,8 @@ class Services:
         self.jobs.on_finish.append(
             lambda job: self.updates.refresh() if job.kind in {"install", "update"} else None
         )
+        self.automation = AutomationService(self)
+        self.jobs.on_finish.append(lambda job: self.automation.on_job_finished(job))
 
 
 class DaemonGuard:

@@ -1,6 +1,7 @@
 import {
   Activity,
   ArrowUpCircle,
+  BellRing,
   Cable,
   ExternalLink,
   FileCog,
@@ -105,6 +106,14 @@ function useCommands(query: string, close: () => void): Command[] {
         keywords: 'setup wire download clients indexers',
         label: 'Connect apps',
         run: go('/connect'),
+      },
+      {
+        group: 'Go to',
+        icon: <BellRing size={ICON} />,
+        id: 'automation',
+        keywords: 'alerts notifications apprise ntfy pushover nightly maintenance schedule auto update',
+        label: 'Automation: alerts and nightly maintenance',
+        run: go('/automation'),
       },
       {
         group: 'Go to',

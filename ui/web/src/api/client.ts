@@ -4,6 +4,9 @@ const BASE = '/api';
 
 export const API_ROUTES = {
   APPS: '/apps',
+  AUTOMATION: '/automation',
+  AUTOMATION_MAINTENANCE: '/automation/maintenance',
+  AUTOMATION_TEST: '/automation/test',
   BACKUPS: '/backups',
   BACKUPS_RUN: '/backups/run',
   CONFIG: '/config',

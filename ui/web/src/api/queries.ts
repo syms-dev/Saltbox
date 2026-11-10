@@ -20,6 +20,8 @@ import type {
   JobsResponse,
   MediaSnapshot,
   Meta,
+  AutomationSettings,
+  AutomationStatus,
   BackupSummary,
   ContainerAction,
   ContainerLogs,
@@ -362,6 +364,46 @@ export function useRecyclarrSync(): UseMutationResult<Job, Error, { preview: boo
     mutationFn: (body: { preview: boolean }) => apiPost<Job>(API_ROUTES.RECYCLARR_SYNC, body),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['recyclarr'] });
+      void client.invalidateQueries({ queryKey: [QUERY_KEYS.JOBS] });
+    },
+  });
+}
+
+export function useAutomation(): UseQueryResult<AutomationStatus> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<AutomationStatus>(API_ROUTES.AUTOMATION, { signal }),
+    queryKey: ['automation'],
+    refetchInterval: 30_000,
+  });
+}
+
+type AutomationChange = {
+  alerts?: Partial<AutomationSettings['alerts']>;
+  maintenance?: Partial<AutomationSettings['maintenance']>;
+};
+
+export function useSaveAutomation(): UseMutationResult<AutomationStatus, Error, AutomationChange> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (change: AutomationChange) => apiPut<AutomationStatus>(API_ROUTES.AUTOMATION, change),
+    onSuccess: (data) => client.setQueryData(['automation'], data),
+  });
+}
+
+export function useTestAlert(): UseMutationResult<{ message: string; ok: boolean }, Error, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPost<{ message: string; ok: boolean }>(API_ROUTES.AUTOMATION_TEST),
+    onSettled: () => void client.invalidateQueries({ queryKey: ['automation'] }),
+  });
+}
+
+export function useRunMaintenance(): UseMutationResult<{ started: boolean }, Error, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPost<{ started: boolean }>(API_ROUTES.AUTOMATION_MAINTENANCE),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['automation'] });
       void client.invalidateQueries({ queryKey: [QUERY_KEYS.JOBS] });
     },
   });

@@ -10,6 +10,7 @@ const PAGES = [
   '/activity',
   '/system',
   '/connect',
+  '/automation',
   '/config/accounts',
   '/config/inventory',
 ];

@@ -148,6 +148,14 @@ else:
     sys.exit("fake tailscale: unsupported " + " ".join(sys.argv[1:]))
 """
 
+FAKE_APPRISE = """#!{python}
+import sys
+args = sys.argv[1:]
+url = open(args[args.index("--config") + 1]).read().strip()
+with open({log!r}, "a") as log:
+    log.write(url + " | " + args[args.index("-t") + 1] + "\\n")
+"""
+
 FAKE_SB = """#!/bin/sh
 echo "Executing Ansible playbook with command: ansible-playbook saltbox.yml --tags $2"
 echo
@@ -322,7 +330,9 @@ def build_box(root: Path) -> Layout:
     sb.write_text(FAKE_SB)
     tailscale = bin_dir / "tailscale"
     tailscale.write_text(FAKE_TAILSCALE.format(python=sys.executable))
-    for path in (docker, sb, tailscale):
+    apprise = bin_dir / "apprise"
+    apprise.write_text(FAKE_APPRISE.format(python=sys.executable, log=str(root / "apprise.log")))
+    for path in (docker, sb, tailscale, apprise):
         path.chmod(0o755)
     os.environ["PATH"] = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
     return Layout(repo=repo, appdata=appdata, sb_binary=sb, state_dir=root / "state")

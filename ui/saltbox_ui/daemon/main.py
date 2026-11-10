@@ -93,6 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     layout = Layout.from_env()
     token = None if args.no_token else ensure_token(layout)
     app = create_app(layout, token=token, web_dir=web_dir(args.web, layout))
+    app.state.services.automation.start()
     hosts = args.host or default_hosts()
     port = args.port or DEFAULT_PORT
     try:
