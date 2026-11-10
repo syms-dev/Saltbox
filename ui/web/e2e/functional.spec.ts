@@ -297,6 +297,16 @@ test.describe('system and setup', () => {
     expect(await jobOutcome(page)).toBe('succeeded');
   });
 
+  test('opens the web app over Tailscale and closes it again', async ({ page }) => {
+    await page.goto('/system');
+    const tailscale = page.getByRole('region', { name: 'Tailscale' });
+    await tailscale.getByRole('button', { name: 'Turn on' }).click();
+    expect(await confirm(page, 'Open the web app over Tailscale?', 'Turn on')).toContain('owner@example.com');
+    await expect(tailscale.getByRole('link', { name: 'https://saltbox.tail-e2e.ts.net:8443/' })).toBeVisible();
+    await tailscale.getByRole('button', { name: 'Turn off' }).click();
+    await expect(tailscale.getByRole('button', { name: 'Turn on' })).toBeVisible();
+  });
+
   test('an app page shows what its container uses', async ({ page }) => {
     await page.goto('/apps/saltbox/plex');
     await expect(page.getByRole('row', { name: /plex/ })).toContainText('31.5% CPU');

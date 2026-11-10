@@ -213,25 +213,47 @@ token for curl.
 
 What the web app does:
 
-- **Home** leads with what needs you, each item with the button that fixes it:
-  restart an unhealthy app, start a stopped one, apply updates, open a config
-  file with errors, retry a failed job. Below it, a launcher for your apps
-  (star the ones you use most), updates, storage and recent activity.
+- **Home** leads with what needs you, each item with the button that fixes it
+  (restart an unhealthy app, start a stopped one, apply updates, open a config
+  file with errors, retry a failed job, start the VPN). Then media at a glance:
+  the VPN (public IP, forwarded port, what is routed through it), downloads in
+  qBittorrent and SABnzbd, what is playing on Plex and what Sonarr and Radarr
+  expect this week; a launcher for your apps; updates, storage and activity.
 - **Apps**: installed apps with health, update and restart buttons, and a
-  Discover tab to browse and install anything in the Saltbox and Sandbox
-  catalogs. Each app has a page with its containers (restart, stop, start),
-  live logs, inventory overrides and role defaults, docs and links.
-- **Activity**: every `sb` job with a live log. A failed job says which task
-  failed and why, and can be run again. Any `sb install` tag can be run here.
-- **System**: disks (each drive and pool once), mounts, Saltbox's systemd
-  services, and the Saltbox checkouts against their branches, with
-  `sb update`.
-- **Connect apps**: the post-install wiring from the TUI's setup step.
+  Discover tab to install anything in the Saltbox and Sandbox catalogs. Each app
+  has a page with its containers (restart, stop, start, CPU and memory), live
+  logs, inventory overrides and role defaults, docs and links.
+- **Activity**: every job with a live log. A failed job says which task failed
+  and why, and can be run again.
+- **System**: CPU, memory and the busiest containers; each drive and pool once;
+  mounts and Saltbox services; Tailscale (and opening this app over it);
+  backups (`sb install backup` on demand); Saltbox's own version and `sb update`.
+- **Automation**: alerts to your phone through Apprise (Saltbox's own
+  notification tool; accounts.yml's `apprise:` is the default) when an app turns
+  unhealthy or stops, a job fails, a disk passes 90%, updates arrive or the VPN
+  has a problem; and nightly maintenance that updates apps with new images
+  (except the ones you exclude) and sends one summary.
+- **Connect apps**: quality profiles through Recyclarr (TRaSH Guides profiles,
+  written to /opt/recyclarr with keys read from the apps, synced with a live
+  log), then the post-install wiring from the TUI's setup step, including
+  checks for the Bazarr and Seerr steps done by hand.
 - **Config**: the YAML files `sb` reads, with the same validation.
 - Search with Ctrl+K (⌘K) or `/` to open any app, page or action.
 
-Every action asks first and says what will happen; the app icons come from
-the apps themselves through Traefik, so nothing loads from outside the server.
+Passwords, tokens and keys never reach the browser unless you press Show
+secrets: config files show `‹hidden:user.pass›`-style placeholders that are
+put back when you save, and logs have known secrets replaced. Every action asks
+first and says what will happen. App icons come from the apps themselves
+through Traefik, so nothing loads from outside the server.
+
+**Over Tailscale.** System → Tailscale → Turn on runs
+`tailscale serve --bg --https=8443 unix:/run/saltbox-ui/tailscale.sock`, so the
+app answers at `https://<name>.<tailnet>.ts.net:8443/` for the Tailscale account
+that owns the server, and nobody else: the daemon checks the
+`Tailscale-User-Login` header Tailscale adds on that socket, and refuses other
+users and tagged devices. It needs MagicDNS and HTTPS certificates switched on in
+the Tailscale admin console. It works when the domain, Cloudflare or Authelia do
+not, which makes it the way back in.
 
 Development: start `saltbox-uid --no-token --no-uds --port 8701` against a
 checkout (same `SALTBOX_*` variables as above) and `npm run dev` in `web/`;

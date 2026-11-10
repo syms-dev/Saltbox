@@ -155,6 +155,38 @@ def tailscale_status(runner: Runner | None = None) -> dict[str, Any]:
     }
 
 
+SERVE_PORT = 8443
+
+
+def tailscale_serve_status(socket_path: str, runner: Runner | None = None) -> dict[str, Any]:
+    """Whether ``tailscale serve`` proxies to the daemon, and the address it serves on."""
+    code, output = (runner or run)(["tailscale", "serve", "status", "--json"])
+    if code != 0:
+        return {"enabled": False, "error": output.strip()[:300]}
+    try:
+        data = json.loads(output or "{}") or {}
+    except ValueError:
+        return {"enabled": False, "error": "unreadable tailscale serve status"}
+    for host_port, config in (data.get("Web") or {}).items():
+        for handler in ((config or {}).get("Handlers") or {}).values():
+            if (handler or {}).get("Proxy") == f"unix:{socket_path}":
+                address = host_port[:-4] if host_port.endswith(":443") else host_port
+                return {"enabled": True, "url": f"https://{address}/"}
+    return {"enabled": False}
+
+
+def tailscale_serve(
+    socket_path: str, enable: bool, runner: Runner | None = None
+) -> tuple[bool, str]:
+    """Turn the tailnet address for the web app on or off (HTTPS on port 8443)."""
+    if enable:
+        args = ["tailscale", "serve", "--bg", f"--https={SERVE_PORT}", f"unix:{socket_path}"]
+    else:
+        args = ["tailscale", "serve", f"--https={SERVE_PORT}", "off"]
+    code, output = (runner or run)(args)
+    return code == 0, output.strip()[-500:]
+
+
 # -- backups ------------------------------------------------------------------------------------
 def backup_summary(config: dict[str, Any], user: str) -> dict[str, Any]:
     """What backup_config.yml asks for, and the newest backup in the local destination."""

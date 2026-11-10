@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import hmac
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -43,6 +45,7 @@ class Services:
     jobs: JobManager = field(init=False)
     token: str | None = None
     web_dir: Path | None = None
+    tailscale_socket: str | None = None
     app_setup_factory: Callable[[Layout], Any] | None = None
     updates: UpdateService = field(init=False)
     automation: AutomationService = field(init=False)
@@ -60,6 +63,26 @@ class Services:
         )
         self.automation = AutomationService(self)
         self.jobs.on_finish.append(lambda job: self.automation.on_job_finished(job))
+
+
+class TailscaleOwner:
+    """The login of the Tailscale account that owns this server, cached five minutes."""
+
+    TTL_SECONDS = 300.0
+
+    def __init__(self, status: Callable[[], dict[str, Any]] | None = None):
+        from ..state.system import tailscale_status
+
+        self.status = status or tailscale_status
+        self._cached: tuple[float, str | None] | None = None
+
+    def __call__(self) -> str | None:
+        now = time.monotonic()
+        if self._cached is not None and now - self._cached[0] < self.TTL_SECONDS:
+            return self._cached[1]
+        owner = str(self.status().get("owner") or "").strip().lower() or None
+        self._cached = (now, owner)
+        return owner
 
 
 class DaemonGuard:
@@ -83,9 +106,17 @@ class DaemonGuard:
     SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
     SAME_SITE = frozenset({"same-origin", "none"})
 
-    def __init__(self, app: ASGIApp, token: str):
+    def __init__(
+        self,
+        app: ASGIApp,
+        token: str,
+        tailscale_socket: str | None = None,
+        tailscale_owner: Callable[[], str | None] | None = None,
+    ):
         self.app = app
         self.token = token
+        self.tailscale_socket = tailscale_socket
+        self.tailscale_owner = tailscale_owner or TailscaleOwner()
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         kind = scope["type"]
@@ -93,7 +124,7 @@ class DaemonGuard:
             await self.app(scope, receive, send)
             return
         headers = Headers(scope=scope)
-        reason = self._refusal(scope, headers)
+        reason = await self._tailscale_refusal(scope, headers) or self._refusal(scope, headers)
         if reason is None:
             await self.app(scope, receive, send)
         elif kind == "websocket":
@@ -102,6 +133,24 @@ class DaemonGuard:
         else:
             status = 401 if reason == "unauthorised" else 403
             await JSONResponse({"error": reason}, status_code=status)(scope, receive, send)
+
+    async def _tailscale_refusal(self, scope: Scope, headers: Headers) -> str | None:
+        """On the socket ``tailscale serve`` proxies to, only this server's owner gets in.
+
+        Tailscale puts the signed-in tailnet user in ``Tailscale-User-Login`` (and
+        strips any copy a client sends). Tagged devices and shared-in users have
+        another login or none, and are refused.
+        """
+        server = scope.get("server")
+        if not self.tailscale_socket or not server or server[0] != self.tailscale_socket:
+            return None
+        login = headers.get("tailscale-user-login", "").strip().lower()
+        if not login:
+            return "unauthorised"
+        owner = await asyncio.to_thread(self.tailscale_owner)
+        if owner is None or login != owner:
+            return "only the Tailscale account that owns this server can open it"
+        return None
 
     def _refusal(self, scope: Scope, headers: Headers) -> str | None:
         if scope.get("client") is not None:
@@ -126,8 +175,14 @@ def create_app(
     token: str | None = None,
     web_dir: Path | None = None,
     services: Services | None = None,
+    tailscale_socket: str | None = None,
 ) -> FastAPI:
-    services = services or Services(layout or Layout.from_env(), token=token, web_dir=web_dir)
+    services = services or Services(
+        layout or Layout.from_env(),
+        token=token,
+        web_dir=web_dir,
+        tailscale_socket=tailscale_socket,
+    )
     app = FastAPI(
         title="saltbox-ui",
         version=__version__,
@@ -138,7 +193,9 @@ def create_app(
     app.state.services = services
     app.include_router(router, prefix="/api")
     if services.token:
-        app.add_middleware(DaemonGuard, token=services.token)
+        app.add_middleware(
+            DaemonGuard, token=services.token, tailscale_socket=services.tailscale_socket
+        )
     if services.web_dir and (services.web_dir / "index.html").exists():
         _mount_web(app, services.web_dir)
     else:

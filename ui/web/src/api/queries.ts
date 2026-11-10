@@ -408,3 +408,11 @@ export function useRunMaintenance(): UseMutationResult<{ started: boolean }, Err
     },
   });
 }
+
+export function useTailscaleServe(): UseMutationResult<TailscaleStatus, Error, boolean> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (enabled: boolean) => apiPost<TailscaleStatus>(API_ROUTES.TAILSCALE_SERVE, { enabled }),
+    onSuccess: (data) => client.setQueryData(['tailscale'], data),
+  });
+}

@@ -23,6 +23,7 @@ export const API_ROUTES = {
   SETUP: '/setup',
   SETUP_APPLY: '/setup/apply',
   TAILSCALE: '/tailscale',
+  TAILSCALE_SERVE: '/tailscale/serve',
   UPDATES: '/updates',
   UPDATES_APPLY: '/updates/apply',
   UPDATES_CHECK: '/updates/check',

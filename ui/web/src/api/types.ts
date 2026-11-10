@@ -245,6 +245,7 @@ export type TailscaleStatus = {
   peers?: number;
   peers_online?: number;
   running?: boolean;
+  serve?: { enabled: boolean; error?: string; url?: string };
   state?: string;
   version?: string;
 };

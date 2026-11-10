@@ -168,3 +168,8 @@
 .memCell .num {
   min-width: 5.5rem;
 }
+
+.access {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+}

@@ -1,7 +1,16 @@
 import { Archive, Cpu, LoaderCircle, Network, Terminal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { useApps, useBackups, useJobs, useMeta, useResources, useRunBackup, useTailscale } from '../api/queries';
+import {
+  useApps,
+  useBackups,
+  useJobs,
+  useMeta,
+  useResources,
+  useRunBackup,
+  useTailscale,
+  useTailscaleServe,
+} from '../api/queries';
 import { useConfirm, useToast } from '../components/feedback';
 import { Meter } from '../components/meter';
 import { jobTitle } from '../components/shell';
@@ -93,6 +102,83 @@ export function ResourcesCard(): React.ReactNode {
   );
 }
 
+function TailscaleAccess({
+  owner,
+  serve,
+}: {
+  owner: string;
+  serve: { enabled: boolean; error?: string; url?: string };
+}): React.ReactNode {
+  const toggle = useTailscaleServe();
+  const confirm = useConfirm();
+  const toast = useToast();
+
+  async function turnOn(): Promise<void> {
+    const ok = await confirm({
+      body: (
+        <>
+          <p>
+            Makes this web app reachable at this server’s Tailscale address, over HTTPS, on port 8443. Only{' '}
+            <strong>{owner}</strong> can open it: other people and tagged devices on your tailnet are refused.
+          </p>
+          <p>It works even when your domain, Cloudflare or Authelia are down.</p>
+        </>
+      ),
+      confirmLabel: 'Turn on',
+      title: 'Open the web app over Tailscale?',
+    });
+    if (!ok) return;
+    toggle.mutate(true, {
+      onError: (error) => toast({ body: error.message, title: 'Could not turn it on', tone: 'danger' }),
+      onSuccess: () => toast({ title: 'Reachable over Tailscale', tone: 'ok' }),
+    });
+  }
+
+  return (
+    <div className={`${styles['access']} stack-sm`}>
+      <strong>Web app over Tailscale</strong>
+      {serve.enabled ? (
+        <>
+          <span className="small">
+            On at{' '}
+            <a href={serve.url} rel="noreferrer" target="_blank">
+              {serve.url}
+            </a>{' '}
+            for {owner} only.
+          </span>
+          <div className="row">
+            <button
+              className="small"
+              disabled={toggle.isPending}
+              onClick={() =>
+                toggle.mutate(false, {
+                  onError: (error) => toast({ body: error.message, title: 'Could not turn it off', tone: 'danger' }),
+                })
+              }
+              type="button"
+            >
+              Turn off
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <span className="muted small">
+            Reach this app from your own devices on the tailnet, without your domain or Authelia. A way back in when
+            something breaks.
+          </span>
+          <div className="row">
+            <button className="small primary" disabled={toggle.isPending} onClick={() => void turnOn()} type="button">
+              Turn on
+            </button>
+          </div>
+        </>
+      )}
+      {serve.error ? <span className="muted small">{serve.error}</span> : null}
+    </div>
+  );
+}
+
 export function TailscaleCard(): React.ReactNode {
   const tailscale = useTailscale();
   const meta = useMeta();
@@ -133,6 +219,7 @@ export function TailscaleCard(): React.ReactNode {
               {data.peers_online} of {data.peers} other devices online
             </dd>
           </dl>
+          {data.serve === undefined ? null : <TailscaleAccess owner={data.owner ?? ''} serve={data.serve} />}
           <p className={`note small ${styles['tip']}`}>
             <Terminal aria-hidden="true" size={14} /> From any of your devices:{' '}
             <code>

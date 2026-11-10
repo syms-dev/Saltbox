@@ -11,6 +11,7 @@ Combines three sources:
 from __future__ import annotations
 
 import json
+import threading
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import resources
@@ -87,6 +88,10 @@ class App:
 # it, and Admin Apps > Misc holds system tools such as the Mainline kernel
 # installer. Entries without a docs category are maintenance tags (Plex Db,
 # Arr Db, Cloudplow Disable).
+# Parsing a role's defaults takes tens of milliseconds and the apps list needs them all.
+_DEFAULTS_CACHE: dict[tuple[str, str], tuple[tuple[int, int], RoleDefaults]] = {}
+_DEFAULTS_LOCK = threading.Lock()
+
 HIDDEN_CATEGORY_PREFIXES = (
     "Admin Apps > Database",
     "Admin Apps > Misc",
@@ -132,10 +137,22 @@ class Catalog:
         return base / role
 
     def defaults(self, role: str, repo: str = "saltbox") -> RoleDefaults | None:
+        """The role's parsed defaults, parsed again only when the file changes."""
         path = self.role_dir(repo, role) / "defaults" / "main.yml"
-        if not path.exists():
+        try:
+            info = path.stat()
+        except OSError:
             return None
-        return parse_role_defaults(role, path)
+        key = (str(path), role)
+        stamp = (info.st_mtime_ns, info.st_size)
+        with _DEFAULTS_LOCK:
+            cached = _DEFAULTS_CACHE.get(key)
+        if cached is not None and cached[0] == stamp:
+            return cached[1]
+        parsed = parse_role_defaults(role, path)
+        with _DEFAULTS_LOCK:
+            _DEFAULTS_CACHE[key] = (stamp, parsed)
+        return parsed
 
     # -- profiles --------------------------------------------------------------
     @cached_property

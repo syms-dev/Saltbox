@@ -14,6 +14,7 @@ import logging
 import os
 import socket
 import sys
+import threading
 from pathlib import Path
 
 from ..layout import Layout
@@ -54,7 +55,9 @@ def _address_present(address: str) -> bool:
     return True
 
 
-def bind_sockets(hosts: list[str], port: int, uds: str | None) -> list[socket.socket]:
+def bind_sockets(
+    hosts: list[str], port: int, uds: str | None, extra_uds: tuple[str, ...] = ()
+) -> list[socket.socket]:
     sockets: list[socket.socket] = []
     for host in hosts:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -63,18 +66,27 @@ def bind_sockets(hosts: list[str], port: int, uds: str | None) -> list[socket.so
         sock.listen(128)
         sock.set_inheritable(True)
         sockets.append(sock)
-    if uds:
-        path = Path(uds)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if path.exists():
-            path.unlink()
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.bind(str(path))
-        path.chmod(0o600)
-        sock.listen(128)
-        sock.set_inheritable(True)
-        sockets.append(sock)
+    for path in [uds, *extra_uds] if uds else []:
+        sockets.append(_bind_unix(Path(path)))
     return sockets
+
+
+def _bind_unix(path: Path) -> socket.socket:
+    """A root-only Unix socket (0600 in the 0700 runtime directory)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        path.unlink()
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.bind(str(path))
+    path.chmod(0o600)
+    sock.listen(128)
+    sock.set_inheritable(True)
+    return sock
+
+
+def tailscale_socket_for(uds: str) -> str:
+    """The socket ``tailscale serve`` proxies to, next to the daemon's own."""
+    return str(Path(uds).with_name("tailscale.sock"))
 
 
 def web_dir(explicit: str | None, layout: Layout) -> Path | None:
@@ -92,12 +104,25 @@ def main(argv: list[str] | None = None) -> int:
 
     layout = Layout.from_env()
     token = None if args.no_token else ensure_token(layout)
-    app = create_app(layout, token=token, web_dir=web_dir(args.web, layout))
+    tailscale_socket = None if args.no_uds else tailscale_socket_for(args.uds)
+    app = create_app(
+        layout, token=token, web_dir=web_dir(args.web, layout), tailscale_socket=tailscale_socket
+    )
     app.state.services.automation.start()
+    # Parse every role's defaults once in the background, so the first Apps page is quick.
+    warm = threading.Thread(
+        target=app.state.services.catalog.apps, name="warm-catalog", daemon=True
+    )
+    warm.start()
     hosts = args.host or default_hosts()
     port = args.port or DEFAULT_PORT
     try:
-        sockets = bind_sockets(hosts, port, None if args.no_uds else args.uds)
+        sockets = bind_sockets(
+            hosts,
+            port,
+            None if args.no_uds else args.uds,
+            (tailscale_socket,) if tailscale_socket else (),
+        )
     except OSError as error:
         print(f"cannot listen: {error}", file=sys.stderr)
         return 1

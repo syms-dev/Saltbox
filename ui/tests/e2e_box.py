@@ -144,6 +144,19 @@ if sys.argv[1:3] == ["status", "--json"]:
         "Peer": {{"phone": {{"Online": True}}, "laptop": {{"Online": False}}}},
         "CurrentTailnet": {{"MagicDNSEnabled": True}},
     }}))
+elif sys.argv[1:4] == ["serve", "status", "--json"]:
+    try:
+        target = open({serve!r}).read().strip()
+    except OSError:
+        target = ""
+    web = {{"saltbox.tail-e2e.ts.net:8443": {{"Handlers": {{"/": {{"Proxy": target}}}}}}}}
+    print(json.dumps({{"Web": web}} if target else {{}}))
+elif sys.argv[1:2] == ["serve"] and sys.argv[-1] == "off":
+    import os
+    if os.path.exists({serve!r}):
+        os.remove({serve!r})
+elif sys.argv[1:2] == ["serve"]:
+    open({serve!r}, "w").write(sys.argv[-1])
 else:
     sys.exit("fake tailscale: unsupported " + " ".join(sys.argv[1:]))
 """
@@ -329,7 +342,9 @@ def build_box(root: Path) -> Layout:
     sb = bin_dir / "sb"
     sb.write_text(FAKE_SB)
     tailscale = bin_dir / "tailscale"
-    tailscale.write_text(FAKE_TAILSCALE.format(python=sys.executable))
+    tailscale.write_text(
+        FAKE_TAILSCALE.format(python=sys.executable, serve=str(root / "tailscale-serve"))
+    )
     apprise = bin_dir / "apprise"
     apprise.write_text(FAKE_APPRISE.format(python=sys.executable, log=str(root / "apprise.log")))
     for path in (docker, sb, tailscale, apprise):
@@ -349,7 +364,12 @@ def main(argv: list[str] | None = None) -> int:
 
     with tempfile.TemporaryDirectory(prefix="saltbox-e2e-") as tmp:
         layout = build_box(Path(tmp))
-        services = Services(layout, token=args.token, web_dir=Path(args.web))
+        services = Services(
+            layout,
+            token=args.token,
+            web_dir=Path(args.web),
+            tailscale_socket=str(Path(tmp) / "tailscale.sock"),
+        )
         services.app_setup_factory = lambda layout: AppSetup(
             layout,
             transport=apps_transport,

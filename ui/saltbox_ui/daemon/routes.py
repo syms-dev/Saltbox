@@ -46,7 +46,14 @@ from ..state import (
     systemd_units,
 )
 from ..state.containers import CONTAINER_ACTIONS, container_action, container_logs
-from ..state.system import backup_summary, container_stats, host_stats, tailscale_status
+from ..state.system import (
+    backup_summary,
+    container_stats,
+    host_stats,
+    tailscale_serve,
+    tailscale_serve_status,
+    tailscale_status,
+)
 from ..yamlio import coerce_scalar, find_duplicate_keys, load_text, write_atomic
 
 router = APIRouter()
@@ -489,7 +496,33 @@ def resources(request: Request) -> dict[str, Any]:
 
 @router.get("/tailscale")
 def tailscale(request: Request) -> dict[str, Any]:
-    return tailscale_status()
+    svc = services(request)
+    status = tailscale_status()
+    if status.get("running") and svc.tailscale_socket:
+        status["serve"] = tailscale_serve_status(svc.tailscale_socket)
+    return status
+
+
+class TailscaleServe(BaseModel):
+    enabled: bool
+
+
+@router.post("/tailscale/serve")
+def tailscale_serve_toggle(request: Request, body: TailscaleServe) -> dict[str, Any]:
+    """Open (or close) the web app on this server's tailnet address, for its owner only."""
+    svc = services(request)
+    if not svc.tailscale_socket:
+        raise HTTPException(409, "the daemon was started without its Unix sockets")
+    ok, message = tailscale_serve(svc.tailscale_socket, body.enabled)
+    if not ok:
+        hint = ""
+        if "HTTPS" in message or "https" in message:
+            hint = (
+                " Turn on MagicDNS and HTTPS certificates in the Tailscale admin console"
+                " (DNS page)."
+            )
+        raise HTTPException(502, f"tailscale serve failed: {message}{hint}")
+    return tailscale(request)
 
 
 @router.get("/backups")
