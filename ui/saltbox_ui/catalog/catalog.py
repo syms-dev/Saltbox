@@ -82,6 +82,25 @@ class App:
         }
 
 
+# Docs categories whose entries are not apps someone picks: databases arrive
+# with the apps that need them, Authelia comes with core and Authentik replaces
+# it, and Admin Apps > Misc holds system tools such as the Mainline kernel
+# installer. Entries without a docs category are maintenance tags (Plex Db,
+# Arr Db, Cloudplow Disable).
+HIDDEN_CATEGORY_PREFIXES = (
+    "Admin Apps > Database",
+    "Admin Apps > Misc",
+    "Admin Apps > Access Control",
+)
+
+
+def is_listed_app(app: App) -> bool:
+    """Whether ``app`` is a real app to offer, rather than a tool, database or tag."""
+    return bool(app.categories) and not any(
+        category.startswith(HIDDEN_CATEGORY_PREFIXES) for category in app.categories
+    )
+
+
 def load_bundled_metadata() -> dict[str, dict[str, Any]]:
     """Docs-derived metadata keyed by ``repo/role``."""
     try:

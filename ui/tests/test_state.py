@@ -87,3 +87,47 @@ def test_mounts_parsing():
         "/mnt/remote/nas box",
     ]
     assert found[1]["type"] == "fuse.mergerfs"
+
+
+def test_containers_from_the_docker_cli() -> None:
+    import json
+
+    from saltbox_ui.state.containers import list_containers_cli
+
+    inspected = [
+        {
+            "Id": "abcdef1234567890",
+            "Name": "/sonarr",
+            "Config": {
+                "Image": "ghcr.io/hotio/sonarr:release",
+                "Labels": {
+                    "com.github.saltbox.saltbox_managed": "true",
+                    "traefik.enable": "true",
+                    "traefik.http.routers.sonarr.middlewares": "a@file,b@file",
+                },
+            },
+            "State": {"Status": "running", "Health": {"Status": "healthy"}},
+        },
+        {
+            "Id": "0123456789abcdef",
+            "Name": "/gluetun",
+            "Config": {"Image": "qmcgaw/gluetun", "Labels": {}},
+            "State": {"Status": "exited"},
+        },
+    ]
+    calls = []
+
+    def runner(args):
+        calls.append(args)
+        if args[:2] == ["docker", "ps"]:
+            return 0, "abcdef1234567890\n0123456789abcdef\n"
+        return 0, json.dumps(inspected)
+
+    found = list_containers_cli(runner)
+    assert [c["name"] for c in found] == ["gluetun", "sonarr"]
+    sonarr = found[1]
+    assert sonarr["managed"] and sonarr["traefik"] and sonarr["health"] == "healthy"
+    assert sonarr["labels"]["traefik.http.routers.sonarr.middlewares"] == "a@file,b@file"
+    assert found[0]["managed"] is False and found[0]["status"] == "exited"
+    assert calls[1][:2] == ["docker", "inspect"]
+    assert list_containers_cli(lambda args: (0, "")) == []

@@ -1,6 +1,7 @@
 .shell {
   display: grid;
-  grid-template-columns: 14rem 1fr;
+  /* minmax(0, ...) stops one long line (a job's tag list) from widening the page */
+  grid-template-columns: 14rem minmax(0, 1fr);
   min-height: 100%;
 }
 
@@ -44,7 +45,9 @@
   text-decoration: none;
 }
 
-.navLinkActive {
+/* :hover sticks after a tap on touch screens, so the active style must win over it */
+.navLinkActive,
+.navLinkActive:hover {
   background: var(--color-accent);
   color: var(--color-accent-fg);
 }
@@ -65,12 +68,14 @@
 }
 
 .main {
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: var(--space-6);
 }
 
 @media (max-width: 48rem) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {

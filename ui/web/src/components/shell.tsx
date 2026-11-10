@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
 import { useJobs, useMeta } from '../api/queries';
+import type { Meta } from '../api/types';
 import { StatusBadge } from './status-badge';
 import styles from './shell.module.css';
 
@@ -15,6 +16,12 @@ function navClass({ isActive }: { isActive: boolean }): string {
   return isActive ? `${styles['navLink']} ${styles['navLinkActive']}` : (styles['navLink'] ?? '');
 }
 
+export function versionLine(meta: Meta): string {
+  const { branch, commit } = meta.saltbox;
+  if (branch === null && commit === null) return `ui ${meta.version}`;
+  return `ui ${meta.version} · ${branch ?? 'detached'}@${commit ?? '?'}`;
+}
+
 export function Shell(): React.ReactNode {
   const meta = useMeta();
   const jobs = useJobs();
@@ -24,11 +31,7 @@ export function Shell(): React.ReactNode {
       <aside className={styles['sidebar']}>
         <div className={styles['brand']}>
           <span className={styles['brandName']}>Saltbox</span>
-          <span className={`muted ${styles['brandVersion']}`}>
-            {meta.data
-              ? `ui ${meta.data.version} · ${meta.data.saltbox.branch ?? '?'}@${meta.data.saltbox.commit ?? '?'}`
-              : ''}
-          </span>
+          <span className={`muted ${styles['brandVersion']}`}>{meta.data ? versionLine(meta.data) : ''}</span>
         </div>
         <nav aria-label="Main" className={styles['nav']}>
           {NAV.map((item) => (

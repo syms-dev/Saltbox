@@ -1,34 +1,77 @@
-"""Containers Saltbox manages, through the Docker SDK when it is installed."""
+"""Containers Saltbox manages.
+
+The Docker SDK is an optional extra, and a plain ``pipx install`` of the UI
+leaves it out, so the ``docker`` command line is used whenever the SDK is
+missing or fails. Both return the same records.
+"""
 
 from __future__ import annotations
 
+import json
+import shutil
+import subprocess
+from collections.abc import Callable
 from typing import Any
 
 MANAGED_LABEL = "com.github.saltbox.saltbox_managed"
+
+Runner = Callable[[list[str]], tuple[int, str]]
+
+
+def _run(args: list[str]) -> tuple[int, str]:
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, check=False, timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return 127, str(error)
+    return result.returncode, result.stdout if result.returncode == 0 else result.stderr
+
+
+def _record(attrs: dict[str, Any], image: str = "") -> dict[str, Any]:
+    config = attrs.get("Config") or {}
+    labels = config.get("Labels") or {}
+    state = attrs.get("State") or {}
+    return {
+        "name": str(attrs.get("Name", "")).lstrip("/"),
+        "id": str(attrs.get("Id", ""))[:12],
+        "image": image or str(config.get("Image", "")),
+        "status": str(state.get("Status", "")),
+        "health": (state.get("Health") or {}).get("Status"),
+        "started_at": state.get("StartedAt"),
+        "managed": str(labels.get(MANAGED_LABEL, "false")).lower() == "true",
+        "traefik": str(labels.get("traefik.enable", "false")).lower() == "true",
+        "labels": labels,
+    }
+
+
+def list_containers_cli(runner: Runner | None = None) -> list[dict[str, Any]]:
+    """``docker ps -aq`` then ``docker inspect``: full labels and health, no SDK needed."""
+    run = runner or _run
+    if runner is None and shutil.which("docker") is None:
+        raise RuntimeError("the docker command is not installed")
+    code, output = run(["docker", "ps", "-aq", "--no-trunc"])
+    if code != 0:
+        raise RuntimeError(output.strip() or "docker ps failed")
+    ids = output.split()
+    if not ids:
+        return []
+    code, output = run(["docker", "inspect", *ids])
+    if code != 0:
+        raise RuntimeError(output.strip() or "docker inspect failed")
+    return sorted((_record(item) for item in json.loads(output or "[]")), key=lambda c: c["name"])
 
 
 def list_containers(*, all_containers: bool = True) -> list[dict[str, Any]]:
     try:
         import docker  # type: ignore[import-not-found]
-    except ImportError as error:
-        raise RuntimeError("the docker package is not installed") from error
-    client = docker.from_env()
+    except ImportError:
+        return list_containers_cli()
+    try:
+        client = docker.from_env()
+        containers = client.containers.list(all=all_containers)
+    except Exception:  # SDK present but unusable (socket, API version): use the CLI
+        return list_containers_cli()
     result = []
-    for container in client.containers.list(all=all_containers):
-        attrs = container.attrs or {}
-        labels = attrs.get("Config", {}).get("Labels") or {}
-        state = attrs.get("State", {})
-        result.append(
-            {
-                "name": container.name,
-                "id": container.short_id,
-                "image": ", ".join(container.image.tags) if container.image else "",
-                "status": container.status,
-                "health": (state.get("Health") or {}).get("Status"),
-                "started_at": state.get("StartedAt"),
-                "managed": labels.get(MANAGED_LABEL, "false").lower() == "true",
-                "traefik": labels.get("traefik.enable", "false").lower() == "true",
-                "labels": labels,
-            }
-        )
+    for container in containers:
+        image = ", ".join(container.image.tags) if container.image else ""
+        result.append(_record(container.attrs or {}, image))
     return sorted(result, key=lambda c: c["name"])

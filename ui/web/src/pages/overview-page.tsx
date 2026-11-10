@@ -11,8 +11,11 @@ const DISK_WARN_PERCENT = 85;
 
 type Attention = { href?: string; text: string; tone: 'danger' | 'warn' };
 
-function attentionItems(data: Overview): Attention[] {
+export function attentionItems(data: Overview): Attention[] {
   const items: Attention[] = [];
+  if (!data.containers.available) {
+    items.push({ text: "Docker isn't reachable from the daemon, so app status is unknown", tone: 'danger' });
+  }
   for (const [file, issues] of Object.entries(data.config_issues)) {
     const errors = issues.filter((i: Issue) => i.level === 'error');
     if (errors.length > 0) {

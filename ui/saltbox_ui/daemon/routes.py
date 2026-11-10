@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisco
 from pydantic import BaseModel, Field
 
 from .. import __version__
+from ..catalog.catalog import is_listed_app
 from ..config.service import CONFIG_FILES
 from ..runner import JobRunning
 from ..state import (
@@ -68,7 +69,7 @@ def overview(request: Request) -> dict[str, Any]:
             "units": systemd_units(),
         },
         "install": {
-            "installed": layout.facts_dir.exists(),
+            "installed": layout.facts_dir.exists() or (layout.appdata / "traefik").is_dir(),
             "configs_present": layout.config_file("accounts").exists(),
             "roles_with_facts": sorted(
                 p.stem for p in layout.facts_dir.glob("*.ini") if layout.facts_dir.exists()
@@ -94,17 +95,21 @@ def apps(request: Request, all: bool = False) -> list[dict[str, Any]]:
     by_name = {c["name"]: c for c in containers or []}
     result = []
     for app in svc.catalog.apps(include_hidden=all):
+        if not all and not is_listed_app(app):
+            continue
         instances = svc.inventory.instances(app.role, app.default_instances or [app.role])
         data = app.as_dict()
         data["instances"] = instances
-        data["installed"] = (svc.layout.facts_dir / f"{app.role}.ini").exists()
+        # Every Saltbox app keeps its config in <appdata>/<instance>; facts files exist only
+        # for the few roles that store generated values.
+        data["installed"] = any((svc.layout.appdata / name).is_dir() for name in instances)
         data["containers"] = [
             {"name": name, "status": by_name[name]["status"], "health": by_name[name]["health"]}
             for name in instances
             if name in by_name
         ]
         result.append(data)
-    return result
+    return sorted(result, key=lambda item: str(item["title"]).lower())
 
 
 @router.get("/apps/{repo}/{role}")
@@ -463,7 +468,9 @@ def _git_describe(repo: Path) -> dict[str, str | None]:
     def run(*args: str) -> str | None:
         try:
             out = subprocess.run(
-                ["git", "-C", str(repo), *args],
+                # The daemon runs as root without sudo; git refuses a repository owned
+                # by another user (the Saltbox user) unless it is marked safe.
+                ["git", "-c", f"safe.directory={repo}", "-C", str(repo), *args],
                 capture_output=True,
                 text=True,
                 timeout=5,

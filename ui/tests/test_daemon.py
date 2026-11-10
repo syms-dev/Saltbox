@@ -102,11 +102,20 @@ def test_inventory_round_trip(client: TestClient, scratch_layout: Layout) -> Non
 
 
 # -- apps --------------------------------------------------------------------
-def test_apps_and_detail(client: TestClient) -> None:
+def test_apps_and_detail(client: TestClient, scratch_layout: Layout) -> None:
     apps = client.get("/api/apps").json()
-    assert len(apps) > 50
+    roles = [a["role"] for a in apps]
+    assert len(apps) > 40
+    for not_an_app in ("plex_db", "arr_db", "cloudplow_disable", "mainline", "redis", "authelia"):
+        assert not_an_app not in roles, not_an_app
+    titles = [a["title"].lower() for a in apps]
+    assert titles == sorted(titles)
+    assert len(client.get("/api/apps", params={"all": True}).json()) > len(apps)
     sonarr = next(a for a in apps if a["role"] == "sonarr")
     assert sonarr["installed"] is False
+    (scratch_layout.appdata / "sonarr").mkdir(parents=True)
+    sonarr = next(a for a in client.get("/api/apps").json() if a["role"] == "sonarr")
+    assert sonarr["installed"] is True  # its /opt folder, not a facts file
     assert sonarr["instances"] == ["sonarr"]
     detail = client.get("/api/apps/saltbox/sonarr").json()
     assert detail["app"]["role"] == "sonarr"
@@ -339,3 +348,36 @@ def test_default_web_dir_prefers_the_checkout(scratch_layout: Layout) -> None:
     assert "warning" not in result
     unit = (scratch_layout.state_dir / "systemd" / "saltbox-ui.service").read_text()
     assert f"--web {dist}" in unit
+
+
+def test_git_describe_reads_a_repo_owned_by_someone_else(tmp_path: Path, monkeypatch) -> None:
+    import os
+    import subprocess
+
+    from saltbox_ui.daemon.routes import _git_describe
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", "-b", "claude/x"], cwd=repo, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.email=t@t",
+            "-c",
+            "user.name=t",
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            "x",
+        ],
+        cwd=repo,
+        check=True,
+    )
+    monkeypatch.delenv("SUDO_UID", raising=False)
+    if os.geteuid() == 0:
+        subprocess.run(["chown", "-R", "nobody", str(repo)], check=True)
+    described = _git_describe(repo)
+    assert described["branch"] == "claude/x"
+    assert described["commit"]

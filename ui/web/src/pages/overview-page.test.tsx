@@ -77,6 +77,12 @@ describe('OverviewPage', () => {
     expect(screen.getByText('A reboot is pending')).toBeInTheDocument();
   });
 
+  it('flags Docker being unreachable', async () => {
+    renderPage(overview({ containers: { available: false, running: 0, stopped: [], total: 0, unhealthy: [] } }));
+    expect(await screen.findByText(/Docker isn't reachable from the daemon/)).toBeInTheDocument();
+    expect(screen.queryByText(/Nothing\./)).not.toBeInTheDocument();
+  });
+
   it('points at a failed last job', async () => {
     renderPage(
       overview({

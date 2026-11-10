@@ -22,6 +22,7 @@ from textual.widgets import (
     Static,
 )
 
+from ...catalog.catalog import is_listed_app
 from ...installer.plan import DNS_MODES, PROFILES, PROVIDER_FIELDS, Remote
 from ...installer.preflight import run_preflight, summarize
 from ...plex import Pin, PlexError
@@ -60,17 +61,6 @@ SELECTOR_ROLES = {
 }
 
 
-# Docs categories whose entries are not apps someone picks during an install:
-# databases arrive with the apps that need them, Authelia comes with core and
-# Authentik replaces it, and Admin Apps > Misc holds system tools such as the
-# Mainline kernel installer.
-HIDDEN_CATEGORY_PREFIXES = (
-    "Admin Apps > Database",
-    "Admin Apps > Misc",
-    "Admin Apps > Access Control",
-)
-
-
 def extra_app_choices(apps: list) -> list:
     """Saltbox apps worth offering as extras, sorted by title.
 
@@ -78,12 +68,7 @@ def extra_app_choices(apps: list) -> list:
     Cloudplow Disable) rather than apps, so they are left out too.
     """
     chosen = [
-        a
-        for a in apps
-        if a.repo == "saltbox"
-        and a.role not in SELECTOR_ROLES
-        and a.categories
-        and not any(c.startswith(HIDDEN_CATEGORY_PREFIXES) for c in a.categories)
+        a for a in apps if a.repo == "saltbox" and a.role not in SELECTOR_ROLES and is_listed_app(a)
     ]
     return sorted(chosen, key=lambda a: a.title.lower())
 
