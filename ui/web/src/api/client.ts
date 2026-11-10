@@ -10,6 +10,7 @@ export const API_ROUTES = {
   CONFIG_VALIDATE: '/config/validate',
   INVENTORY: '/inventory',
   JOBS: '/jobs',
+  MEDIA: '/media',
   META: '/meta',
   OVERVIEW: '/overview',
   RESOURCES: '/resources',

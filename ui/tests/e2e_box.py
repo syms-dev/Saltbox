@@ -27,6 +27,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from saltbox_ui.appsetup import AppSetup
 from saltbox_ui.appsetup.http import Response
 from saltbox_ui.daemon import Services, create_app
 from saltbox_ui.daemon.updates import UpdateService
@@ -171,6 +172,71 @@ def registry_transport(method: str, url: str, headers: dict[str, str], body: Any
     return Response(200, b"", {"docker-content-digest": digest})
 
 
+def _json(data: Any) -> Response:
+    return Response(200, json.dumps(data).encode())
+
+
+def apps_transport(method: str, url: str, headers: dict[str, str], body: Any) -> Response:
+    """Just enough of qBittorrent, Plex, Sonarr and Radarr for the media cards."""
+    import datetime as dt
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(url)
+    host, path = parts.hostname or "", parts.path
+    if path == "/api/v2/auth/login":
+        ok = b"password12345678" in (body or b"")
+        return Response(204 if ok else 200, b"" if ok else b"Fails.", {"set-cookie": "SID=e2e"})
+    if path == "/api/v2/transfer/info":
+        return _json({"dl_info_speed": 12_582_912, "up_info_speed": 524_288})
+    if path == "/api/v2/torrents/info":
+        return _json(
+            [{"name": "Some.Show.S03E04.1080p.WEB", "progress": 0.62, "eta": 300, "dlspeed": 8e6}]
+        )
+    if path == "/status/sessions":
+        return _json(
+            {
+                "MediaContainer": {
+                    "Metadata": [
+                        {
+                            "type": "episode",
+                            "grandparentTitle": "Some Show",
+                            "parentIndex": 3,
+                            "index": 2,
+                            "title": "The One Before",
+                            "duration": 2_700_000,
+                            "viewOffset": 1_350_000,
+                            "User": {"title": "seed"},
+                            "Player": {"title": "Living Room TV", "state": "playing"},
+                        }
+                    ]
+                }
+            }
+        )
+    if path == "/api/v3/calendar":
+        soon = (dt.datetime.now(dt.UTC) + dt.timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        if host == "sonarr":
+            return _json(
+                [
+                    {
+                        "series": {"title": "Some Show"},
+                        "seasonNumber": 3,
+                        "episodeNumber": 5,
+                        "title": "The Next One",
+                        "airDateUtc": soon,
+                        "hasFile": False,
+                    }
+                ]
+            )
+        return _json([{"title": "A Film", "year": 2026, "digitalRelease": soon, "hasFile": False}])
+    return Response(404, b"not part of the e2e box")
+
+
+def e2e_files(container: str, path: str) -> str:
+    return {"/tmp/gluetun/ip": "185.98.171.144", "/tmp/gluetun/forwarded_port": "51413"}.get(
+        path, ""
+    )
+
+
 def _git(cwd: Path, *args: str) -> None:
     env = dict(
         os.environ,
@@ -231,6 +297,13 @@ def build_box(root: Path) -> Layout:
     for container in CONTAINERS:
         if container["Name"][1:] not in NO_APPDATA:
             (appdata / container["Name"][1:]).mkdir(parents=True)
+    for name in ("sonarr", "radarr"):
+        (appdata / name / "config.xml").write_text(
+            f"<Config><ApiKey>{name}e2eapikey0123456789abcdef</ApiKey></Config>"
+        )
+    (appdata / "saltbox" / "plex.ini").write_text(
+        "[plex]\nclient_identifier = e2e\ntoken = e2eplextoken12345\n"
+    )
 
     bin_dir = root / "bin"
     bin_dir.mkdir()
@@ -260,6 +333,13 @@ def main(argv: list[str] | None = None) -> int:
     with tempfile.TemporaryDirectory(prefix="saltbox-e2e-") as tmp:
         layout = build_box(Path(tmp))
         services = Services(layout, token=args.token, web_dir=Path(args.web))
+        services.app_setup_factory = lambda layout: AppSetup(
+            layout,
+            transport=apps_transport,
+            resolver=lambda name: name,
+            container_reader=e2e_files,
+            log_reader=lambda name: "",
+        )
         registry = Registry(transport=registry_transport)
         services.updates = UpdateService(
             layout, checker=lambda containers: check_updates(containers, registry=registry)

@@ -256,3 +256,58 @@ export type BackupSummary = {
   latest: { age_seconds: number; modified: number; path: string; size: number } | null;
   schedule: string;
 };
+
+type Section<T> = ({ available: true } & T) | { available: false; error: string };
+
+export type VpnStatus = {
+  configured: boolean;
+  container?: string;
+  forwarded_port?: number | null;
+  health?: string | null;
+  public_ip?: string;
+  qbittorrent_protected?: boolean;
+  routed?: string[];
+  running?: boolean;
+};
+
+export type DownloadItem = { eta?: number | null; name: string; progress: number; speed?: number; time_left?: string };
+
+export type QbitStatus = { download_speed: number; downloading: number; items: DownloadItem[]; upload_speed: number };
+
+export type SabStatus = {
+  download_speed: number;
+  downloading: number;
+  items: DownloadItem[];
+  paused: boolean;
+  size_left: string;
+  time_left: string;
+};
+
+export type PlexSession = {
+  player: string;
+  progress: number;
+  state: string;
+  subtitle: string;
+  title: string;
+  transcoding: boolean;
+  type: string;
+  user: string;
+};
+
+export type UpcomingItem = {
+  app: string;
+  date: string;
+  downloaded: boolean;
+  kind: 'episode' | 'movie';
+  subtitle: string;
+  title: string;
+};
+
+export type MediaSnapshot = {
+  checked_at: number;
+  plex?: Section<{ sessions: PlexSession[] }>;
+  qbittorrent?: Section<QbitStatus>;
+  sabnzbd?: Section<SabStatus>;
+  upcoming?: Section<{ errors: string[]; items: UpcomingItem[] }>;
+  vpn?: Section<VpnStatus>;
+};

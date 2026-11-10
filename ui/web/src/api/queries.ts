@@ -18,6 +18,7 @@ import type {
   Job,
   JobRequest,
   JobsResponse,
+  MediaSnapshot,
   Meta,
   BackupSummary,
   ContainerAction,
@@ -324,5 +325,15 @@ export function useRunBackup(): UseMutationResult<Job, Error, void> {
       void client.invalidateQueries({ queryKey: [QUERY_KEYS.JOBS] });
       void client.invalidateQueries({ queryKey: [QUERY_KEYS.BACKUPS] });
     },
+  });
+}
+
+const MEDIA_REFRESH_MS = 15_000;
+
+export function useMedia(): UseQueryResult<MediaSnapshot> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<MediaSnapshot>(API_ROUTES.MEDIA, { signal }),
+    queryKey: ['media'],
+    refetchInterval: MEDIA_REFRESH_MS,
   });
 }

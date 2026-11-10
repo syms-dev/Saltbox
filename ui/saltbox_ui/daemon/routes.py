@@ -517,6 +517,37 @@ def run_backup(request: Request) -> dict[str, Any]:
     return _job_view(svc, job)
 
 
+# -- media ---------------------------------------------------------------------------
+MEDIA_TTL_SECONDS = 15.0
+
+
+@router.get("/media")
+def media(request: Request) -> dict[str, Any]:
+    """VPN, downloads, Plex sessions and the week ahead, each section on its own."""
+    from ..appsetup.vpnport import docker_cat
+    from ..media import media_snapshot
+
+    svc = services(request)
+    cached = svc.__dict__.get("_media")
+    if cached is not None and time.monotonic() - cached[0] < MEDIA_TTL_SECONDS:
+        return cached[1]
+    setup = _app_setup(request)
+    found = setup.discover()
+    data = media_snapshot(
+        found,
+        _containers_or_none() or [],
+        transport=getattr(setup, "transport", None),
+        read_file=getattr(setup, "container_reader", None) or docker_cat,
+        read_log=getattr(setup, "log_reader", None),
+    )
+    redact = _redactor(svc)
+    for section in data.values():
+        if isinstance(section, dict) and section.get("error"):
+            section["error"] = redact(str(section["error"]))
+    svc.__dict__["_media"] = (time.monotonic(), data)
+    return data
+
+
 # -- containers ----------------------------------------------------------------
 def _managed_container(name: str) -> dict[str, Any]:
     """The Saltbox-managed container called ``name``; 404 for anything else."""

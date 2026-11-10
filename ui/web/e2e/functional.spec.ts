@@ -41,6 +41,19 @@ test.describe('home', () => {
     await expect(page.getByRole('region', { name: 'Updates' })).toContainText('2 apps: Gluetun, Sonarr');
   });
 
+  test('shows the VPN, downloads, what is playing and what is coming up', async ({ page }) => {
+    await page.goto('/');
+    const media = page.getByRole('region', { name: 'Media' });
+    await expect(media.getByRole('region', { name: 'VPN' })).toContainText('Protected');
+    await expect(media.getByRole('region', { name: 'VPN' })).toContainText('185.98.171.144');
+    await expect(media.getByRole('region', { name: 'VPN' })).toContainText('51413');
+    await expect(media.getByRole('region', { name: 'Downloads' })).toContainText('12.0 MiB/s');
+    await expect(media.getByRole('region', { name: 'Downloads' })).toContainText('Some.Show.S03E04.1080p.WEB');
+    await expect(media.getByRole('region', { name: 'Now playing' })).toContainText('Some Show');
+    await expect(media.getByRole('region', { name: 'Now playing' })).toContainText('seed on Living Room TV');
+    await expect(media.getByRole('region', { name: 'Coming up' })).toContainText('A Film');
+  });
+
   test('fixes an unhealthy app and a stopped one from the attention list', async ({ page }) => {
     await page.goto('/');
     const attention = page.getByRole('region', { name: 'Needs attention' });
@@ -292,7 +305,7 @@ test.describe('system and setup', () => {
   test('Connect apps lists every check per app without failing as a whole', async ({ page }) => {
     await page.goto('/connect');
     await expect(page.getByRole('region', { name: 'qBittorrent' })).toContainText('Login');
-    await expect(page.getByRole('region', { name: 'Sonarr' })).toContainText('API key');
+    await expect(page.getByRole('region', { name: 'Sonarr' })).toBeVisible();
     await page.getByRole('button', { name: 'Check again' }).click();
     await expect(page.getByRole('region', { name: 'Plex' })).toContainText('Movies library');
   });

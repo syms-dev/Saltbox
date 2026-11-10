@@ -1,0 +1,129 @@
+.row {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+}
+
+.row:empty {
+  display: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.title {
+  align-items: center;
+  color: var(--color-fg-muted);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.facts {
+  display: grid;
+  font-size: var(--text-sm);
+  gap: var(--space-1) var(--space-3);
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--color-fg-muted);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.client {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.clientHead {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  justify-content: space-between;
+}
+
+.speeds {
+  align-items: center;
+  display: inline-flex;
+  font-variant-numeric: tabular-nums;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.items {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.items li {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.itemName {
+  font-size: var(--text-sm);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemMeta {
+  align-items: center;
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.bar {
+  background: var(--color-surface-3);
+  border-radius: var(--radius-full);
+  display: block;
+  height: 0.35rem;
+  overflow: hidden;
+}
+
+.bar span {
+  background: var(--color-accent);
+  border-radius: var(--radius-full);
+  display: block;
+  height: 100%;
+}
+
+.day {
+  color: var(--color-fg-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-1);
+  text-transform: uppercase;
+}
+
+.items li.upcoming {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.got {
+  color: var(--color-ok);
+  flex: none;
+}

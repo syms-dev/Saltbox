@@ -73,3 +73,21 @@ export function formatUptime(seconds: number | null): string {
   if (hours > 0) return `${part(hours, 'hour')}, ${part(minutes, 'minute')}`;
   return part(minutes, 'minute');
 }
+
+/** "12.0 MiB/s" from bytes per second; an em dash for nothing. */
+export function formatSpeed(bytesPerSecond: number): string {
+  if (bytesPerSecond <= 0) return '—';
+  return `${formatBytes(bytesPerSecond)}/s`;
+}
+
+/** "Today", "Tomorrow", or "Thu 12 Nov" for a date. */
+export function formatDay(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const day = (d: Date): number => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diff = Math.round((day(date) - day(now)) / 86_400_000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  if (diff === -1) return 'Yesterday';
+  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', weekday: 'short' });
+}

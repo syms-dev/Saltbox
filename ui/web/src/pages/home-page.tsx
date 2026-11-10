@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { useApps, useJobs, useOverview, useStartJob, useUpdates } from '../api/queries';
+import { useApps, useJobs, useMedia, useOverview, useStartJob, useUpdates } from '../api/queries';
 import type { App, Job } from '../api/types';
 import { AppAvatar } from '../components/app-avatar';
 import { useToast } from '../components/feedback';
@@ -24,6 +24,7 @@ import { useContainerActions, useJobActions } from '../lib/actions';
 import { usePins } from '../lib/pins';
 import { appHealth, hostOf } from '../lib/status';
 import { type Attention, type AttentionAction, attentionItems } from './home-attention';
+import { MediaRow, mediaAttention } from './home-media';
 import styles from './home-page.module.css';
 
 export { attentionItems } from './home-attention';
@@ -335,12 +336,13 @@ function ActivityCard({ jobs }: { jobs: Job[] }): React.ReactNode {
 export function HomePage(): React.ReactNode {
   const overview = useOverview();
   const apps = useApps();
+  const media = useMedia();
   if (overview.isPending) return <Loading what="your server" />;
   if (overview.isError) return <ErrorMessage error={overview.error} prefix="Home" />;
   const data = overview.data;
   const all = apps.data ?? [];
   const installed = all.filter((app) => app.installed);
-  const attention = attentionItems(data, all);
+  const attention = [...mediaAttention(media.data), ...attentionItems(data, all)];
   const urgent = attention.filter((item) => item.tone !== 'info').length;
   const running = data.containers.running;
   return (
@@ -368,6 +370,8 @@ export function HomePage(): React.ReactNode {
           <AttentionList items={attention} />
         </section>
       )}
+
+      <MediaRow media={media.data} />
 
       <div className={styles['columns']}>
         <Launcher apps={installed} />
