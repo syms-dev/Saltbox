@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import os
 import pwd
+import shutil
+import subprocess
 from collections.abc import Callable
 from pathlib import Path
 
@@ -49,6 +51,23 @@ def owned_dir_maker(user: str) -> Callable[[Path], None]:
     return make
 
 
+def docker_logs(name: str) -> str:
+    """The recent log of a container, or an empty string when Docker is not available."""
+    if shutil.which("docker") is None:
+        return ""
+    try:
+        result = subprocess.run(
+            ["docker", "logs", "--tail", "300", name],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=20,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return result.stdout + result.stderr
+
+
 class AppSetup:
     def __init__(
         self,
@@ -57,8 +76,10 @@ class AppSetup:
         transport: Transport | None = None,
         resolver: Resolver | None = None,
         ensure_dir: Callable[[Path], None] | None = None,
+        log_reader: Callable[[str], str] | None = None,
     ):
         self.layout = layout
+        self.log_reader = log_reader or docker_logs
         self.transport = transport
         self.resolver = resolver
         self.ensure_dir = ensure_dir
@@ -74,6 +95,7 @@ class AppSetup:
             found,
             transport=self.transport,
             ensure_dir=self.ensure_dir or owned_dir_maker(found.user),
+            log_reader=self.log_reader,
         )
         return build_tasks(ctx)
 

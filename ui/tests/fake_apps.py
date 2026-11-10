@@ -13,6 +13,7 @@ import urllib.parse
 from typing import Any
 
 from saltbox_ui.appsetup.http import Response, SetupError
+from saltbox_ui.appsetup.tasks import ARR_MEDIA_MANAGEMENT, ARR_NAMING, PLEX_PREFERENCES
 
 CATEGORY_FIELD = {"sonarr": "tvCategory", "radarr": "movieCategory", "lidarr": "musicCategory"}
 
@@ -35,6 +36,41 @@ class FakeArr:
         self.notifications: list[dict[str, Any]] = []
         self.applications: list[dict[str, Any]] = []
         self.ids = itertools.count(1)
+        self.config = self.stock_config(role)
+        self.puts: list[str] = []
+
+    @staticmethod
+    def stock_config(role: str) -> dict[str, dict[str, Any]]:
+        """Stock settings: some differ from the docs, some keys setup must not touch."""
+        media = dict(ARR_MEDIA_MANAGEMENT.get(role, {}))
+        media.update(importExtraFiles=False, extraFileExtensions="srt", enableMediaInfo=True)
+        media.pop("recycleBinCleanupDays", None)  # a version without this setting
+        media.update(id=1, chmodFolder="755")
+        naming = {key: False for key in ARR_NAMING.get(role, {})}
+        if "colonReplacementFormat" in naming:
+            naming["colonReplacementFormat"] = "smart"
+        naming.update(id=1, standardEpisodeFormat="{Series Title} - S{season:00}E{episode:00}")
+        return {
+            "mediamanagement": media,
+            "naming": naming,
+            "downloadclient": {
+                "id": 1,
+                "enableCompletedDownloadHandling": True,
+                "autoRedownloadFailed": True,
+            },
+            "host": {
+                "id": 1,
+                "bindAddress": "*",
+                "port": 8989,
+                "urlBase": "",
+                "enableSsl": False,
+                "proxyEnabled": False,
+                "logLevel": "info",
+                "analyticsEnabled": True,
+                "updateAutomatically": False,
+                "authenticationMethod": "external",
+            },
+        }
 
     def schemas(self, resource: str) -> list[dict[str, Any]]:
         if resource == "downloadclient":
@@ -112,6 +148,20 @@ class FakeArr:
         }
         if method == "GET" and resource.endswith("/schema"):
             return _json(200, self.schemas(resource.removesuffix("/schema")))
+        if resource.startswith("config/"):
+            name, _, ident = resource.removeprefix("config/").partition("/")
+            if name not in self.config:
+                return _json(404, {"message": "Not Found"})
+            if method == "GET":
+                return _json(200, self.config[name])
+            if method == "PUT" and ident == str(self.config[name]["id"]):
+                body_data = json.loads(body or b"{}")
+                if set(body_data) != set(self.config[name]):
+                    return _json(400, [{"errorMessage": "settings object was not complete"}])
+                self.config[name] = body_data
+                self.puts.append(name)
+                return _json(202, body_data)
+            return _json(405, {"message": "Method not allowed"})
         if method == "GET" and resource == "qualityprofile":
             return _json(200, [{"id": 4, "name": "Any"}])
         if method == "GET" and resource == "metadataprofile":
@@ -139,9 +189,18 @@ class FakeArr:
 class FakeQbit:
     """qBittorrent 5 style: a wrong password is a 401, the cookie name is configurable."""
 
-    def __init__(self, user: str, password: str, *, cookie_name: str = "SID", status_on_fail=401):
+    def __init__(
+        self,
+        user: str,
+        password: str | None,
+        *,
+        cookie_name: str = "SID",
+        status_on_fail=401,
+        temporary: str = "",
+    ):
         self.user = user
         self.password = password
+        self.temporary = temporary  # qBittorrent >= 4.6.1 with no password set
         self.cookie_name = cookie_name
         self.status_on_fail = status_on_fail
         self.preferences: dict[str, Any] = {"save_path": "/downloads/", "temp_path_enabled": False}
@@ -150,7 +209,8 @@ class FakeQbit:
     def handle(self, method: str, path: str, headers: dict[str, str], body: bytes | None):
         if path == "/api/v2/auth/login" and method == "POST":
             form = dict(urllib.parse.parse_qsl((body or b"").decode()))
-            if form.get("username") == self.user and form.get("password") == self.password:
+            expected = self.password if self.password is not None else self.temporary
+            if form.get("username") == self.user and form.get("password") == expected:
                 self.logins += 1
                 cookies = f"theme=dark; path=/\n{self.cookie_name}=s3cr3t; HttpOnly; path=/"
                 return Response(200, b"Ok.", {"set-cookie": cookies})
@@ -163,9 +223,30 @@ class FakeQbit:
             return _json(200, self.preferences)
         if path == "/api/v2/app/setPreferences" and method == "POST":
             form = dict(urllib.parse.parse_qsl((body or b"").decode()))
-            self.preferences.update(json.loads(form["json"]))
+            changes = json.loads(form["json"])
+            if "web_ui_password" in changes:
+                self.user = changes.pop("web_ui_username", self.user)
+                self.password = changes.pop("web_ui_password")
+                self.temporary = ""
+            self.preferences.update(changes)
             return Response(200, b"", {})
         return Response(404, b"Not Found", {})
+
+
+def qbit_log(qbit: FakeQbit) -> str:
+    """What ``docker logs qbittorrent`` prints for the fake's current state."""
+    lines = [
+        "WebUI will be started shortly after internal preparations. Please wait...",
+        "To control qBittorrent, access the WebUI at: http://localhost:8080",
+    ]
+    if qbit.password is None:
+        lines += [
+            f"The WebUI administrator username is: {qbit.user}",
+            "The WebUI administrator password was not set. A temporary password is provided "
+            f"for this session: {qbit.temporary}",
+            "You should set your own password in program preferences.",
+        ]
+    return "\n".join(lines)
 
 
 class FakeSab:
@@ -198,6 +279,43 @@ class FakePlex:
         self.token = token
         self.sections: list[dict[str, Any]] = []
         self.refreshed: list[str] = []
+        self.library_prefs: dict[str, dict[str, Any]] = {}
+        # Plex defaults; one docs setting is missing, as in an older Plex
+        self.prefs: dict[str, Any] = {
+            key: (not value if isinstance(value, bool) else value)
+            for key, value in PLEX_PREFERENCES.items()
+            if key != "MusicAnalysisBehavior"
+        }
+        self.prefs.update(
+            GenerateBIFBehavior="scheduled", TranscoderThrottleBuffer=60, secureConnections=1
+        )
+        self.prefs["FriendlyName"] = "saltbox"
+
+    @staticmethod
+    def _settings(values: dict[str, Any]) -> dict[str, Any]:
+        def kind(value: Any) -> str:
+            return (
+                "bool" if isinstance(value, bool) else "int" if isinstance(value, int) else "text"
+            )
+
+        return {
+            "MediaContainer": {
+                "Setting": [{"id": k, "value": v, "type": kind(v)} for k, v in values.items()]
+            }
+        }
+
+    @staticmethod
+    def _apply(target: dict[str, Any], query: dict[str, str]) -> None:
+        for key, raw in query.items():
+            if key not in target:
+                continue
+            old = target[key]
+            if isinstance(old, bool):
+                target[key] = raw in ("1", "true")
+            elif isinstance(old, int):
+                target[key] = int(raw)
+            else:
+                target[key] = raw
 
     def handle(self, method: str, path: str, headers: dict[str, str], body: bytes | None):
         if headers.get("X-Plex-Token") != self.token:
@@ -205,9 +323,32 @@ class FakePlex:
         url = urllib.parse.urlsplit(path)
         if url.path == "/library/sections" and method == "GET":
             return _json(200, {"MediaContainer": {"Directory": copy.deepcopy(self.sections)}})
+        query = dict(urllib.parse.parse_qsl(url.query))
+        if url.path == "/:/prefs" and method == "GET":
+            return _json(200, self._settings(self.prefs))
+        if url.path == "/:/prefs" and method == "PUT":
+            self._apply(self.prefs, query)
+            return Response(200, b"", {})
+        if url.path.endswith("/prefs") and url.path.startswith("/library/sections/"):
+            key = url.path.split("/")[3]
+            if key not in self.library_prefs:
+                return Response(404, b"Not Found", {})
+            if method == "GET":
+                return _json(200, self._settings(self.library_prefs[key]))
+            self._apply(self.library_prefs[key], query)
+            return Response(200, b"", {})
         if url.path == "/library/sections" and method == "POST":
-            query = dict(urllib.parse.parse_qsl(url.query))
             key = str(len(self.sections) + 1)
+            prefs = {"enableBIFGeneration": True} if query["type"] in ("movie", "show") else {}
+            self._apply(
+                prefs,
+                {
+                    k[6:-1]: v
+                    for k, v in query.items()
+                    if k.startswith("prefs[") and k.endswith("]")
+                },
+            )
+            self.library_prefs[key] = prefs
             self.sections.append(
                 {
                     "key": key,

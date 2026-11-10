@@ -9,7 +9,7 @@ from saltbox_ui.appsetup.discover import discover, sabnzbd_api_key, xml_api_key
 from saltbox_ui.config import ConfigService, Inventory
 from saltbox_ui.layout import Layout
 from saltbox_ui.plex import write_plex_facts
-from tests.fake_apps import FakeArr, FakeNetwork, FakePlex, FakeQbit, FakeSab
+from tests.fake_apps import FakeArr, FakeNetwork, FakePlex, FakeQbit, FakeSab, qbit_log
 
 KEYS = {"sonarr": "s" * 32, "radarr": "r" * 32, "lidarr": "l" * 32, "prowlarr": "p" * 32}
 
@@ -49,7 +49,11 @@ def box(scratch_layout: Layout):
     apps["plex"] = net.add("plex", FakePlex("plex-token"))
     made: list[Path] = []
     setup = AppSetup(
-        scratch_layout, transport=net, resolver=lambda name: name, ensure_dir=made.append
+        scratch_layout,
+        transport=net,
+        resolver=lambda name: name,
+        ensure_dir=made.append,
+        log_reader=lambda name: qbit_log(net.apps[name]) if name == "qbittorrent" else "",
     )
     return setup, apps, net, made
 
@@ -89,7 +93,11 @@ def test_status_before_setup(box) -> None:
     tasks = setup.status()
     counts = summarize(tasks)
     assert counts["error"] == 0
-    assert counts["done"] == 0
+    status = {task.id: task.status for task in tasks}
+    assert status["qbittorrent:login"] == "done"
+    assert status["sonarr:downloadclient"] == "done"  # stock values already match the docs
+    assert status["sonarr:mediamanagement"] == "todo"
+    assert status["plex:preferences"] == "todo"
     assert counts["manual"] == 2  # Bazarr and Seerr
     ids = set(by_id(tasks))
     assert {
@@ -106,7 +114,8 @@ def test_status_before_setup(box) -> None:
         "plex:lidarr",
     } <= ids
     seerr = by_id(tasks)["seerr"]
-    assert KEYS["radarr"] in seerr.detail and "plex, port 32400" in seerr.detail
+    assert KEYS["radarr"] in seerr.detail and "pick your Plex server" in seerr.detail
+    assert "Import Users From Plex" in seerr.detail
     assert "a-long-password" not in " ".join(t.detail for t in tasks)
 
 
@@ -180,8 +189,9 @@ def test_failures_are_reported_per_task(box) -> None:
     apps["qbittorrent"].password = "changed-in-the-ui"
     net.down.add("radarr")
     tasks = by_id(setup.apply())
+    assert tasks["qbittorrent:login"].status == "error"
+    assert "rejected user 'seed'" in tasks["qbittorrent:login"].detail
     assert tasks["qbittorrent:folders"].status == "error"
-    assert "rejected user 'seed'" in tasks["qbittorrent:folders"].detail
     assert tasks["radarr:rootfolder"].status == "error"
     assert "cannot reach radarr:7878" in tasks["radarr:rootfolder"].detail
     assert tasks["sonarr:rootfolder"].status == "done"
@@ -226,14 +236,34 @@ def test_sabnzbd_without_a_usenet_server_is_skipped(box, scratch_layout: Layout)
 
 
 @pytest.mark.parametrize("status_on_fail", [401, 200])
-def test_qbittorrent_wrong_password_is_explained(box, status_on_fail) -> None:
+def test_qbittorrent_changed_password_is_left_alone(box, status_on_fail) -> None:
     setup, apps, *_ = box
     apps["qbittorrent"].password = "changed-in-the-ui"
     apps["qbittorrent"].status_on_fail = status_on_fail
-    task = by_id(setup.status())["qbittorrent:folders"]
-    assert task.status == "error"
-    assert "rejected user 'seed'" in task.detail
-    assert "accounts.yml" in task.detail
+    tasks = by_id(setup.status())
+    login = tasks["qbittorrent:login"]
+    assert login.status == "error"
+    assert "rejected user 'seed'" in login.detail and "set it back" in login.detail
+    assert tasks["qbittorrent:folders"].status == "todo"
+    assert "waits for the qBittorrent login" in tasks["qbittorrent:folders"].detail
+    setup.apply()
+    assert apps["qbittorrent"].password == "changed-in-the-ui"  # never overwritten
+
+
+def test_qbittorrent_temporary_password_is_replaced(box) -> None:
+    setup, apps, *_ = box
+    qbit = apps["qbittorrent"]
+    qbit.user, qbit.password, qbit.temporary = "admin", None, "HeQUhwCLP"
+    status = by_id(setup.status())
+    assert status["qbittorrent:login"].status == "todo"
+    assert "temporary 'admin' password" in status["qbittorrent:login"].detail
+
+    tasks = by_id(setup.apply())
+    assert tasks["qbittorrent:login"].status == "done"
+    assert (qbit.user, qbit.password) == ("seed", "a-long-password-123")
+    assert tasks["qbittorrent:folders"].status == "done"
+    assert tasks["sonarr:qbittorrent"].status == "done"
+    assert summarize(list(tasks.values()))["error"] == 0
 
 
 def test_qbittorrent_ban_and_renamed_cookie(box) -> None:
@@ -242,8 +272,8 @@ def test_qbittorrent_ban_and_renamed_cookie(box) -> None:
     assert by_id(setup.apply())["qbittorrent:folders"].status == "done"
     apps["qbittorrent"].password = "nope"
     apps["qbittorrent"].status_on_fail = 403
-    task = by_id(setup.status())["qbittorrent:folders"]
-    assert "banned" in task.detail
+    task = by_id(setup.status())["qbittorrent:login"]
+    assert task.status == "error" and "banned" in task.detail
 
 
 def test_extra_instances_need_their_own_root_folder(box, scratch_layout: Layout) -> None:
@@ -338,7 +368,7 @@ def test_daemon_setup_routes(box, scratch_layout: Layout) -> None:
     )
     status = client.get("/api/setup").json()
     assert status["summary"]["todo"] > 0
-    assert all("password" not in t["detail"] for t in status["tasks"])
+    assert all("a-long-password-123" not in t["detail"] for t in status["tasks"])
     applied = client.post("/api/setup/apply").json()
     assert applied["summary"]["todo"] == 0 and applied["summary"]["error"] == 0
     assert apps["prowlarr"].applications
@@ -358,3 +388,68 @@ def test_sbx_setup(box, env_layout: Layout, monkeypatch, capsys) -> None:
     assert main(["setup", "status"]) == 0
     data = json.loads(capsys.readouterr().out)
     assert data["summary"]["todo"] == 0
+
+
+def test_apply_sets_the_docs_settings_and_nothing_else(box) -> None:
+    setup, apps, *_ = box
+    tasks = by_id(setup.apply())
+    assert summarize(list(tasks.values()))["error"] == 0
+
+    qbit = apps["qbittorrent"].preferences
+    assert qbit["autorun_enabled"] is True
+    assert qbit["autorun_program"] == '/usr/bin/unrar x -r "%F/." "%F/"'
+    assert qbit["export_dir"].endswith("/qbittorrent/torrents/")
+
+    sonarr = apps["sonarr"].config
+    media = sonarr["mediamanagement"]
+    assert media["importExtraFiles"] is True and media["extraFileExtensions"] == "srt,sub,idx"
+    assert media["enableMediaInfo"] is False and media["copyUsingHardlinks"] is True
+    assert media["chmodFolder"] == "755"  # not a docs setting, left as it was
+    assert sonarr["naming"]["renameEpisodes"] is True
+    assert sonarr["naming"]["standardEpisodeFormat"].startswith("{Series Title}")  # untouched
+    assert sonarr["host"]["logLevel"] == "debug" and sonarr["host"]["analyticsEnabled"] is False
+    assert sonarr["host"]["authenticationMethod"] == "external"
+    assert apps["radarr"].config["naming"]["colonReplacementFormat"] == "delete"
+    lidarr = apps["lidarr"].config["mediamanagement"]
+    assert lidarr["allowFingerprinting"] == "newFiles" and lidarr["rescanAfterRefresh"] == "never"
+    assert "recycleBinCleanupDays" not in lidarr  # absent in this version, not added
+
+    plex = apps["plex"]
+    assert plex.prefs["autoEmptyTrash"] is True and plex.prefs["GdmEnabled"] is False
+    assert plex.prefs["GenerateBIFBehavior"] == "never"
+    assert plex.prefs["TranscoderThrottleBuffer"] == 150
+    assert plex.prefs["PublishServerOnPlexOnlineKey"] is False
+    assert plex.prefs["FriendlyName"] == "saltbox"
+    assert "MusicAnalysisBehavior not in this Plex version" in tasks["plex:preferences"].detail
+    by_type = {sec["type"]: plex.library_prefs[sec["key"]] for sec in plex.sections}
+    assert by_type["movie"] == {"enableBIFGeneration": False}
+    assert by_type["show"] == {"enableBIFGeneration": False}
+    assert by_type["artist"] == {}
+
+
+def test_settings_run_once(box) -> None:
+    setup, apps, *_ = box
+    setup.apply()
+    puts = list(apps["sonarr"].puts)
+    tasks = setup.apply()
+    assert apps["sonarr"].puts == puts  # nothing written the second time
+    assert summarize(tasks)["todo"] == 0
+
+
+def test_existing_library_gets_thumbnails_turned_off(box) -> None:
+    setup, apps, *_ = box
+    plex = apps["plex"]
+    plex.sections.append(
+        {
+            "key": "9",
+            "title": "My Movies",
+            "type": "movie",
+            "Location": [{"id": 9, "path": "/mnt/unionfs/Media/Movies"}],
+        }
+    )
+    plex.library_prefs["9"] = {"enableBIFGeneration": True}
+    task = by_id(setup.status())["plex:radarr"]
+    assert task.status == "todo" and "preview thumbnails" in task.detail
+    setup.apply()
+    assert plex.library_prefs["9"] == {"enableBIFGeneration": False}
+    assert not any(sec["title"] == "Movies" for sec in plex.sections)  # not duplicated

@@ -14,6 +14,7 @@ reported as manual, with the exact values to enter.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -31,6 +32,9 @@ QBIT_PREFERENCES = {
     "temp_path": f"{TORRENTS}/incoming/",
     "export_dir": f"{TORRENTS}/torrents/",
     "export_dir_fin": f"{TORRENTS}/torrents/",
+    # "Run external program on torrent completion", as the qBittorrent docs page asks
+    "autorun_enabled": True,
+    "autorun_program": '/usr/bin/unrar x -r "%F/." "%F/"',
 }
 # Autoscan wants events that point at one file on disk; everything else stays off.
 AUTOSCAN_EVENTS = {
@@ -48,6 +52,111 @@ AUTOSCAN_EVENTS = {
     "onTrackFileDelete",
     "onTrackFileDeleteForUpgrade",
 }
+# Settings from each app's page in the Saltbox docs. Only keys the running
+# version actually has are compared and changed; "(optional)" items are left.
+ARR_MEDIA_MANAGEMENT = {
+    "sonarr": {
+        "createEmptySeriesFolders": False,
+        "deleteEmptyFolders": False,
+        "skipFreeSpaceCheckWhenImporting": False,
+        "copyUsingHardlinks": True,
+        "importExtraFiles": True,
+        "extraFileExtensions": "srt,sub,idx",
+        "autoUnmonitorPreviouslyDownloadedEpisodes": False,
+        "enableMediaInfo": False,
+        "fileDate": "none",
+        "recycleBin": "",
+        "setPermissionsLinux": False,
+    },
+    "radarr": {
+        "createEmptyMovieFolders": False,
+        "autoRenameFolders": False,
+        "pathsDefaultStatic": False,
+        "skipFreeSpaceCheckWhenImporting": False,
+        "copyUsingHardlinks": True,
+        "importExtraFiles": True,
+        "extraFileExtensions": "srt,sub,idx",
+        "autoUnmonitorPreviouslyDownloadedMovies": False,
+        "enableMediaInfo": False,
+        "fileDate": "none",
+        "recycleBin": "",
+        "setPermissionsLinux": False,
+    },
+    "lidarr": {
+        "createEmptyArtistFolders": False,
+        "deleteEmptyFolders": False,
+        "skipFreeSpaceCheckWhenImporting": False,
+        "minimumFreeSpaceWhenImporting": 100,
+        "copyUsingHardlinks": True,
+        "importExtraFiles": True,
+        "extraFileExtensions": "srt",
+        "autoUnmonitorPreviouslyDownloadedTracks": False,
+        "downloadPropersAndRepacks": "preferAndUpgrade",
+        "watchLibraryForChanges": True,
+        "rescanAfterRefresh": "never",
+        "allowFingerprinting": "newFiles",
+        "fileDate": "albumReleaseDate",
+        "recycleBin": "",
+        "recycleBinCleanupDays": 0,
+        "setPermissionsLinux": False,
+    },
+}
+# Naming: rename and illegal characters per the docs. The format strings are left
+# alone: the docs call them a preference and their examples out of date.
+ARR_NAMING = {
+    "sonarr": {"renameEpisodes": True, "replaceIllegalCharacters": True},
+    "radarr": {
+        "renameMovies": True,
+        "replaceIllegalCharacters": True,
+        "colonReplacementFormat": "delete",
+    },
+    "lidarr": {"renameTracks": True, "replaceIllegalCharacters": True},
+}
+ARR_DOWNLOAD_HANDLING = {
+    "enableCompletedDownloadHandling": True,
+    "removeCompletedDownloads": True,
+    "autoRedownloadFailed": True,
+    "removeFailedDownloads": True,
+}
+ARR_GENERAL = {
+    "bindAddress": "*",
+    "urlBase": "",
+    "enableSsl": False,
+    "proxyEnabled": False,
+    "launchBrowser": False,
+    "logLevel": "debug",
+    "analyticsEnabled": False,
+    "updateAutomatically": False,
+}
+# Plex server settings from the Library, Network, Transcoder, DLNA, Scheduled
+# Tasks and Remote Access tabs of the Plex docs page, by preference id.
+PLEX_PREFERENCES = {
+    "autoEmptyTrash": True,
+    "allowMediaDeletion": True,
+    "GenerateBIFBehavior": "never",
+    "GenerateIntroMarkerBehavior": "never",
+    "GenerateChapterThumbBehavior": "never",
+    "LoudnessAnalysisBehavior": "never",
+    "MusicAnalysisBehavior": "never",
+    "secureConnections": 1,
+    "GdmEnabled": False,
+    "TranscoderTempDirectory": "/transcode",
+    "TranscoderThrottleBuffer": 150,
+    "HardwareAcceleratedCodecs": True,
+    "TranscodeCountLimit": 0,
+    "DlnaEnabled": False,
+    "DlnaReportTimeline": False,
+    "ButlerTaskRefreshLibraries": False,
+    "ButlerTaskUpgradeMediaAnalysis": False,
+    "ButlerTaskDeepMediaAnalysis": False,
+    "PublishServerOnPlexOnlineKey": False,
+}
+# Per library: "Enable video preview thumbnails" off (movie and TV libraries).
+PLEX_LIBRARY_PREFS = {
+    "movie": {"enableBIFGeneration": False},
+    "show": {"enableBIFGeneration": False},
+}
+
 PLEX_LIBRARIES = {
     "radarr": ("Movies", "movie", "tv.plex.agents.movie", "Plex Movie"),
     "sonarr": ("TV Shows", "show", "tv.plex.agents.series", "Plex TV Series"),
@@ -90,6 +199,7 @@ class SetupContext:
     found: Discovery
     transport: Transport | None = None
     ensure_dir: Callable[[Path], None] | None = None
+    log_reader: Callable[[str], str] | None = None
     _qbit_cookie: str = field(default="", repr=False)
     _sab_servers: dict[str, int] = field(default_factory=dict, repr=False)
 
@@ -111,29 +221,52 @@ class SetupContext:
             name=service.name,
         )
 
-    def qbit(self, service: Service) -> Client:
+    def qbit_login(self, service: Service, user: str, password: str) -> tuple[str, int]:
+        """Log in; returns the session cookie (empty when refused) and the HTTP status."""
         client = Client(service.host_url, transport=self.transport, name=service.name)
-        if not self._qbit_cookie:
-            response = client.request(
-                "POST",
-                "/api/v2/auth/login",
-                form={"username": self.found.user, "password": self.found.password},
-                headers={"Referer": service.host_url},
-                ok=(200, 401, 403),
+        response = client.request(
+            "POST",
+            "/api/v2/auth/login",
+            form={"username": user, "password": password},
+            headers={"Referer": service.host_url},
+            ok=(200, 401, 403),
+        )
+        if response.status == 403:
+            raise SetupError(
+                f"{service.name}: this server's address is banned after too many failed "
+                "logins; restart qBittorrent to lift the ban"
             )
-            if response.status == 403:
-                raise SetupError(
-                    f"{service.name}: this server's address is banned after too many failed "
-                    "logins; restart qBittorrent to lift the ban"
-                )
-            cookie = session_cookie(response.headers.get("set-cookie", ""))
-            if response.status == 401 or "Ok" not in response.text or not cookie:
-                raise SetupError(
+        cookie = session_cookie(response.headers.get("set-cookie", ""))
+        if response.status != 200 or "Ok" not in response.text:
+            cookie = ""
+        return cookie, response.status
+
+    def qbit_temporary_login(self, service: Service) -> tuple[str, str] | None:
+        """qBittorrent's own user and temporary password, from its log, when it has no password.
+
+        qBittorrent 4.6.1 and later invent a password on every start until one is
+        set, and print it. Saltbox sets the login only when it creates the config,
+        so an install interrupted at the wrong moment leaves qBittorrent here.
+        """
+        if self.log_reader is None:
+            return None
+        text = self.log_reader(service.name)
+        passwords = TEMP_PASSWORD_RE.findall(text)
+        if not passwords:
+            return None
+        users = TEMP_USER_RE.findall(text)
+        return (users[-1] if users else "admin"), passwords[-1]
+
+    def qbit(self, service: Service) -> Client:
+        if not self._qbit_cookie:
+            cookie, _status = self.qbit_login(service, self.found.user, self.found.password)
+            if not cookie:
+                raise QbitLoginError(
                     f"{service.name}: rejected user '{self.found.user}' with the password from "
-                    "accounts.yml, so the other apps can't log in either. Its login was set "
-                    "before Saltbox could, or changed in its web UI"
+                    "accounts.yml, so the other apps can't log in either"
                 )
             self._qbit_cookie = cookie
+        client = Client(service.host_url, transport=self.transport, name=service.name)
         client.headers["Cookie"] = self._qbit_cookie
         client.headers["Referer"] = service.host_url
         return client
@@ -156,6 +289,14 @@ class SetupContext:
     def make_dir(self, path: str) -> None:
         if self.ensure_dir is not None:
             self.ensure_dir(Path(path))
+
+
+class QbitLoginError(SetupError):
+    """qBittorrent refused the accounts.yml login."""
+
+
+TEMP_PASSWORD_RE = re.compile(r"temporary password is provided for this session:\s*(\S+)", re.I)
+TEMP_USER_RE = re.compile(r"administrator username is:\s*(\S+)", re.I)
 
 
 class SabClient(Client):
@@ -219,9 +360,58 @@ def same_path(a: str, b: str) -> bool:
 
 
 # -- tasks -------------------------------------------------------------------
+def qbit_login_task(ctx: SetupContext, qbit: Service) -> Task:
+    user, password = ctx.found.user, ctx.found.password
+
+    def check() -> tuple[str, str]:
+        cookie, _status = ctx.qbit_login(qbit, user, password)
+        if cookie:
+            ctx._qbit_cookie = cookie
+            return "done", f"logs in as {user} with the accounts.yml password"
+        if ctx.qbit_temporary_login(qbit):
+            return (
+                "todo",
+                "qBittorrent is still on its own temporary 'admin' password; will set its "
+                f"login to {user} and the accounts.yml password",
+            )
+        return (
+            "error",
+            f"rejected user '{user}' with the password from accounts.yml. If you changed "
+            "qBittorrent's login in its web UI, set it back to that user and password",
+        )
+
+    def apply() -> None:
+        temporary = ctx.qbit_temporary_login(qbit)
+        if not temporary:
+            raise SetupError(
+                f"{qbit.name}: no temporary password in its log; restart it with "
+                f"'sudo docker restart {qbit.name}' and try again"
+            )
+        cookie, _status = ctx.qbit_login(qbit, *temporary)
+        if not cookie:
+            raise SetupError(
+                f"{qbit.name}: the temporary password from its log was refused; restart it "
+                f"with 'sudo docker restart {qbit.name}' and try again"
+            )
+        client = Client(qbit.host_url, transport=ctx.transport, name=qbit.name)
+        client.headers.update(Cookie=cookie, Referer=qbit.host_url)
+        client.request(
+            "POST",
+            "/api/v2/app/setPreferences",
+            form={"json": json.dumps({"web_ui_username": user, "web_ui_password": password})},
+        )
+        ctx._qbit_cookie = ""
+
+    return Task(f"{qbit.name}:login", "qBittorrent", "Login", check, apply)
+
+
 def qbit_folders_task(ctx: SetupContext, qbit: Service) -> Task:
     def check() -> tuple[str, str]:
-        prefs = ctx.qbit(qbit).get("/api/v2/app/preferences") or {}
+        try:
+            client = ctx.qbit(qbit)
+        except QbitLoginError:
+            return "todo", "waits for the qBittorrent login"
+        prefs = client.get("/api/v2/app/preferences") or {}
         if same_path(str(prefs.get("save_path", "")), QBIT_PREFERENCES["save_path"]):
             return "done", f"saves to {QBIT_PREFERENCES['save_path']}"
         return "todo", f"currently saves to {prefs.get('save_path') or 'the image default'}"
@@ -296,6 +486,9 @@ def download_client_task(
         item = schema_item(client, "downloadclient", implementation)
         set_fields(item, {**values, **category_fields(item, category)})
         item.update(name=label, enable=True, priority=1, tags=[])
+        for key in ("removeCompletedDownloads", "removeFailedDownloads"):
+            if key in item:
+                item[key] = True
         client.post("/downloadclient", item)
 
     return Task(
@@ -363,40 +556,61 @@ def prowlarr_app_task(ctx: SetupContext, prowlarr: Service, arr: Service) -> Tas
 def plex_library_task(ctx: SetupContext, plex: Service, role: str) -> Task:
     title_name, kind, agent, scanner = PLEX_LIBRARIES[role]
     folder = f"{MEDIA_ROOT}/{ROOT_FOLDERS[role]}"
+    wanted_prefs = PLEX_LIBRARY_PREFS.get(kind, {})
 
     def sections() -> list[dict[str, Any]]:
         data = ctx.plex(plex).get("/library/sections") or {}
         return list((data.get("MediaContainer") or {}).get("Directory") or [])
 
+    def section() -> dict[str, Any] | None:
+        for item in sections():
+            for location in item.get("Location") or []:
+                if same_path(str(location.get("path", "")), folder):
+                    return item
+        return None
+
+    def pref_changes(key: str) -> dict[str, Any]:
+        if not wanted_prefs:
+            return {}
+        current = plex_settings(ctx.plex(plex).get(f"/library/sections/{key}/prefs"))
+        return plex_differences(current, wanted_prefs)
+
     def check() -> tuple[str, str]:
         if not ctx.found.plex_token:
             return "manual", "no Plex token found; add the library in Plex yourself"
-        for section in sections():
-            for location in section.get("Location") or []:
-                if same_path(str(location.get("path", "")), folder):
-                    return "done", f"'{section.get('title')}' uses {folder}"
-        return "todo", f"will add '{title_name}' on {folder} and scan it"
+        found = section()
+        if found is None:
+            return "todo", f"will add '{title_name}' on {folder} and scan it"
+        if pref_changes(str(found.get("key"))):
+            return "todo", f"'{found.get('title')}': will turn off video preview thumbnails"
+        return "done", f"'{found.get('title')}' uses {folder}"
 
     def apply() -> None:
         client = ctx.plex(plex)
-        client.request(
-            "POST",
-            "/library/sections",
-            params={
+        found = section()
+        if found is None:
+            params = {
                 "name": title_name,
                 "type": kind,
                 "agent": agent,
                 "scanner": scanner,
                 "language": "en-US",
                 "location": folder,
-            },
-        )
-        # Autoscan only updates libraries that have been scanned once.
-        for section in sections():
-            if any(
-                same_path(str(loc.get("path", "")), folder) for loc in section.get("Location") or []
-            ):
-                client.request("GET", f"/library/sections/{section.get('key')}/refresh")
+            }
+            params.update({f"prefs[{k}]": plex_value(v) for k, v in wanted_prefs.items()})
+            client.request("POST", "/library/sections", params=params)
+            found = section()
+            if found is None:
+                raise SetupError(f"{plex.name}: the '{title_name}' library was not created")
+            # Autoscan only updates libraries that have been scanned once.
+            client.request("GET", f"/library/sections/{found.get('key')}/refresh")
+        changes = pref_changes(str(found.get("key")))
+        if changes:
+            client.request(
+                "PUT",
+                f"/library/sections/{found.get('key')}/prefs",
+                params={k: plex_value(v) for k, v in changes.items()},
+            )
 
     return Task(f"{plex.name}:{role}", "Plex", f"{title_name} library", check, apply)
 
@@ -443,6 +657,74 @@ def sab_categories_task(ctx: SetupContext, sab: Service, categories: list[str]) 
     return Task(f"{sab.name}:categories", "SABnzbd", "Categories", check, apply)
 
 
+def differences(current: dict[str, Any], desired: dict[str, Any]) -> dict[str, Any]:
+    """Desired values for keys the app has and that differ from what it has now."""
+    return {
+        key: value for key, value in desired.items() if key in current and current[key] != value
+    }
+
+
+def arr_settings_task(
+    ctx: SetupContext, arr: Service, resource: str, desired: dict[str, Any], title: str
+) -> Task:
+    path = f"/config/{resource}"
+
+    def check() -> tuple[str, str]:
+        current = ctx.arr(arr).get(path) or {}
+        changes = differences(current, desired)
+        if not changes:
+            return "done", "matches the Saltbox docs"
+        return "todo", "will set " + ", ".join(sorted(changes))
+
+    def apply() -> None:
+        client = ctx.arr(arr)
+        current = client.get(path) or {}
+        current.update(differences(current, desired))
+        client.put(f"{path}/{current.get('id', 1)}", current)
+
+    return Task(f"{arr.name}:{resource}", arr.role.capitalize(), title, check, apply)
+
+
+def plex_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    return str(value)
+
+
+def plex_settings(data: Any) -> dict[str, Any]:
+    settings = ((data or {}).get("MediaContainer") or {}).get("Setting") or []
+    return {str(s.get("id")): s.get("value") for s in settings if isinstance(s, dict)}
+
+
+def plex_differences(current: dict[str, Any], desired: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in desired.items()
+        if key in current and plex_value(current[key]) != plex_value(value)
+    }
+
+
+def plex_preferences_task(ctx: SetupContext, plex: Service) -> Task:
+    def check() -> tuple[str, str]:
+        if not ctx.found.plex_token:
+            return "manual", "no Plex token found; set these in Plex's settings yourself"
+        current = plex_settings(ctx.plex(plex).get("/:/prefs"))
+        unknown = sorted(set(PLEX_PREFERENCES) - set(current))
+        changes = plex_differences(current, PLEX_PREFERENCES)
+        note = f" ({', '.join(unknown)} not in this Plex version)" if unknown else ""
+        if not changes:
+            return "done", "matches the Saltbox docs" + note
+        return "todo", "will set " + ", ".join(sorted(changes)) + note
+
+    def apply() -> None:
+        client = ctx.plex(plex)
+        changes = plex_differences(plex_settings(client.get("/:/prefs")), PLEX_PREFERENCES)
+        if changes:
+            client.request("PUT", "/:/prefs", params={k: plex_value(v) for k, v in changes.items()})
+
+    return Task(f"{plex.name}:preferences", "Plex", "Server settings", check, apply)
+
+
 def manual_task(task_id: str, app: str, title: str, text: str) -> Task:
     return Task(task_id, app, title, lambda: ("manual", text))
 
@@ -461,20 +743,25 @@ def bazarr_text(found: Discovery) -> str:
 
 
 def seerr_text(found: Discovery) -> str:
+    """The Overseerr setup steps from the Saltbox docs, which Seerr's page points to."""
     lines = [
-        "Open Seerr in your browser and sign in with Plex. When it asks for servers, enter:",
+        "Open Seerr in your browser, then:",
+        "1. Sign in with your Plex account.",
+        "2. Click the refresh icon, pick your Plex server, Save Changes, then switch on the "
+        "libraries to offer and click Continue.",
     ]
-    plex = found.first("plex")
-    if plex:
-        lines.append(f"Plex: {plex.name}, port {plex.port}, no SSL; then sync and pick libraries")
-    for role in ("radarr", "sonarr"):
+    step = 3
+    for role, label in (("radarr", "Radarr"), ("sonarr", "Sonarr")):
         service = found.first(role)
         if service:
             folder = f"{MEDIA_ROOT}/{ROOT_FOLDERS[role]}"
             lines.append(
-                f"{role.capitalize()}: {service.name}, port {service.port}, API key "
-                f"{service.api_key or '(see its Settings, General)'}, root folder {folder}"
+                f"{step}. Add {label} Server: tick Default server, hostname {service.name}, "
+                f"port {service.port}, API key {service.api_key or '(see its Settings, General)'}, "
+                f"click Test, then pick a quality, root folder {folder} and minimum availability."
             )
+            step += 1
+    lines.append(f"{step}. Finish Setup, then Settings, Users, Import Users From Plex.")
     return "\n".join(lines)
 
 
@@ -489,6 +776,7 @@ def build_tasks(ctx: SetupContext) -> list[Task]:
     plex = found.first("plex")
 
     if qbit:
+        tasks.append(qbit_login_task(ctx, qbit))
         tasks.append(qbit_folders_task(ctx, qbit))
     if sab and sab.api_key:
         categories = [arr.name for role in ARR_ROLES for arr in found.installed(role)]
@@ -546,6 +834,18 @@ def build_tasks(ctx: SetupContext) -> list[Task]:
                 )
             if autoscan:
                 tasks.append(autoscan_task(ctx, arr, autoscan))
+            tasks.append(
+                arr_settings_task(
+                    ctx, arr, "mediamanagement", ARR_MEDIA_MANAGEMENT[role], "Media management"
+                )
+            )
+            tasks.append(arr_settings_task(ctx, arr, "naming", ARR_NAMING[role], "Renaming"))
+            tasks.append(
+                arr_settings_task(
+                    ctx, arr, "downloadclient", ARR_DOWNLOAD_HANDLING, "Download handling"
+                )
+            )
+            tasks.append(arr_settings_task(ctx, arr, "host", ARR_GENERAL, "General"))
     if prowlarr and prowlarr.api_key:
         for role in ("sonarr", "radarr", "lidarr"):
             for arr in found.installed(role):
@@ -570,6 +870,7 @@ def build_tasks(ctx: SetupContext) -> list[Task]:
                 )
             )
     if plex:
+        tasks.append(plex_preferences_task(ctx, plex))
         for role in ("radarr", "sonarr", "lidarr"):
             if found.installed(role):
                 tasks.append(plex_library_task(ctx, plex, role))

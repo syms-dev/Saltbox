@@ -145,7 +145,19 @@ installer's last screen) makes the connections the Saltbox app docs describe:
   Autoscan understands.
 - Prowlarr syncs its indexers to each of them and gets qBittorrent too.
 - Plex gets Movies, TV Shows and Music libraries on the same paths, each
-  scanned once so Autoscan can update them.
+  scanned once so Autoscan can update them, with video preview thumbnails
+  off.
+- The settings each app's docs page lists: qBittorrent's torrent-file
+  folders and unrar on completion; Media Management, renaming, download
+  handling and General for Sonarr, Radarr and Lidarr; and Plex's Library,
+  Network, Transcoder, DLNA, Scheduled Tasks and Remote Access settings.
+  Only fields the running version has are changed, everything else is left
+  as it was, and items the docs mark optional are skipped. Naming formats are
+  left alone: the docs call them a preference (Recyclarr can manage them).
+- qBittorrent's login: when an interrupted install left it on its own
+  temporary `admin` password, the password is read from its log and the
+  login set to the accounts.yml user and password, as Saltbox intended. A
+  login someone set on purpose is never changed.
 
 It reads API keys from each app's own config under `/opt`, the qBittorrent
 and Autoscan login from `accounts.yml`, and the Plex token from
