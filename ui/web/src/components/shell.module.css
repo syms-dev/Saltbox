@@ -69,7 +69,7 @@
 
 .main {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   padding: var(--space-6);
 }
 

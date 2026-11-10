@@ -128,9 +128,11 @@ function InstalledApps({ apps }: InstalledAppsProps): React.ReactNode {
   }
 
   return (
-    <section className="card">
+    <section aria-labelledby="installed-apps" className="card">
       <div className={`row ${styles['installedHeader']}`}>
-        <h2 className={styles['installedTitle']}>Installed</h2>
+        <h2 className={styles['installedTitle']} id="installed-apps">
+          Installed
+        </h2>
         <span className="muted">{checkedLabel(updates.data?.checked_at ?? null, updates.data?.running ?? false)}</span>
         <button
           disabled={check.isPending || updates.data?.running === true}

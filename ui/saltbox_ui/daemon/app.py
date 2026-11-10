@@ -8,10 +8,13 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import Headers
+from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.websockets import WebSocketClose
 
 from .. import __version__
 from ..catalog import Catalog
@@ -55,27 +58,62 @@ class Services:
         )
 
 
-class BearerTokenMiddleware(BaseHTTPMiddleware):
-    """Require the daemon token on TCP connections.
+class DaemonGuard:
+    """Require the daemon token on TCP connections, for HTTP and WebSocket alike.
 
     Traefik adds the token to every request it forwards after Authelia has let
     the person through; local tools read it from the state directory. A
     connection over the Unix socket has no client address and is trusted: only
     root can open the socket.
+
+    Browsers also say where a request comes from. A state-changing request that
+    another site started (``Sec-Fetch-Site`` other than ``same-origin`` or
+    ``none``), or a WebSocket opened from another origin, is refused even though
+    Traefik would add the token to it: a page on a sibling app's subdomain
+    shares the Authelia cookie and must not be able to start jobs here.
+
+    This is plain ASGI rather than ``BaseHTTPMiddleware``, which never sees
+    WebSocket connections.
     """
 
-    def __init__(self, app, token: str):
-        super().__init__(app)
+    SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+    SAME_SITE = frozenset({"same-origin", "none"})
+
+    def __init__(self, app: ASGIApp, token: str):
+        self.app = app
         self.token = token
 
-    async def dispatch(self, request: Request, call_next):
-        if request.client is None or not request.url.path.startswith("/api/"):
-            return await call_next(request)
-        header = request.headers.get("authorization", "")
-        presented = header[7:] if header.lower().startswith("bearer ") else ""
-        if not presented or not hmac.compare_digest(presented, self.token):
-            return JSONResponse({"error": "unauthorised"}, status_code=401)
-        return await call_next(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        kind = scope["type"]
+        if kind not in ("http", "websocket") or not scope.get("path", "").startswith("/api/"):
+            await self.app(scope, receive, send)
+            return
+        headers = Headers(scope=scope)
+        reason = self._refusal(scope, headers)
+        if reason is None:
+            await self.app(scope, receive, send)
+        elif kind == "websocket":
+            code = 4401 if reason == "unauthorised" else 4403
+            await WebSocketClose(code=code)(scope, receive, send)
+        else:
+            status = 401 if reason == "unauthorised" else 403
+            await JSONResponse({"error": reason}, status_code=status)(scope, receive, send)
+
+    def _refusal(self, scope: Scope, headers: Headers) -> str | None:
+        if scope.get("client") is not None:
+            header = headers.get("authorization", "")
+            presented = header[7:] if header.lower().startswith("bearer ") else ""
+            if not presented or not hmac.compare_digest(presented, self.token):
+                return "unauthorised"
+        if scope["type"] == "websocket":
+            origin = headers.get("origin")
+            if origin and urlsplit(origin).netloc != headers.get("host", ""):
+                return "cross-origin request refused"
+        elif scope.get("method", "GET") not in self.SAFE_METHODS:
+            site = headers.get("sec-fetch-site")
+            if site is not None and site not in self.SAME_SITE:
+                return "cross-site request refused"
+        return None
 
 
 def create_app(
@@ -86,11 +124,17 @@ def create_app(
     services: Services | None = None,
 ) -> FastAPI:
     services = services or Services(layout or Layout.from_env(), token=token, web_dir=web_dir)
-    app = FastAPI(title="saltbox-ui", version=__version__, docs_url="/api/docs", redoc_url=None)
+    app = FastAPI(
+        title="saltbox-ui",
+        version=__version__,
+        docs_url="/api/docs",
+        redoc_url=None,
+        openapi_url="/api/openapi.json",
+    )
     app.state.services = services
     app.include_router(router, prefix="/api")
     if services.token:
-        app.add_middleware(BearerTokenMiddleware, token=services.token)
+        app.add_middleware(DaemonGuard, token=services.token)
     if services.web_dir and (services.web_dir / "index.html").exists():
         _mount_web(app, services.web_dir)
     else:

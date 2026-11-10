@@ -131,3 +131,42 @@ def test_systemd_unit_sets_home():
     from saltbox_ui.daemon.install import systemd_unit
 
     assert "Environment=HOME=/root" in systemd_unit("/usr/local/bin/saltbox-uid")
+
+
+def test_cancel_stops_what_sb_started(scratch_layout: Layout, tmp_path: Path):
+    """sb runs ansible-playbook as a child; cancelling only sb left it running with the log
+    pipe open, so the job never finished."""
+    import threading
+    import time
+
+    script = tmp_path / "bin" / "sb-tree"
+    script.parent.mkdir(parents=True, exist_ok=True)
+    marker = tmp_path / "child-survived"
+    script.write_text(f"#!/bin/sh\necho started\n(sleep 3; touch {marker}) &\nsleep 30\n")
+    script.chmod(0o755)
+    runner = SbRunner(scratch_layout, sb=script)
+    lines: list[str] = []
+    jobs: list = []
+    thread = threading.Thread(
+        target=lambda: jobs.append(runner.run([str(script)], kind="install", on_line=lines.append))
+    )
+    thread.start()
+    deadline = time.time() + 5
+    while "started" not in lines and time.time() < deadline:
+        time.sleep(0.02)
+    began = time.time()
+    assert runner.cancel() is True
+    thread.join(timeout=10)
+    assert not thread.is_alive(), "the job kept running after cancel"
+    assert time.time() - began < 5
+    assert jobs[0].status == "interrupted"
+    time.sleep(3.5)
+    assert not marker.exists(), "a process sb started outlived the cancel"
+
+
+def test_job_records_and_logs_are_private(scratch_layout: Layout, fake_sb: Path):
+    scratch_layout.jobs_dir.mkdir(parents=True)
+    scratch_layout.jobs_dir.chmod(0o755)  # as an older version left it
+    job = SbRunner(scratch_layout, sb=fake_sb).install(["core"])
+    assert scratch_layout.jobs_dir.stat().st_mode & 0o777 == 0o700
+    assert Path(job.log_path).stat().st_mode & 0o777 == 0o600

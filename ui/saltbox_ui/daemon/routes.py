@@ -58,6 +58,7 @@ def meta(request: Request) -> dict[str, Any]:
 @router.get("/overview")
 def overview(request: Request) -> dict[str, Any]:
     svc = services(request)
+    svc.updates.ensure_fresh()
     layout = svc.layout
     containers = _containers_or_none()
     issues = svc.config.validate_all()

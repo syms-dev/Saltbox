@@ -41,6 +41,7 @@ RestartSec=5
 RuntimeDirectory=saltbox-ui
 RuntimeDirectoryMode=0700
 StateDirectory=saltbox-ui
+StateDirectoryMode=0700
 Environment=PYTHONUNBUFFERED=1
 Environment=HOME=/root
 

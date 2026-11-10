@@ -14,6 +14,7 @@ import json
 import os
 import pwd
 import shlex
+import signal
 import subprocess
 import time
 import uuid
@@ -160,9 +161,16 @@ class SbRunner:
         return command
 
     # -- job persistence ---------------------------------------------------
+    @staticmethod
+    def _private_dir(path: Path) -> None:
+        """Create ``path`` readable by its owner only: Ansible logs can hold secrets."""
+        path.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if path.stat().st_mode & 0o077:
+            path.chmod(0o700)  # tighten a directory an older version created
+
     def _save(self, job: Job) -> None:
         """Persist the record atomically so a concurrent reader never sees a partial file."""
-        self.jobs_dir.mkdir(parents=True, exist_ok=True)
+        self._private_dir(self.jobs_dir)
         path = self.jobs_dir / f"{job.id}.json"
         tmp = path.with_suffix(".json.tmp")
         tmp.write_text(json.dumps(job.as_dict(), indent=1), encoding="utf-8")
@@ -200,7 +208,7 @@ class SbRunner:
     ) -> Job:
         """Create and persist a pending job without starting it."""
         job = Job(id=uuid.uuid4().hex[:12], command=list(command), kind=kind, tags=list(tags))
-        self.jobs_dir.mkdir(parents=True, exist_ok=True)
+        self._private_dir(self.jobs_dir)
         job.log_path = str(self.jobs_dir / f"{job.id}.log")
         self._save(job)
         return job
@@ -243,7 +251,8 @@ class SbRunner:
                 env,
                 (self.layout.repo, self.layout.sandbox_repo, self.layout.saltbox_mod_repo),
             )
-            with open(log_path, "w", encoding="utf-8") as log:
+            log_fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with open(log_fd, "w", encoding="utf-8") as log:
                 log.write(f"$ {job.command_line}\n")
                 try:
                     process = subprocess.Popen(
@@ -256,6 +265,9 @@ class SbRunner:
                         text=True,
                         errors="replace",
                         bufsize=1,
+                        # Its own process group, so cancelling stops ansible-playbook and
+                        # everything else sb started, not only sb.
+                        start_new_session=True,
                     )
                 except OSError as error:
                     message = f"failed to start: {error}"
@@ -295,11 +307,28 @@ class SbRunner:
 
     @staticmethod
     def _stop(process: subprocess.Popen[str]) -> None:
-        process.terminate()
+        """Stop the job's whole process group: SIGTERM, then SIGKILL after 10 seconds.
+
+        Signalling only ``sb`` leaves its children running with the log pipe
+        open, so the job would carry on and never finish.
+        """
+
+        def signal_group(sig: signal.Signals) -> None:
+            try:
+                os.killpg(process.pid, sig)
+            except ProcessLookupError:
+                pass
+            except PermissionError:
+                process.send_signal(sig)
+
+        signal_group(signal.SIGTERM)
         try:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            process.kill()
+            signal_group(signal.SIGKILL)
+            process.wait()
+        else:
+            signal_group(signal.SIGKILL)  # anything sb left behind in the group
 
     def cancel(self) -> bool:
         """Stop the job this runner is executing, if any. Returns whether one was stopped."""

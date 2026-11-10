@@ -81,7 +81,7 @@ jobs:
       - name: Lint and typecheck
         working-directory: ui/web
         run: |
-          npx prettier --check "src/**/*.{ts,tsx,css}"
+          npm run format:check
           npm run lint
           npm run typecheck
 
@@ -98,3 +98,35 @@ jobs:
           name: saltbox-web-dist
           path: ui/web/dist
           retention-days: 14
+
+  e2e:
+    name: Web app end to end (daemon + browser)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-saltbox-uv
+
+      - name: Install the engine
+        working-directory: ui
+        run: |
+          uv python install --managed-python --no-bin "$(< ../.python-version)"
+          uv venv --python "$(< ../.python-version)" --managed-python --no-project .venv
+          uv pip install --python .venv/bin/python -e ".[dev]"
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/web/package-lock.json
+
+      - name: Install the web app and Chromium
+        working-directory: ui/web
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: End to end tests
+        working-directory: ui/web
+        run: npm run e2e
+

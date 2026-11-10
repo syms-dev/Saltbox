@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import {
   useMutation,
   useQuery,
@@ -163,12 +164,23 @@ export function useValidateConfig(): UseMutationResult<Record<string, Issue[]>, 
 
 const UPDATES_POLL_MS = 3_000;
 
+/** Update status; polls while a check runs, then refreshes the pages that show its results. */
 export function useUpdates(): UseQueryResult<UpdatesResponse> {
-  return useQuery({
+  const client = useQueryClient();
+  const result = useQuery({
     queryFn: () => apiFetch<UpdatesResponse>(API_ROUTES.UPDATES),
     queryKey: [QUERY_KEYS.UPDATES],
     refetchInterval: (query) => (query.state.data?.running === true ? UPDATES_POLL_MS : false),
   });
+  const checkedAt = result.data?.checked_at ?? null;
+  const seen = useRef(checkedAt);
+  useEffect(() => {
+    if (checkedAt === seen.current) return;
+    seen.current = checkedAt;
+    void client.invalidateQueries({ queryKey: [QUERY_KEYS.OVERVIEW] });
+    void client.invalidateQueries({ queryKey: [QUERY_KEYS.APPS] });
+  }, [checkedAt, client]);
+  return result;
 }
 
 function invalidateUpdates(client: ReturnType<typeof useQueryClient>): void {

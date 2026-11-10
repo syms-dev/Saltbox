@@ -59,6 +59,23 @@ SALTBOX_REPO=$PWD/.. .venv/bin/sbx catalog fields sonarr
 SALTBOX_REPO=$PWD/.. .venv/bin/sbx config validate
 ```
 
+The web app has unit tests (Vitest) and an end-to-end suite (Playwright) that
+drives the built app in Chromium against the real daemon, with its token check
+and job runner, on a throwaway box: `tests/e2e_box.py` fakes only `sb`,
+`docker` and the image registry.
+
+```
+cd ui/web
+npm ci
+npm test            # unit tests
+npm run e2e         # builds, starts tests/e2e_box.py, runs e2e/*.spec.ts
+python -m tests.e2e_box --port 8790 --token dev   # (from ui/) the same box, to click around in
+```
+
+New pages get a case in `e2e/functional.spec.ts` and an entry in the page list
+of `e2e/layout.spec.ts`, which checks phone and tablet widths for sideways
+scrolling. Every e2e test fails on a console error.
+
 ## Installer
 
 On a server that already ran the Saltbox bootstrap (`sb` and

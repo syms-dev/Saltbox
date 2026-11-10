@@ -231,6 +231,55 @@ def test_bearer_token_required_on_tcp(scratch_layout: Layout, fake_sb: Path) -> 
     assert client.get("/api/meta", headers={"Authorization": "Bearer wrong"}).status_code == 401
     assert client.get("/api/meta", headers={"Authorization": "Bearer s3cret"}).status_code == 200
     assert client.get("/").status_code == 200  # the page itself is not behind the token
+    assert client.get("/openapi.json").status_code != 200  # the schema moved under /api
+    assert client.get("/api/openapi.json").status_code == 401
+
+
+def test_job_stream_needs_the_token(scratch_layout: Layout, fake_sb: Path) -> None:
+    """WebSockets bypass Starlette's BaseHTTPMiddleware; the guard must still check them."""
+    from starlette.websockets import WebSocketDisconnect
+
+    client = TestClient(create_app(services=Services(scratch_layout, token="s3cret")))
+    auth = {"Authorization": "Bearer s3cret"}
+    job = client.post("/api/jobs", json={"kind": "validate"}, headers=auth).json()
+    wait_for(
+        lambda: client.get(f"/api/jobs/{job['id']}", headers=auth).json()["status"] == "succeeded"
+    )
+    stream = f"/api/jobs/{job['id']}/stream"
+    with pytest.raises(WebSocketDisconnect) as refused, client.websocket_connect(stream) as ws:
+        ws.receive_json()
+    assert refused.value.code == 4401
+    with client.websocket_connect(f"/api/jobs/{job['id']}/stream", headers=auth) as ws:
+        assert ws.receive_json()["type"] == "log"
+
+
+def test_browser_requests_from_other_sites_are_refused(
+    scratch_layout: Layout, fake_sb: Path
+) -> None:
+    """Traefik adds the token to whatever Authelia lets through, so a page on a sibling
+    subdomain (same site, same Authelia cookie) must not be able to start jobs."""
+    from starlette.websockets import WebSocketDisconnect
+
+    client = TestClient(create_app(services=Services(scratch_layout, token="s3cret")))
+    auth = {"Authorization": "Bearer s3cret"}
+    sibling = {**auth, "Sec-Fetch-Site": "same-site"}
+    assert client.post("/api/saltbox/update", headers=sibling).status_code == 403
+    assert client.post("/api/jobs", json={"kind": "validate"}, headers=sibling).status_code == 403
+    assert client.get("/api/meta", headers=sibling).status_code == 200  # reads stay allowed
+    own = {**auth, "Sec-Fetch-Site": "same-origin"}
+    job = client.post("/api/jobs", json={"kind": "validate"}, headers=own)
+    assert job.status_code == 202
+    stream = f"/api/jobs/{job.json()['id']}/stream"
+    with (
+        pytest.raises(WebSocketDisconnect) as refused,
+        client.websocket_connect(
+            stream, headers={**auth, "Origin": "https://sonarr.example.com"}
+        ) as ws,
+    ):
+        ws.receive_json()
+    assert refused.value.code == 4403
+    with client.websocket_connect(stream, headers={**auth, "Origin": "http://testserver"}) as ws:
+        assert ws.receive_json()["type"] in {"log", "done"}
 
 
 def test_web_dir_served_with_spa_fallback(scratch_layout: Layout, tmp_path: Path) -> None:

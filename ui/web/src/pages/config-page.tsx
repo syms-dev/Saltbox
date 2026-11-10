@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 
 import {
@@ -43,8 +43,14 @@ type EditorProps = {
 
 function Editor({ initial, isSaving, issues, onSave, path, saveError, source }: EditorProps): React.ReactNode {
   const [text, setText] = useState(initial);
-  useEffect(() => setText(initial), [initial]);
-  const dirty = text !== initial;
+  const [base, setBase] = useState(initial);
+  // When the file reloads (after a save, or a background refetch), take the new text only if
+  // nothing has been typed since the last load; never throw away an edit in progress.
+  if (initial !== base) {
+    setBase(initial);
+    if (text === base) setText(initial);
+  }
+  const dirty = text !== base;
   return (
     <div className="stack">
       <p className="muted">
@@ -62,7 +68,7 @@ function Editor({ initial, isSaving, issues, onSave, path, saveError, source }: 
         <button className="primary" disabled={!dirty || isSaving} onClick={() => onSave(text)} type="button">
           Save
         </button>
-        <button disabled={!dirty} onClick={() => setText(initial)} type="button">
+        <button disabled={!dirty} onClick={() => setText(base)} type="button">
           Revert
         </button>
         {dirty ? <span className="muted">unsaved changes</span> : null}

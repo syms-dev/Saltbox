@@ -1,0 +1,213 @@
+"""A disposable Saltbox host for end-to-end tests of the daemon and web app.
+
+``python -m tests.e2e_box --port 8790 --token e2e`` builds a box in a temp
+directory and serves the real daemon (real routes, real bearer-token check,
+real job runner, the built web app) on it. Only the outside world is faked:
+
+- ``sb``: prints a short Ansible-like log; a tag containing ``e2e-fail``
+  fails the way a real playbook does, and ``e2e-slow`` runs for a minute.
+- ``docker``: ``ps``, ``inspect`` and ``image inspect`` answer from a fixed
+  set of containers (healthy, unhealthy, stopped, one inside Gluetun).
+- the image registry: Sonarr and Gluetun have newer images, the rest are
+  current.
+- the Saltbox checkout is a git repository one commit behind its upstream.
+
+The Playwright suite in ``ui/web/e2e`` starts this as its web server.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+from saltbox_ui.appsetup.http import Response
+from saltbox_ui.daemon import Services, create_app
+from saltbox_ui.daemon.updates import UpdateService
+from saltbox_ui.layout import Layout
+from saltbox_ui.state.updates import Registry, check_updates
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DOMAIN = "e2e.example"
+UPDATED_IMAGES = {"hotio/sonarr", "qmcgaw/gluetun"}
+
+
+def _container(
+    name: str,
+    image: str,
+    *,
+    status: str = "running",
+    health: str | None = "healthy",
+    network: str = "saltbox",
+    web: bool = True,
+) -> dict[str, Any]:
+    labels = {"com.github.saltbox.saltbox_managed": "true"}
+    if web:
+        host = f"Host(`{name}.{DOMAIN}`)"
+        labels[f"traefik.http.routers.{name}.rule"] = host
+        labels[f"traefik.http.routers.{name}-http.rule"] = host
+        labels[f"traefik.http.routers.{name}-api.rule"] = f"{host} && PathPrefix(`/api`)"
+    state: dict[str, Any] = {"Status": status}
+    if health is not None:
+        state["Health"] = {"Status": health}
+    return {
+        "Id": f"{name:0>16}"[:16].replace(" ", "0"),
+        "Name": f"/{name}",
+        "Config": {"Image": image, "Labels": labels},
+        "State": state,
+        "Image": f"sha256:{name}",
+        "HostConfig": {"NetworkMode": network},
+    }
+
+
+CONTAINERS = [
+    _container("plex", "ghcr.io/hotio/plex:release"),
+    _container("sonarr", "ghcr.io/hotio/sonarr:release"),
+    _container("radarr", "ghcr.io/hotio/radarr:release"),
+    _container("prowlarr", "ghcr.io/hotio/prowlarr:release", health="unhealthy"),
+    _container("gluetun", "qmcgaw/gluetun:latest", web=False),
+    _container(
+        "qbittorrent", "saltydk/qbittorrent:latest", health=None, network="container:gluetun"
+    ),
+    _container("dozzle", "amir20/dozzle:latest", status="exited", health=None),
+]
+
+FAKE_DOCKER = """#!{python}
+import json, sys
+containers = json.load(open({inspect!r}))
+args = sys.argv[1:]
+if args[:1] == ["ps"]:
+    print("\\n".join(c["Id"] for c in containers))
+elif args[:1] == ["inspect"]:
+    print(json.dumps([c for c in containers if c["Id"] in args[1:]]))
+elif args[:2] == ["image", "inspect"]:
+    out = []
+    for c in containers:
+        if c["Image"] in args[2:]:
+            repo = c["Config"]["Image"].rsplit(":", 1)[0]
+            out.append({{"Id": c["Image"], "RepoDigests": [repo + "@sha256:" + c["Image"][7:]]}})
+    print(json.dumps(out))
+else:
+    sys.exit("fake docker: unsupported " + " ".join(args))
+"""
+
+FAKE_SB = """#!/bin/sh
+echo "Executing Ansible playbook with command: ansible-playbook saltbox.yml --tags $2"
+echo
+echo "PLAY [localhost] ***"
+sleep 1
+case "$*" in
+  *e2e-slow*)
+    echo "TASK [e2e-slow : wait] ***"
+    sleep 60;;
+  *e2e-fail*)
+    echo 'fatal: [localhost]: FAILED! => {"msg": "e2e failure"}'
+    echo "PLAY RECAP ***"
+    echo "localhost : ok=3 changed=0 unreachable=0 failed=1"
+    exit 2;;
+esac
+echo "TASK [$2 : Create Docker container] ***"
+echo "changed: [localhost]"
+echo "PLAY RECAP ***"
+echo "localhost : ok=12 changed=1 unreachable=0 failed=0"
+"""
+
+
+def registry_transport(method: str, url: str, headers: dict[str, str], body: Any) -> Response:
+    """A registry with no auth: every image is current except UPDATED_IMAGES."""
+    path = url.split("/v2/", 1)[1]
+    repository = path.split("/manifests/", 1)[0]
+    name = repository.rsplit("/", 1)[-1]
+    digest = "sha256:newer" if repository in UPDATED_IMAGES else f"sha256:{name}"
+    return Response(200, b"", {"docker-content-digest": digest})
+
+
+def _git(cwd: Path, *args: str) -> None:
+    env = dict(
+        os.environ,
+        GIT_AUTHOR_NAME="e2e",
+        GIT_AUTHOR_EMAIL="e2e@example.invalid",
+        GIT_COMMITTER_NAME="e2e",
+        GIT_COMMITTER_EMAIL="e2e@example.invalid",
+    )
+    subprocess.run(["git", *args], cwd=cwd, env=env, check=True, capture_output=True)
+
+
+def build_box(root: Path) -> Layout:
+    repo = root / "saltbox"
+    repo.mkdir(parents=True)
+    for name in ("schema", "defaults"):
+        shutil.copytree(REPO_ROOT / name, repo / name)
+    shutil.copy(REPO_ROOT / "saltbox.yml", repo / "saltbox.yml")
+    for defaults in (REPO_ROOT / "roles").glob("*/defaults/main.yml"):
+        target = repo / defaults.relative_to(REPO_ROOT)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(defaults, target)
+    (repo / "inventories" / "host_vars").mkdir(parents=True)
+    (repo / "inventories" / "host_vars" / "localhost.yml").write_text("---\n")
+    for name in ("accounts", "settings"):
+        shutil.copy(repo / "defaults" / f"{name}.yml.default", repo / f"{name}.yml")
+
+    # A checkout one commit behind the branch it tracks.
+    upstream = root / "upstream.git"
+    _git(root, "init", "-q", "--bare", "-b", "master", str(upstream))
+    _git(repo, "init", "-q", "-b", "master")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "box")
+    _git(repo, "remote", "add", "origin", str(upstream))
+    _git(repo, "push", "-q", "-u", "origin", "master")
+    newer = root / "newer"
+    _git(root, "clone", "-q", str(upstream), str(newer))
+    (newer / "CHANGELOG").write_text("newer\n")
+    _git(newer, "add", "CHANGELOG")
+    _git(newer, "commit", "-qm", "newer")
+    _git(newer, "push", "-q", "origin", "master")
+
+    appdata = root / "opt"
+    (appdata / "saltbox").mkdir(parents=True)  # the facts folder an install leaves
+    for container in CONTAINERS:
+        (appdata / container["Name"][1:]).mkdir(parents=True)
+
+    bin_dir = root / "bin"
+    bin_dir.mkdir()
+    inspect = root / "inspect.json"
+    inspect.write_text(json.dumps(CONTAINERS))
+    docker = bin_dir / "docker"
+    docker.write_text(FAKE_DOCKER.format(python=sys.executable, inspect=str(inspect)))
+    sb = bin_dir / "sb"
+    sb.write_text(FAKE_SB)
+    for path in (docker, sb):
+        path.chmod(0o755)
+    os.environ["PATH"] = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+    return Layout(repo=repo, appdata=appdata, sb_binary=sb, state_dir=root / "state")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--port", type=int, default=8790)
+    parser.add_argument("--token", default="e2e-token")
+    parser.add_argument("--web", default=str(REPO_ROOT / "ui" / "web" / "dist"))
+    args = parser.parse_args(argv)
+
+    import uvicorn
+
+    with tempfile.TemporaryDirectory(prefix="saltbox-e2e-") as tmp:
+        layout = build_box(Path(tmp))
+        services = Services(layout, token=args.token, web_dir=Path(args.web))
+        registry = Registry(transport=registry_transport)
+        services.updates = UpdateService(
+            layout, checker=lambda containers: check_updates(containers, registry=registry)
+        )
+        app = create_app(services=services)
+        uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning", ws="websockets")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
