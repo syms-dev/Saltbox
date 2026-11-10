@@ -42,6 +42,7 @@ RuntimeDirectory=saltbox-ui
 RuntimeDirectoryMode=0700
 StateDirectory=saltbox-ui
 Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/root
 
 [Install]
 WantedBy=multi-user.target

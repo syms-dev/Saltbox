@@ -110,3 +110,24 @@ def test_trust_repos_lets_root_use_a_repo_owned_by_another_user(tmp_path: Path):
     assert refused.returncode != 0 and "dubious ownership" in refused.stderr
     allowed = subprocess.run(command, env=trust_repos(dict(base), [repo]), capture_output=True)
     assert allowed.returncode == 0
+
+
+def test_jobs_get_a_home_when_systemd_gives_none(scratch_layout: Layout, tmp_path: Path):
+    """systemd starts the daemon without HOME; sb's first task runs `git config --global`."""
+    script = tmp_path / "bin" / "sb-home"
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text(
+        '#!/bin/sh\necho "home=$HOME"\ngit config --global --get-all safe.directory\n'
+    )
+    script.chmod(0o755)
+    runner = SbRunner(scratch_layout, sb=script, env={"PATH": "/usr/bin:/bin"})
+    lines: list[str] = []
+    runner.run([str(script)], kind="install", on_line=lines.append)
+    assert lines[0] == "home=" + __import__("pwd").getpwuid(os.geteuid()).pw_dir
+    assert not any("HOME not set" in line for line in lines)
+
+
+def test_systemd_unit_sets_home():
+    from saltbox_ui.daemon.install import systemd_unit
+
+    assert "Environment=HOME=/root" in systemd_unit("/usr/local/bin/saltbox-uid")

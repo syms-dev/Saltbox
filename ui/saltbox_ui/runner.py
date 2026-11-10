@@ -12,6 +12,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import pwd
 import shlex
 import subprocess
 import time
@@ -56,6 +57,20 @@ class Job:
     def from_dict(cls, data: dict[str, Any]) -> Job:
         known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
         return cls(**known)
+
+
+def ensure_home(env: dict[str, str]) -> dict[str, str]:
+    """Give ``env`` a ``HOME`` when it has none.
+
+    systemd starts services without ``HOME``. Saltbox's first task runs
+    ``git config --global``, which fails with "$HOME not set" without it.
+    """
+    if not env.get("HOME"):
+        try:
+            env["HOME"] = pwd.getpwuid(os.geteuid()).pw_dir or "/root"
+        except KeyError:
+            env["HOME"] = "/root"
+    return env
 
 
 def trust_repos(env: dict[str, str], repos: Iterable[Path]) -> dict[str, str]:
@@ -223,6 +238,7 @@ class SbRunner:
             env.setdefault("TERM", "dumb")
             env.setdefault("ANSIBLE_FORCE_COLOR", "0")
             env.setdefault("NO_COLOR", "1")
+            ensure_home(env)
             trust_repos(
                 env,
                 (self.layout.repo, self.layout.sandbox_repo, self.layout.saltbox_mod_repo),
