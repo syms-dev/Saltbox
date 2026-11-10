@@ -79,6 +79,7 @@ CONTAINERS = [
     _container("dozzle", "amir20/dozzle:latest", status="exited", health=None),
     # Autoheal keeps no config folder; it counts as installed by its container alone.
     _container("autoheal", "willfarrell/autoheal:latest", health=None, web=False),
+    _container("recyclarr", "ghcr.io/recyclarr/recyclarr:8", health=None, web=False),
 ]
 NO_APPDATA = {"autoheal"}
 SECRET_KEY = "e2e-wireguard-private-key="
@@ -116,6 +117,12 @@ elif args[:1] == ["stats"]:
         print(json.dumps({{"Name": c["Name"][1:], "CPUPerc": f"{{cpu:.2f}}%",
                           "MemUsage": f"{{mem}}MiB / 15.5GiB", "MemPerc": f"{{mem / 158.72:.2f}}%",
                           "PIDs": "20"}}))
+elif args[:4] == ["exec", "recyclarr", "recyclarr", "sync"]:
+    preview = "--preview" in args
+    print("[INF] Processing Sonarr Server: [sonarr]")
+    print("[INF] Created 42 New Custom Formats" + (" (preview)" if preview else ""))
+    print("[INF] Updated Quality Profile: WEB-1080p")
+    print("[INF] Completed at " + ("preview" if preview else "sync"))
 elif args[:1] == ["logs"]:
     name = args[-1]
     for i in range(1, 41):

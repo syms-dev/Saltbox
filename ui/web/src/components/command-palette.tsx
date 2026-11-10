@@ -10,6 +10,7 @@ import {
   PackagePlus,
   RefreshCw,
   Search,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -103,6 +104,14 @@ function useCommands(query: string, close: () => void): Command[] {
         id: 'connect',
         keywords: 'setup wire download clients indexers',
         label: 'Connect apps',
+        run: go('/connect'),
+      },
+      {
+        group: 'Go to',
+        icon: <SlidersHorizontal size={ICON} />,
+        id: 'profiles',
+        keywords: 'recyclarr trash guides quality profiles custom formats 4k 1080p',
+        label: 'Quality profiles (Recyclarr)',
         run: go('/connect'),
       },
       {

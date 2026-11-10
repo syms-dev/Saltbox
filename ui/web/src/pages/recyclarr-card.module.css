@@ -1,0 +1,48 @@
+.title {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.apps {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
+
+.app {
+  align-content: start;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.app legend {
+  font-weight: 650;
+  padding: 0 var(--space-1);
+}
+
+.profile {
+  align-items: flex-start;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-2);
+}
+
+.profile:hover {
+  background: var(--color-surface-2);
+}
+
+.profile input {
+  margin-top: 0.2rem;
+}
+
+.profile > span {
+  display: grid;
+}

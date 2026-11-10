@@ -13,6 +13,8 @@ export const API_ROUTES = {
   MEDIA: '/media',
   META: '/meta',
   OVERVIEW: '/overview',
+  RECYCLARR: '/recyclarr',
+  RECYCLARR_SYNC: '/recyclarr/sync',
   RESOURCES: '/resources',
   SALTBOX_UPDATE: '/saltbox/update',
   SETUP: '/setup',

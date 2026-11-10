@@ -311,3 +311,18 @@ export type MediaSnapshot = {
   upcoming?: Section<{ errors: string[]; items: UpcomingItem[] }>;
   vpn?: Section<VpnStatus>;
 };
+
+export type RecyclarrProfile = { default: boolean; name: string; summary: string; trash_id: string };
+
+export type RecyclarrApp = 'radarr' | 'sonarr';
+
+export type RecyclarrStatus = {
+  config_exists: boolean;
+  installed: boolean;
+  instances: Record<RecyclarrApp, string[]>;
+  last_job: Job | null;
+  managed: boolean;
+  profiles: Record<RecyclarrApp, RecyclarrProfile[]>;
+  running: boolean;
+  selected: Record<RecyclarrApp, string[]>;
+};

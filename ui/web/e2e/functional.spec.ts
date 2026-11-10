@@ -302,6 +302,26 @@ test.describe('system and setup', () => {
     await expect(page.getByRole('row', { name: /plex/ })).toContainText('31.5% CPU');
   });
 
+  test('sets up Recyclarr profiles and syncs them', async ({ page }) => {
+    await page.goto('/connect');
+    const card = page.getByRole('region', { name: 'Quality profiles' });
+    await expect(card.getByRole('checkbox', { name: /WEB-1080p/ })).toBeChecked();
+    await expect(card.getByRole('button', { name: 'Sync now' })).toBeDisabled(); // nothing saved yet
+    await card.getByRole('checkbox', { name: /UHD Bluray \+ WEB/ }).check();
+    await card.getByRole('button', { name: 'Save profiles' }).click();
+    await expect(page.getByRole('status').getByText('Profiles saved')).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Save profiles' })).toBeDisabled();
+    await card.getByRole('button', { name: 'Preview changes' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('docker exec recyclarr recyclarr sync --preview');
+    expect(await jobOutcome(page)).toBe('succeeded');
+    await expect(page.getByRole('log', { name: 'Job log' })).toContainText('Created 42 New Custom Formats (preview)');
+    await page.goto('/connect');
+    await expect(page.getByRole('region', { name: 'Quality profiles' })).toContainText('Last run:');
+    await expect(
+      page.getByRole('region', { name: 'Quality profiles' }).getByRole('checkbox', { name: /UHD Bluray/ }),
+    ).toBeChecked();
+  });
+
   test('Connect apps lists every check per app without failing as a whole', async ({ page }) => {
     await page.goto('/connect');
     await expect(page.getByRole('region', { name: 'qBittorrent' })).toContainText('Login');

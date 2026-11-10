@@ -62,6 +62,16 @@ class JobManager:
             command = self.runner.validate_command()
         else:
             raise ValueError(f"unknown job kind: {kind}")
+        return self._launch(command, kind, tag_list)
+
+    def start_recyclarr(self, *, preview: bool = False, container: str = "recyclarr") -> Job:
+        """``recyclarr sync`` inside its container, as a job with a live log."""
+        command = ["docker", "exec", container, "recyclarr", "sync"]
+        if preview:
+            command.append("--preview")
+        return self._launch(command, "recyclarr", ["preview"] if preview else ["sync"])
+
+    def _launch(self, command: list[str], kind: str, tag_list: list[str]) -> Job:
         with self._guard:
             if self._current and self._thread and self._thread.is_alive():
                 raise JobRunning("a job is already running")

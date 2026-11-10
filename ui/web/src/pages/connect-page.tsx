@@ -6,6 +6,7 @@ import type { SetupStatus, SetupTask } from '../api/types';
 import { useConfirm, useToast } from '../components/feedback';
 import { ErrorMessage, Loading } from '../components/query-state';
 import styles from './connect-page.module.css';
+import { RecyclarrCard } from './recyclarr-card';
 
 const HIDDEN = '\u2039hidden\u203a';
 
@@ -91,6 +92,8 @@ export function ConnectPage(): React.ReactNode {
         Wires your installed apps together the way the Saltbox docs describe, so Sonarr and Radarr can reach your
         download clients and indexers, and Plex sees your library. Safe to run again at any time.
       </p>
+      <RecyclarrCard />
+      <h2 className={styles['flush']}>Connections</h2>
       <div className="chips">
         {(['done', 'todo', 'error', 'manual', 'skip'] as const).map((status) => (
           <span className={`${styles['pill']} ${styles[status]}`} key={status}>

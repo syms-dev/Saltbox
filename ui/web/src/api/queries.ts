@@ -25,6 +25,7 @@ import type {
   ContainerLogs,
   ContainerState,
   Overview,
+  RecyclarrStatus,
   Resources,
   SetupResponse,
   TailscaleStatus,
@@ -335,5 +336,33 @@ export function useMedia(): UseQueryResult<MediaSnapshot> {
     queryFn: ({ signal }) => apiFetch<MediaSnapshot>(API_ROUTES.MEDIA, { signal }),
     queryKey: ['media'],
     refetchInterval: MEDIA_REFRESH_MS,
+  });
+}
+
+export function useRecyclarr(): UseQueryResult<RecyclarrStatus> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<RecyclarrStatus>(API_ROUTES.RECYCLARR, { signal }),
+    queryKey: ['recyclarr'],
+  });
+}
+
+type RecyclarrSelection = { radarr: string[]; sonarr: string[] };
+
+export function useSaveRecyclarr(): UseMutationResult<{ backup: string | null }, Error, RecyclarrSelection> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (selection: RecyclarrSelection) => apiPut<{ backup: string | null }>(API_ROUTES.RECYCLARR, selection),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['recyclarr'] }),
+  });
+}
+
+export function useRecyclarrSync(): UseMutationResult<Job, Error, { preview: boolean }> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { preview: boolean }) => apiPost<Job>(API_ROUTES.RECYCLARR_SYNC, body),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['recyclarr'] });
+      void client.invalidateQueries({ queryKey: [QUERY_KEYS.JOBS] });
+    },
   });
 }

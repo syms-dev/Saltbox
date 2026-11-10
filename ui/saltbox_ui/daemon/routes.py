@@ -548,6 +548,62 @@ def media(request: Request) -> dict[str, Any]:
     return data
 
 
+# -- recyclarr ------------------------------------------------------------------------
+class RecyclarrSelection(BaseModel):
+    sonarr: list[str] = Field(default_factory=list)
+    radarr: list[str] = Field(default_factory=list)
+
+
+class RecyclarrSync(BaseModel):
+    preview: bool = False
+
+
+def _recyclarr_status(request: Request) -> dict[str, Any]:
+    from .. import recyclarr
+
+    svc = services(request)
+    found = _app_setup(request).discover()
+    containers = {c["name"]: c for c in _containers_or_none() or []}
+    data = recyclarr.status(svc.layout, found, containers)
+    runs = [j for j in svc.runner.jobs(limit=200) if j.kind == "recyclarr"]
+    data["last_job"] = _job_view(svc, runs[0]) if runs else None
+    return data
+
+
+@router.get("/recyclarr")
+def recyclarr_status(request: Request) -> dict[str, Any]:
+    return _recyclarr_status(request)
+
+
+@router.put("/recyclarr")
+def recyclarr_save(request: Request, body: RecyclarrSelection) -> dict[str, Any]:
+    """Write recyclarr.yml and secrets.yml for the chosen TRaSH profiles."""
+    from .. import recyclarr
+
+    svc = services(request)
+    found = _app_setup(request).discover()
+    try:
+        result = recyclarr.write_config(svc.layout, found, body.model_dump())
+    except recyclarr.RecyclarrError as error:
+        raise HTTPException(400, str(error)) from error
+    svc.__dict__.pop("_redactor", None)  # the new secrets.yml holds keys to hide
+    return {**result, "status": _recyclarr_status(request)}
+
+
+@router.post("/recyclarr/sync", status_code=202)
+def recyclarr_sync(request: Request, body: RecyclarrSync) -> dict[str, Any]:
+    """``recyclarr sync`` (or ``--preview``) in its container, with a live log."""
+    svc = services(request)
+    container = next((c for c in _containers_or_none() or [] if c["name"] == "recyclarr"), None)
+    if container is None or container["status"] != "running":
+        raise HTTPException(409, "the recyclarr container is not running")
+    try:
+        job = svc.jobs.start_recyclarr(preview=body.preview)
+    except JobRunning as error:
+        raise HTTPException(409, str(error)) from error
+    return _job_view(svc, job)
+
+
 # -- containers ----------------------------------------------------------------
 def _managed_container(name: str) -> dict[str, Any]:
     """The Saltbox-managed container called ``name``; 404 for anything else."""
