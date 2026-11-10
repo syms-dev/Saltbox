@@ -139,6 +139,7 @@ def build_parser() -> argparse.ArgumentParser:
     setup_sub = setup.add_subparsers(dest="action", required=True)
     setup_sub.add_parser("status", help="check every connection")
     setup_sub.add_parser("apply", help="make the missing connections")
+    setup_sub.add_parser("sync-port", help="point qBittorrent at the VPN's forwarded port")
 
     daemon = sub.add_parser("daemon", help="the web daemon: unit, route, status")
     daemon_sub = daemon.add_subparsers(dest="action", required=True)
@@ -479,6 +480,13 @@ def _setup(args: argparse.Namespace, layout: Layout) -> int:
     from .appsetup import AppSetup, summarize
 
     setup = AppSetup(layout)
+    if args.action == "sync-port":
+        task = setup.sync_port()
+        if task is None:
+            emit({"status": "skip", "detail": "qBittorrent is not routed through a VPN"})
+            return 0
+        emit(task.as_dict())
+        return 3 if task.status == "error" else 0
     tasks = setup.apply() if args.action == "apply" else setup.status()
     counts = summarize(tasks)
     emit({"summary": counts, "tasks": [task.as_dict() for task in tasks]})

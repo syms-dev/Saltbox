@@ -482,3 +482,75 @@ def test_plex_library_detail_shows_reported_value(box) -> None:
     plex.library_prefs["9"] = {"enableBIFGeneration": True}
     task = by_id(setup.status())["plex:radarr"]
     assert "Plex reports enableBIFGeneration=True" in task.detail
+
+
+# -- VPN port ---------------------------------------------------------------------
+@pytest.fixture
+def vpn_box(box, scratch_layout: Layout, tmp_path: Path):
+    _setup, apps, net, made = box
+    Inventory(scratch_layout.inventory).update(
+        {"qbittorrent_docker_network_mode": "container:gluetun"}
+    )
+    state = {"file": "51413\n", "log": "", "enabled": False, "calls": []}
+
+    def systemctl(*args: str) -> tuple[int, str]:
+        state["calls"].append(args)
+        if args[:2] == ("enable", "--now"):
+            state["enabled"] = True
+        if args[0] == "is-enabled":
+            return (0, "enabled") if state["enabled"] else (1, "disabled")
+        return 0, ""
+
+    vpn = AppSetup(
+        scratch_layout,
+        transport=net,
+        resolver=lambda name: name,
+        ensure_dir=made.append,
+        log_reader=lambda name: state["log"],
+        container_reader=lambda name, path: state["file"] if name == "gluetun" else "",
+        unit_dir=tmp_path / "systemd",
+        systemctl=systemctl,
+    )
+    return vpn, apps, state
+
+
+def test_vpn_port_is_applied_and_kept_in_sync(vpn_box, tmp_path: Path) -> None:
+    setup, apps, state = vpn_box
+    status = by_id(setup.status())
+    assert status["qbittorrent:vpnport"].status == "todo"
+    assert "forwarded port 51413" in status["qbittorrent:vpnport"].detail
+    assert status["portsync:timer"].status == "todo"
+
+    tasks = by_id(setup.apply())
+    assert tasks["qbittorrent:vpnport"].status == "done"
+    prefs = apps["qbittorrent"].preferences
+    assert prefs["listen_port"] == 51413 and prefs["random_port"] is False
+    assert tasks["portsync:timer"].status == "done"
+    timer = (tmp_path / "systemd" / "saltbox-ui-portsync.timer").read_text()
+    assert "OnUnitActiveSec=5min" in timer
+    service = (tmp_path / "systemd" / "saltbox-ui-portsync.service").read_text()
+    assert "setup sync-port" in service
+    assert ("enable", "--now", "saltbox-ui-portsync.timer") in state["calls"]
+
+    state["file"] = "60001"  # the VPN reconnected and Proton handed out a new port
+    synced = setup.sync_port()
+    assert synced.status == "done" and "60001" in synced.detail
+    assert apps["qbittorrent"].preferences["listen_port"] == 60001
+
+
+def test_vpn_port_from_log_and_missing(vpn_box) -> None:
+    setup, apps, state = vpn_box
+    state["file"] = ""
+    state["log"] = "INFO [port forwarding] port forwarded is 41000\n"
+    assert by_id(setup.apply())["qbittorrent:vpnport"].status == "done"
+    assert apps["qbittorrent"].preferences["listen_port"] == 41000
+    state["log"] = ""
+    task = by_id(setup.status())["qbittorrent:vpnport"]
+    assert task.status == "skip" and "gluetun_vpn_port_forwarding" in task.detail
+
+
+def test_no_vpn_port_tasks_without_gluetun(box) -> None:
+    setup, *_ = box
+    tasks = by_id(setup.status())
+    assert "qbittorrent:vpnport" not in tasks and "portsync:timer" not in tasks
+    assert setup.sync_port() is None

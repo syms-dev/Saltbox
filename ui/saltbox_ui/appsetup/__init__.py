@@ -17,7 +17,15 @@ from pathlib import Path
 from ..layout import Layout
 from .discover import Discovery, Resolver, Service, discover, resolve_hosts
 from .http import SetupError, Transport
-from .tasks import SetupContext, Task, apply_all, build_tasks, check_all, summarize
+from .tasks import (
+    SetupContext,
+    Task,
+    apply_all,
+    build_tasks,
+    check_all,
+    qbit_vpn_port_task,
+    summarize,
+)
 
 __all__ = [
     "AppSetup",
@@ -77,9 +85,15 @@ class AppSetup:
         resolver: Resolver | None = None,
         ensure_dir: Callable[[Path], None] | None = None,
         log_reader: Callable[[str], str] | None = None,
+        container_reader: Callable[[str, str], str] | None = None,
+        unit_dir: Path | None = None,
+        systemctl: Callable[..., tuple[int, str]] | None = None,
     ):
         self.layout = layout
         self.log_reader = log_reader or docker_logs
+        self.container_reader = container_reader
+        self.unit_dir = unit_dir or Path("/etc/systemd/system")
+        self.systemctl = systemctl
         self.transport = transport
         self.resolver = resolver
         self.ensure_dir = ensure_dir
@@ -89,15 +103,28 @@ class AppSetup:
         resolve_hosts(found, self.resolver)
         return found
 
-    def tasks(self) -> list[Task]:
+    def context(self) -> SetupContext:
         found = self.discover()
-        ctx = SetupContext(
+        return SetupContext(
             found,
             transport=self.transport,
             ensure_dir=self.ensure_dir or owned_dir_maker(found.user),
             log_reader=self.log_reader,
+            container_reader=self.container_reader,
+            unit_dir=self.unit_dir,
+            systemctl=self.systemctl,
         )
-        return build_tasks(ctx)
+
+    def tasks(self) -> list[Task]:
+        return build_tasks(self.context())
+
+    def sync_port(self) -> Task | None:
+        """Just the VPN port step, for the timer. None when qBittorrent is not behind a VPN."""
+        ctx = self.context()
+        qbit = ctx.found.first("qbittorrent")
+        if qbit is None or not ctx.found.qbit_vpn:
+            return None
+        return apply_all([qbit_vpn_port_task(ctx, qbit)])[0]
 
     def status(self) -> list[Task]:
         return check_all(self.tasks())

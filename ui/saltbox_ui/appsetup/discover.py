@@ -66,6 +66,7 @@ class Discovery:
     user: str = ""
     password: str = ""
     plex_token: str = ""
+    qbit_vpn: str = ""  # the Gluetun container qBittorrent is routed through, if any
 
     def first(self, role: str) -> Service | None:
         for service in self.services.get(role, []):
@@ -169,6 +170,12 @@ def discover(
                     service.api_key = sabnzbd_api_key(path)
             services.append(service)
         result.services[role] = services
+
+    qbit = result.first("qbittorrent")
+    if qbit is not None:
+        mode = str(inventory.effective("qbittorrent", "_docker_network_mode", qbit.name, "") or "")
+        if mode.startswith("container:"):
+            result.qbit_vpn = mode.split(":", 1)[1]
 
     plex = result.first("plex")
     if plex is not None:

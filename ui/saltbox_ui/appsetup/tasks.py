@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from . import vpnport
 from .discover import API_VERSION, ARR_ROLES, Discovery, Service
 from .http import Client, Response, SetupError, Transport
 
@@ -200,6 +201,9 @@ class SetupContext:
     transport: Transport | None = None
     ensure_dir: Callable[[Path], None] | None = None
     log_reader: Callable[[str], str] | None = None
+    container_reader: Callable[[str, str], str] | None = None
+    unit_dir: Path = Path("/etc/systemd/system")
+    systemctl: Callable[..., tuple[int, str]] | None = None
     _qbit_cookie: str = field(default="", repr=False)
     _sab_servers: dict[str, int] = field(default_factory=dict, repr=False)
 
@@ -406,6 +410,60 @@ def qbit_login_task(ctx: SetupContext, qbit: Service) -> Task:
         ctx._qbit_cookie = ""
 
     return Task(f"{qbit.name}:login", "qBittorrent", "Login", check, apply)
+
+
+def qbit_vpn_port_task(ctx: SetupContext, qbit: Service) -> Task:
+    gluetun = ctx.found.qbit_vpn
+
+    def current_port() -> int | None:
+        reader = ctx.container_reader or vpnport.docker_cat
+        return vpnport.forwarded_port(gluetun, reader, ctx.log_reader)
+
+    def check() -> tuple[str, str]:
+        port = current_port()
+        if port is None:
+            return (
+                "skip",
+                f"{gluetun} hasn't reported a forwarded port. Check that "
+                'gluetun_vpn_port_forwarding is "on" and the server supports P2P',
+            )
+        try:
+            client = ctx.qbit(qbit)
+        except QbitLoginError:
+            return "todo", "waits for the qBittorrent login"
+        listening = (client.get("/api/v2/app/preferences") or {}).get("listen_port")
+        if listening == port:
+            return "done", f"listens on the VPN's forwarded port {port}"
+        return "todo", f"will listen on the VPN's forwarded port {port} (now {listening})"
+
+    def apply() -> None:
+        port = current_port()
+        if port is None:
+            raise SetupError(f"{gluetun}: no forwarded port to use yet")
+        ctx.qbit(qbit).request(
+            "POST",
+            "/api/v2/app/setPreferences",
+            form={"json": json.dumps({"listen_port": port, "random_port": False, "upnp": False})},
+        )
+
+    return Task(f"{qbit.name}:vpnport", "qBittorrent", "VPN port", check, apply)
+
+
+def port_timer_task(ctx: SetupContext) -> Task:
+    systemctl = ctx.systemctl or vpnport.default_systemctl
+
+    def check() -> tuple[str, str]:
+        if vpnport.timer_installed(ctx.unit_dir, systemctl):
+            return "done", f"re-checked every {vpnport.INTERVAL}"
+        return "todo", f"will re-check the port every {vpnport.INTERVAL}, as it changes"
+
+    def apply() -> None:
+        try:
+            vpnport.install_timer(ctx.unit_dir, systemctl)
+        except (OSError, RuntimeError) as error:
+            raise SetupError(f"port sync timer: {error}") from error
+
+    return Task("portsync:timer", "qBittorrent", "Keep VPN port in sync", check, apply)
 
 
 def qbit_folders_task(ctx: SetupContext, qbit: Service) -> Task:
@@ -794,6 +852,9 @@ def build_tasks(ctx: SetupContext) -> list[Task]:
     if qbit:
         tasks.append(qbit_login_task(ctx, qbit))
         tasks.append(qbit_folders_task(ctx, qbit))
+        if found.qbit_vpn:
+            tasks.append(qbit_vpn_port_task(ctx, qbit))
+            tasks.append(port_timer_task(ctx))
     if sab and sab.api_key:
         categories = [arr.name for role in ARR_ROLES for arr in found.installed(role)]
         if categories:
