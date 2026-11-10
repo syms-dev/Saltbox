@@ -8,7 +8,9 @@ in the browser keeps its comments and passes the same validation.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +21,15 @@ from .. import __version__
 from ..catalog.catalog import is_listed_app
 from ..config.service import CONFIG_FILES
 from ..runner import JobRunning
+from ..secrets import (
+    Redactor,
+    UnknownPlaceholder,
+    mask_text,
+    mask_tree,
+    secret_values,
+    tree_secrets,
+    unmask_text,
+)
 from ..state import (
     cached_tags,
     disk_usage,
@@ -91,8 +102,8 @@ def overview(request: Request) -> dict[str, Any]:
         "updates": _updates_summary(svc),
         "services": read_motd_services(layout),
         "jobs": {
-            **svc.jobs.status(),
-            "recent": [j.as_dict() for j in svc.runner.jobs(limit=5)],
+            **_jobs_status(svc),
+            "recent": [_job_view(svc, j) for j in svc.runner.jobs(limit=5)],
         },
         "config_issues": {
             name: [i.as_dict() for i in found] for name, found in issues.items() if found
@@ -115,9 +126,11 @@ def apps(request: Request, all: bool = False) -> list[dict[str, Any]]:
         instances = svc.inventory.instances(app.role, app.default_instances or [app.role])
         data = app.as_dict()
         data["instances"] = instances
-        # Every Saltbox app keeps its config in <appdata>/<instance>; facts files exist only
-        # for the few roles that store generated values.
-        data["installed"] = any((svc.layout.appdata / name).is_dir() for name in instances)
+        # Most apps keep their config in <appdata>/<instance>; some (Autoheal, Watchtower)
+        # keep none, so a container under the instance's name counts too.
+        data["installed"] = any(
+            (svc.layout.appdata / name).is_dir() or name in by_name for name in instances
+        )
         data["containers"] = [
             _container_view(by_name[name], updates.get(name))
             for name in instances
@@ -130,7 +143,7 @@ def apps(request: Request, all: bool = False) -> list[dict[str, Any]]:
 
 
 @router.get("/apps/{repo}/{role}")
-def app_detail(request: Request, repo: str, role: str) -> dict[str, Any]:
+def app_detail(request: Request, repo: str, role: str, reveal: bool = False) -> dict[str, Any]:
     svc = services(request)
     app = svc.catalog.app(role, repo)
     if app is None:
@@ -144,6 +157,7 @@ def app_detail(request: Request, repo: str, role: str) -> dict[str, Any]:
         for name in instances
         if name in containers
     ]
+    overrides = svc.inventory.overrides_for(role, instances)
     return {
         "app": app.as_dict(),
         "containers": views,
@@ -152,7 +166,7 @@ def app_detail(request: Request, repo: str, role: str) -> dict[str, Any]:
         "installed": bool(views) or any((svc.layout.appdata / n).is_dir() for n in instances),
         "instances": instances,
         "fields": [f.as_dict() for f in defaults.visible()] if defaults else [],
-        "overrides": svc.inventory.overrides_for(role, instances),
+        "overrides": (overrides if reveal else mask_tree(overrides)),
         "facts": _facts_for(svc, role),
     }
 
@@ -203,7 +217,7 @@ def config_files(request: Request) -> list[dict[str, Any]]:
 
 
 @router.get("/config/{name}")
-def config_file(request: Request, name: str) -> dict[str, Any]:
+def config_file(request: Request, name: str, reveal: bool = False) -> dict[str, Any]:
     svc = services(request)
     if name not in CONFIG_FILES:
         raise HTTPException(404, f"unknown config file {name}")
@@ -212,12 +226,14 @@ def config_file(request: Request, name: str) -> dict[str, Any]:
     if not text:
         default = svc.config.default_path(name)
         text = default.read_text(encoding="utf-8") if default and default.exists() else ""
+    data = svc.config.load_plain(name) if (path.exists() or text) else {}
     return {
         "name": name,
         "path": str(path),
         "source": svc.config.source(name),
-        "text": text,
-        "data": svc.config.load_plain(name) if (path.exists() or text) else {},
+        "text": text if reveal else mask_text(text),
+        "data": data if reveal else mask_tree(data),
+        "hidden": len(secret_values(text)),
         "issues": [i.as_dict() for i in svc.config.validate(name)],
     }
 
@@ -231,9 +247,12 @@ def write_config_file(request: Request, name: str, body: ConfigText) -> dict[str
     svc = services(request)
     if name not in CONFIG_FILES:
         raise HTTPException(404, f"unknown config file {name}")
-    _check_yaml(body.text)
     path = svc.config.path(name)
-    write_atomic(path, body.text if body.text.endswith("\n") else body.text + "\n")
+    default = svc.config.default_path(name)
+    text = _unmask(body.text, path if path.exists() or default is None else default)
+    _check_yaml(text)
+    write_atomic(path, text if text.endswith("\n") else text + "\n")
+    svc.__dict__.pop("_redactor", None)
     return {"name": name, "issues": [i.as_dict() for i in svc.config.validate(name)]}
 
 
@@ -259,13 +278,16 @@ def validate_config(request: Request, api: bool = False) -> dict[str, list[dict[
 
 
 @router.get("/inventory")
-def inventory(request: Request) -> dict[str, Any]:
+def inventory(request: Request, reveal: bool = False) -> dict[str, Any]:
     svc = services(request)
     path = svc.layout.inventory
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    data = svc.inventory.as_dict()
     return {
         "path": str(path),
-        "text": path.read_text(encoding="utf-8") if path.exists() else "",
-        "data": svc.inventory.as_dict(),
+        "text": text if reveal else mask_text(text),
+        "data": data if reveal else mask_tree(data),
+        "hidden": len(secret_values(text)),
         "issues": [i.as_dict() for i in svc.config.validate_inventory()],
     }
 
@@ -273,8 +295,10 @@ def inventory(request: Request) -> dict[str, Any]:
 @router.put("/inventory")
 def write_inventory(request: Request, body: ConfigText) -> dict[str, Any]:
     svc = services(request)
-    _check_yaml(body.text)
-    write_atomic(svc.layout.inventory, body.text if body.text.endswith("\n") else body.text + "\n")
+    text = _unmask(body.text, svc.layout.inventory)
+    _check_yaml(text)
+    write_atomic(svc.layout.inventory, text if text.endswith("\n") else text + "\n")
+    svc.__dict__.pop("_redactor", None)
     return {"issues": [i.as_dict() for i in svc.config.validate_inventory()]}
 
 
@@ -362,7 +386,7 @@ def update_saltbox(request: Request) -> dict[str, Any]:
         job = svc.jobs.start("update")
     except JobRunning as error:
         raise HTTPException(409, str(error)) from error
-    return job.as_dict()
+    return _job_view(svc, job)
 
 
 def _start_update(svc, apps: list) -> dict[str, Any]:
@@ -389,7 +413,7 @@ def _start_update(svc, apps: list) -> dict[str, Any]:
         job = svc.jobs.start("install", tags=tags)
     except JobRunning as error:
         raise HTTPException(409, str(error)) from error
-    return job.as_dict()
+    return _job_view(svc, job)
 
 
 def _app_for_container(svc, name: str):
@@ -465,7 +489,8 @@ def container_log(request: Request, name: str, tail: int = 300) -> dict[str, Any
         lines = container_logs(name, tail)
     except RuntimeError as error:
         raise HTTPException(502, str(error)) from error
-    return {"name": name, "lines": lines}
+    redact = _redactor(services(request))
+    return {"name": name, "lines": [redact(line) for line in lines]}
 
 
 # -- app setup ---------------------------------------------------------------
@@ -478,19 +503,29 @@ def _app_setup(request: Request):
 
 
 @router.get("/setup")
-def setup_status(request: Request) -> dict[str, Any]:
-    from ..appsetup import summarize
-
+def setup_status(request: Request, reveal: bool = False) -> dict[str, Any]:
     tasks = _app_setup(request).status()
-    return {"summary": summarize(tasks), "tasks": [t.as_dict() for t in tasks]}
+    return _setup_view(services(request), tasks, reveal)
 
 
 @router.post("/setup/apply")
-def setup_apply(request: Request) -> dict[str, Any]:
+def setup_apply(request: Request, reveal: bool = False) -> dict[str, Any]:
+    tasks = _app_setup(request).apply()
+    return _setup_view(services(request), tasks, reveal)
+
+
+def _setup_view(svc, tasks: list, reveal: bool) -> dict[str, Any]:
+    """Task list; API keys in the manual steps are hidden unless asked for."""
     from ..appsetup import summarize
 
-    tasks = _app_setup(request).apply()
-    return {"summary": summarize(tasks), "tasks": [t.as_dict() for t in tasks]}
+    redact = _redactor(svc)
+    views = []
+    for task in tasks:
+        view = task.as_dict()
+        if not reveal:
+            view["detail"] = redact(view["detail"])
+        views.append(view)
+    return {"summary": summarize(tasks), "tasks": views}
 
 
 # -- jobs ------------------------------------------------------------------
@@ -507,7 +542,7 @@ class JobRequest(BaseModel):
 @router.get("/jobs")
 def jobs(request: Request, limit: int = 50) -> dict[str, Any]:
     svc = services(request)
-    return {**svc.jobs.status(), "jobs": [j.as_dict() for j in svc.runner.jobs(limit=limit)]}
+    return {**_jobs_status(svc), "jobs": [_job_view(svc, j) for j in svc.runner.jobs(limit=limit)]}
 
 
 @router.post("/jobs", status_code=202)
@@ -527,15 +562,16 @@ def start_job(request: Request, body: JobRequest) -> dict[str, Any]:
         raise HTTPException(409, str(error)) from error
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
-    return job.as_dict()
+    return _job_view(svc, job)
 
 
 @router.get("/jobs/{job_id}")
 def job(request: Request, job_id: str) -> dict[str, Any]:
-    found = services(request).runner.job(job_id)
+    svc = services(request)
+    found = svc.runner.job(job_id)
     if found is None:
         raise HTTPException(404, "no such job")
-    return found.as_dict()
+    return _job_view(svc, found)
 
 
 @router.get("/jobs/{job_id}/log")
@@ -545,7 +581,11 @@ def job_log(request: Request, job_id: str, offset: int = 0) -> dict[str, Any]:
     if found is None:
         raise HTTPException(404, "no such job")
     text = svc.runner.log(job_id)
-    return {"job": found.as_dict(), "offset": len(text), "text": text[offset:]}
+    return {
+        "job": _job_view(svc, found),
+        "offset": len(text),
+        "text": _redactor(svc)(text[offset:]),
+    }
 
 
 @router.post("/jobs/{job_id}/cancel")
@@ -570,19 +610,22 @@ async def stream_job(websocket: WebSocket, job_id: str) -> None:
         return
     await websocket.accept()
     log_path = Path(found.log_path or svc.layout.jobs_dir / f"{job_id}.log")
+    redact = _redactor(svc)
     offset = 0
     try:
         while True:
             chunk = await asyncio.to_thread(_read_from, log_path, offset)
-            if chunk:
-                offset += len(chunk.encode("utf-8"))
-                await websocket.send_json({"type": "log", "text": chunk})
+            # Whole lines only while the job writes, so no secret is split across messages.
+            whole = chunk[: chunk.rfind("\n") + 1]
+            if whole:
+                offset += len(whole.encode("utf-8"))
+                await websocket.send_json({"type": "log", "text": redact(whole)})
             current = svc.runner.job(job_id)
             if current and current.status not in {"pending", "running"}:
                 tail = await asyncio.to_thread(_read_from, log_path, offset)
                 if tail:
-                    await websocket.send_json({"type": "log", "text": tail})
-                await websocket.send_json({"type": "done", "job": current.as_dict()})
+                    await websocket.send_json({"type": "log", "text": redact(tail)})
+                await websocket.send_json({"type": "done", "job": _job_view(svc, current)})
                 break
             await asyncio.sleep(STREAM_POLL_SECONDS)
     except WebSocketDisconnect:
@@ -591,6 +634,65 @@ async def stream_job(websocket: WebSocket, job_id: str) -> None:
 
 
 # -- helpers -----------------------------------------------------------------
+REDACTOR_TTL_SECONDS = 60.0
+
+
+def _redactor(svc) -> Redactor:
+    """Every secret the server holds, to scrub from logs and instructions; cached a minute."""
+    cached = svc.__dict__.get("_redactor")
+    now = time.monotonic()
+    if cached is not None and now - cached[0] < REDACTOR_TTL_SECONDS:
+        return cached[1]
+    from ..appsetup.discover import sabnzbd_api_key, xml_api_key
+
+    values: list[str] = []
+    texts = [svc.config.path(name) for name in CONFIG_FILES] + [svc.layout.inventory]
+    for path in texts:
+        try:
+            values += secret_values(path.read_text(encoding="utf-8")).values()
+        except OSError:
+            continue
+    appdata = svc.layout.appdata
+    try:
+        values += [xml_api_key(path) for path in appdata.glob("*/config.xml")]
+        values += [sabnzbd_api_key(path) for path in appdata.glob("*/sabnzbd.ini")]
+    except OSError:
+        pass
+    with contextlib.suppress(Exception):  # unreadable facts must not stop the page
+        values += tree_secrets(read_all_facts(svc.layout, redact=False))
+    redactor = Redactor(values)
+    svc.__dict__["_redactor"] = (now, redactor)
+    return redactor
+
+
+def _job_view(svc, job) -> dict[str, Any]:
+    """A job record with any secret on its command line (extra vars) hidden."""
+    data = job.as_dict()
+    redact = _redactor(svc)
+    data["command_line"] = redact(data["command_line"])
+    data["command"] = [redact(arg) for arg in data["command"]]
+    return data
+
+
+def _jobs_status(svc) -> dict[str, Any]:
+    status = svc.jobs.status()
+    current = svc.jobs.current
+    status["current"] = _job_view(svc, current) if current is not None else None
+    return status
+
+
+def _unmask(text: str, saved_path: Path) -> str:
+    """Put saved secrets back in place of the placeholders the browser was shown."""
+    try:
+        saved = saved_path.read_text(encoding="utf-8")
+    except OSError:
+        saved = ""
+    try:
+        return unmask_text(text, saved)
+    except UnknownPlaceholder as error:
+        raise HTTPException(400, str(error)) from error
+
+
 def _coerce(value: Any) -> Any:
     """Strings from forms become YAML scalars; an empty string stays a string."""
     if isinstance(value, str) and value.strip():

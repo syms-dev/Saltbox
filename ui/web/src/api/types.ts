@@ -170,6 +170,8 @@ export type ConfigFileSummary = {
 
 export type ConfigFile = {
   data: Record<string, unknown>;
+  /** How many secrets the text shows as placeholders. */
+  hidden?: number;
   issues: Issue[];
   name: string;
   path: string;
@@ -179,6 +181,7 @@ export type ConfigFile = {
 
 export type Inventory = {
   data: Record<string, unknown>;
+  hidden?: number;
   issues: Issue[];
   path: string;
   text: string;

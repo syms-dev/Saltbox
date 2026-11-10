@@ -1,10 +1,13 @@
-import { CircleAlert, CircleCheck, CircleDashed, CircleMinus, Hand, LoaderCircle } from 'lucide-react';
+import { CircleAlert, CircleCheck, CircleDashed, CircleMinus, Eye, EyeOff, Hand, LoaderCircle } from 'lucide-react';
+import { useState } from 'react';
 
 import { useApplySetup, useSetup } from '../api/queries';
 import type { SetupStatus, SetupTask } from '../api/types';
 import { useConfirm, useToast } from '../components/feedback';
 import { ErrorMessage, Loading } from '../components/query-state';
 import styles from './connect-page.module.css';
+
+const HIDDEN = '\u2039hidden\u203a';
 
 const ICONS: Record<SetupStatus, React.ReactNode> = {
   done: <CircleCheck aria-hidden="true" size={18} />,
@@ -29,7 +32,8 @@ export function groupByApp(tasks: SetupTask[]): [string, SetupTask[]][] {
 }
 
 export function ConnectPage(): React.ReactNode {
-  const setup = useSetup();
+  const [revealed, setRevealed] = useState(false);
+  const setup = useSetup(revealed);
   const apply = useApplySetup();
   const confirm = useConfirm();
   const toast = useToast();
@@ -69,6 +73,12 @@ export function ConnectPage(): React.ReactNode {
       <div className="row">
         <h1 className={styles['flush']}>Connect apps</h1>
         <span className="spacer" />
+        {tasks.some((task) => task.detail.includes(HIDDEN)) || revealed ? (
+          <button className="ghost" onClick={() => setRevealed((r) => !r)} type="button">
+            {revealed ? <EyeOff aria-hidden="true" size={16} /> : <Eye aria-hidden="true" size={16} />}
+            {revealed ? 'Hide API keys' : 'Show API keys'}
+          </button>
+        ) : null}
         <button disabled={apply.isPending || setup.isFetching} onClick={() => void setup.refetch()} type="button">
           Check again
         </button>

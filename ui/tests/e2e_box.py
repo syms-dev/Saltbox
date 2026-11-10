@@ -76,7 +76,11 @@ CONTAINERS = [
         "qbittorrent", "saltydk/qbittorrent:latest", health=None, network="container:gluetun"
     ),
     _container("dozzle", "amir20/dozzle:latest", status="exited", health=None),
+    # Autoheal keeps no config folder; it counts as installed by its container alone.
+    _container("autoheal", "willfarrell/autoheal:latest", health=None, web=False),
 ]
+NO_APPDATA = {"autoheal"}
+SECRET_KEY = "e2e-wireguard-private-key="
 
 FAKE_DOCKER = """#!{python}
 import json, sys
@@ -166,7 +170,12 @@ def build_box(root: Path) -> Layout:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(defaults, target)
     (repo / "inventories" / "host_vars").mkdir(parents=True)
-    (repo / "inventories" / "host_vars" / "localhost.yml").write_text("---\n")
+    (repo / "inventories" / "host_vars" / "localhost.yml").write_text(
+        "---\n"
+        "gluetun_role_docker_envs_custom:\n"
+        "  VPN_SERVICE_PROVIDER: protonvpn\n"
+        f'  WIREGUARD_PRIVATE_KEY: "{SECRET_KEY}"\n'
+    )
     for name in ("accounts", "settings"):
         text = (repo / "defaults" / f"{name}.yml.default").read_text()
         (repo / f"{name}.yml").write_text(text.replace("testsaltbox.ml", DOMAIN))
@@ -189,7 +198,8 @@ def build_box(root: Path) -> Layout:
     appdata = root / "opt"
     (appdata / "saltbox").mkdir(parents=True)  # the facts folder an install leaves
     for container in CONTAINERS:
-        (appdata / container["Name"][1:]).mkdir(parents=True)
+        if container["Name"][1:] not in NO_APPDATA:
+            (appdata / container["Name"][1:]).mkdir(parents=True)
 
     bin_dir = root / "bin"
     bin_dir.mkdir()

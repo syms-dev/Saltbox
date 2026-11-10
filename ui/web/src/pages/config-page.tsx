@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 
@@ -32,8 +33,41 @@ function IssueList({ issues }: { issues: Issue[] }): React.ReactNode {
   );
 }
 
+type SecretsNoteProps = { dirty: boolean; hidden: number; onToggle: () => void; revealed: boolean };
+
+/** Says that secrets are hidden and how saving treats them, with a switch to show them. */
+function SecretsNote({ dirty, hidden, onToggle, revealed }: SecretsNoteProps): React.ReactNode {
+  if (hidden === 0) return null;
+  return (
+    <div className={`note ${revealed ? 'warn' : ''} ${styles['secrets']}`}>
+      {revealed ? <Eye aria-hidden="true" size={16} /> : <EyeOff aria-hidden="true" size={16} />}
+      <span>
+        {revealed ? (
+          <>Secrets are visible. Hide them again before sharing your screen.</>
+        ) : (
+          <>
+            {hidden} password{hidden === 1 ? '' : 's'}, token{hidden === 1 ? '' : 's'} or key
+            {hidden === 1 ? '' : 's'} hidden as <code>‹hidden:…›</code>. Leave one as it is to keep it, or replace it to
+            change it.
+          </>
+        )}
+      </span>
+      <button
+        className="small"
+        disabled={dirty}
+        onClick={onToggle}
+        title={dirty ? 'Save or revert your changes first' : undefined}
+        type="button"
+      >
+        {revealed ? 'Hide secrets' : 'Show secrets'}
+      </button>
+    </div>
+  );
+}
+
 type EditorProps = {
   initial: string;
+  secrets?: (dirty: boolean) => React.ReactNode;
   isSaving: boolean;
   issues: Issue[];
   onSave: (text: string) => void;
@@ -42,7 +76,7 @@ type EditorProps = {
   source?: string;
 };
 
-function Editor({ initial, isSaving, issues, onSave, path, saveError, source }: EditorProps): React.ReactNode {
+function Editor({ initial, isSaving, issues, onSave, path, saveError, secrets, source }: EditorProps): React.ReactNode {
   const [text, setText] = useState(initial);
   const [base, setBase] = useState(initial);
   // When the file reloads (after a save, or a background refetch), take the new text only if
@@ -64,6 +98,7 @@ function Editor({ initial, isSaving, issues, onSave, path, saveError, source }: 
         <code>{path}</code>
         {source === 'default' ? ' · not created yet, showing the default' : ''}
       </p>
+      {secrets?.(dirty)}
       <textarea
         aria-label="File contents"
         className={`mono ${styles['editor']}`}
@@ -93,7 +128,8 @@ function Editor({ initial, isSaving, issues, onSave, path, saveError, source }: 
 }
 
 function FileEditor({ name }: { name: string }): React.ReactNode {
-  const file = useConfigFile(name);
+  const [revealed, setRevealed] = useState(false);
+  const file = useConfigFile(name, revealed);
   const save = useSaveConfig();
   if (file.isPending) return <Loading what={name} />;
   if (file.isError) return <ErrorMessage error={file.error} prefix={name} />;
@@ -105,13 +141,22 @@ function FileEditor({ name }: { name: string }): React.ReactNode {
       onSave={(text) => save.mutate({ name, text })}
       path={file.data.path}
       saveError={save.error}
+      secrets={(dirty) => (
+        <SecretsNote
+          dirty={dirty}
+          hidden={file.data.hidden ?? 0}
+          onToggle={() => setRevealed((r) => !r)}
+          revealed={revealed}
+        />
+      )}
       source={file.data.source}
     />
   );
 }
 
 function InventoryEditor(): React.ReactNode {
-  const inventory = useInventory();
+  const [revealed, setRevealed] = useState(false);
+  const inventory = useInventory(revealed);
   const save = useSaveInventory();
   if (inventory.isPending) return <Loading what="inventory" />;
   if (inventory.isError) return <ErrorMessage error={inventory.error} prefix="Inventory" />;
@@ -123,6 +168,14 @@ function InventoryEditor(): React.ReactNode {
       onSave={(text) => save.mutate(text)}
       path={inventory.data.path}
       saveError={save.error}
+      secrets={(dirty) => (
+        <SecretsNote
+          dirty={dirty}
+          hidden={inventory.data.hidden ?? 0}
+          onToggle={() => setRevealed((r) => !r)}
+          revealed={revealed}
+        />
+      )}
     />
   );
 }
@@ -179,7 +232,9 @@ export function ConfigPage(): React.ReactNode {
             </NavLink>
           ))}
         </nav>
-        <section className="card">{name === INVENTORY ? <InventoryEditor /> : <FileEditor name={name} />}</section>
+        <section className="card">
+          {name === INVENTORY ? <InventoryEditor /> : <FileEditor key={name} name={name} />}
+        </section>
       </div>
     </div>
   );

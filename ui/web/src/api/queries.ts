@@ -64,10 +64,12 @@ export function useApps(): UseQueryResult<App[]> {
   });
 }
 
-export function useAppDetail(repo: string, role: string): UseQueryResult<AppDetail> {
+export function useAppDetail(repo: string, role: string, reveal = false): UseQueryResult<AppDetail> {
   return useQuery({
-    queryFn: ({ signal }) => apiFetch<AppDetail>(API_ROUTES.appDetail(repo, role), { signal }),
-    queryKey: [QUERY_KEYS.APPS, repo, role],
+    placeholderData: (previous) => previous,
+    queryFn: ({ signal }) =>
+      apiFetch<AppDetail>(`${API_ROUTES.appDetail(repo, role)}${reveal ? '?reveal=true' : ''}`, { signal }),
+    queryKey: [QUERY_KEYS.APPS, repo, role, reveal],
   });
 }
 
@@ -94,17 +96,18 @@ export function useConfigFiles(): UseQueryResult<ConfigFileSummary[]> {
   });
 }
 
-export function useConfigFile(name: string): UseQueryResult<ConfigFile> {
+export function useConfigFile(name: string, reveal = false): UseQueryResult<ConfigFile> {
   return useQuery({
-    queryFn: ({ signal }) => apiFetch<ConfigFile>(API_ROUTES.configFile(name), { signal }),
-    queryKey: [QUERY_KEYS.CONFIG, name],
+    queryFn: ({ signal }) =>
+      apiFetch<ConfigFile>(`${API_ROUTES.configFile(name)}${reveal ? '?reveal=true' : ''}`, { signal }),
+    queryKey: [QUERY_KEYS.CONFIG, name, reveal],
   });
 }
 
-export function useInventory(): UseQueryResult<Inventory> {
+export function useInventory(reveal = false): UseQueryResult<Inventory> {
   return useQuery({
-    queryFn: ({ signal }) => apiFetch<Inventory>(API_ROUTES.INVENTORY, { signal }),
-    queryKey: [QUERY_KEYS.INVENTORY],
+    queryFn: ({ signal }) => apiFetch<Inventory>(`${API_ROUTES.INVENTORY}${reveal ? '?reveal=true' : ''}`, { signal }),
+    queryKey: [QUERY_KEYS.INVENTORY, reveal],
   });
 }
 
@@ -269,10 +272,11 @@ export function useContainerLogs(name: string, tail: number, live: boolean): Use
   });
 }
 
-export function useSetup(): UseQueryResult<SetupResponse> {
+export function useSetup(reveal = false): UseQueryResult<SetupResponse> {
   return useQuery({
-    queryFn: ({ signal }) => apiFetch<SetupResponse>(API_ROUTES.SETUP, { signal }),
-    queryKey: [QUERY_KEYS.SETUP],
+    placeholderData: (previous) => previous,
+    queryFn: ({ signal }) => apiFetch<SetupResponse>(`${API_ROUTES.SETUP}${reveal ? '?reveal=true' : ''}`, { signal }),
+    queryKey: [QUERY_KEYS.SETUP, reveal],
   });
 }
 
@@ -280,6 +284,6 @@ export function useApplySetup(): UseMutationResult<SetupResponse, Error, void> {
   const client = useQueryClient();
   return useMutation({
     mutationFn: () => apiPost<SetupResponse>(API_ROUTES.SETUP_APPLY),
-    onSuccess: (data) => client.setQueryData([QUERY_KEYS.SETUP], data),
+    onSuccess: () => void client.invalidateQueries({ queryKey: [QUERY_KEYS.SETUP] }),
   });
 }

@@ -277,12 +277,20 @@ function LogsTab({ containers }: { containers: ContainerState[] }): React.ReactN
 // -- settings ------------------------------------------------------------------------------------
 type OverridesEditorProps = {
   fields: Field[];
+  onReveal: () => void;
   overrides: Record<string, Record<string, unknown>>;
   repo: string;
+  revealed: boolean;
   role: string;
 };
 
-function OverridesEditor({ fields, overrides, repo, role }: OverridesEditorProps): React.ReactNode {
+const HIDDEN = '\u2039hidden\u203a';
+
+function hasHidden(value: unknown): boolean {
+  return JSON.stringify(value ?? null).includes(HIDDEN);
+}
+
+function OverridesEditor({ fields, onReveal, overrides, repo, revealed, role }: OverridesEditorProps): React.ReactNode {
   const update = useUpdateOverrides();
   const toast = useToast();
   const [key, setKey] = useState('');
@@ -308,13 +316,25 @@ function OverridesEditor({ fields, overrides, repo, role }: OverridesEditorProps
   }
 
   return (
-    <section className="card">
-      <h2>Your overrides</h2>
+    <section aria-labelledby="overrides-title" className="card">
+      <h2 id="overrides-title">Your overrides</h2>
       <p className="muted small">
         Saved to <code>inventories/host_vars/localhost.yml</code>. Role-wide keys look like{' '}
         <code>{role}_role_&lt;setting&gt;</code>, one instance’s like <code>{role}_&lt;setting&gt;</code>. They apply
         the next time the app is installed or reinstalled.
       </p>
+      {current.some((entry) => hasHidden(entry.value)) || revealed ? (
+        <div className={`note ${revealed ? 'warn' : ''} ${styles['secrets']}`}>
+          <span>
+            {revealed
+              ? 'Secret values are visible.'
+              : 'Passwords, tokens and keys are hidden. To change one, set the key again with the new value.'}
+          </span>
+          <button className="small" onClick={onReveal} type="button">
+            {revealed ? 'Hide secrets' : 'Show secrets'}
+          </button>
+        </div>
+      ) : null}
       {current.length === 0 ? (
         <p className="muted">No overrides; the defaults below apply.</p>
       ) : (
@@ -500,7 +520,8 @@ type Tab = 'details' | 'logs' | 'overview' | 'settings';
 export function AppPage(): React.ReactNode {
   const { repo = 'saltbox', role = '' } = useParams();
   const [params, setParams] = useSearchParams();
-  const detail = useAppDetail(repo, role);
+  const [revealed, setRevealed] = useState(false);
+  const detail = useAppDetail(repo, role, revealed);
   const jobs = useJobs();
   const jobActions = useJobActions();
   const containers = useContainerActions();
@@ -610,7 +631,14 @@ export function AppPage(): React.ReactNode {
       {tab === 'logs' ? <LogsTab containers={data.containers} /> : null}
       {tab === 'settings' ? (
         <div className="stack">
-          <OverridesEditor fields={data.fields} overrides={data.overrides} repo={repo} role={role} />
+          <OverridesEditor
+            fields={data.fields}
+            onReveal={() => setRevealed((r) => !r)}
+            overrides={data.overrides}
+            repo={repo}
+            revealed={revealed}
+            role={role}
+          />
           <DefaultsTable fields={data.fields} />
         </div>
       ) : null}

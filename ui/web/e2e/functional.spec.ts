@@ -275,6 +275,48 @@ test.describe('system and setup', () => {
   });
 });
 
+test.describe('secrets', () => {
+  const KEY = 'e2e-wireguard-private-key=';
+  const PASSWORD = 'password12345678';
+
+  test('config files hide secrets until asked, and saving keeps them', async ({ page }) => {
+    await page.goto('/config/accounts');
+    const editor = page.getByLabel('File contents');
+    await expect(editor).toContainText('pass: \u2039hidden:user.pass\u203a');
+    expect(await page.content()).not.toContain(PASSWORD);
+    await expect(page.getByText(/hidden as/)).toBeVisible();
+
+    await page.goto('/config/inventory');
+    await expect(page.getByLabel('File contents')).toContainText(
+      '\u2039hidden:gluetun_role_docker_envs_custom.WIREGUARD_PRIVATE_KEY\u203a',
+    );
+    expect(await page.content()).not.toContain(KEY);
+    const text = await page.getByLabel('File contents').inputValue();
+    await page.getByLabel('File contents').fill(text.replace('protonvpn', 'mullvad'));
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('unsaved changes')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Show secrets' }).click();
+    await expect(page.getByLabel('File contents')).toContainText(KEY);
+    await expect(page.getByLabel('File contents')).toContainText('mullvad');
+    await page.getByRole('button', { name: 'Hide secrets' }).click();
+    await expect(page.getByLabel('File contents')).not.toContainText(KEY);
+  });
+
+  test('app overrides hide secret values', async ({ page }) => {
+    await page.goto('/apps/saltbox/gluetun?tab=settings');
+    await expect(page.getByText('Passwords, tokens and keys are hidden.')).toBeVisible();
+    expect(await page.content()).not.toContain(KEY);
+    await page.getByRole('button', { name: 'Show secrets' }).click();
+    const overrides = page.getByRole('region', { name: 'Your overrides' });
+    await expect(overrides.getByRole('row', { name: /gluetun_role_docker_envs_custom/ })).toContainText(KEY);
+  });
+
+  test('an app without a config folder still counts as installed', async ({ page }) => {
+    await page.goto('/apps');
+    await expect(page.getByRole('list', { name: 'Installed apps' })).toContainText('Autoheal');
+  });
+});
+
 test.describe('config', () => {
   test('edits, reverts and validates config files', async ({ page }) => {
     await page.goto('/config');
