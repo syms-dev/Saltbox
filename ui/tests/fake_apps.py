@@ -294,6 +294,19 @@ class FakePlex:
         )
         self.prefs["FriendlyName"] = "saltbox"
 
+    # Real Plex servers have been seen reporting library booleans as text.
+    library_bools_as_text = False
+
+    def _library_settings(self, values: dict[str, Any]) -> dict[str, Any]:
+        if not self.library_bools_as_text:
+            return self._settings(values)
+        shown = {k: (str(v).lower() if isinstance(v, bool) else v) for k, v in values.items()}
+        data = self._settings(shown)
+        for item in data["MediaContainer"]["Setting"]:
+            if item["value"] in ("true", "false"):
+                item["type"] = "bool"
+        return data
+
     @staticmethod
     def _settings(values: dict[str, Any]) -> dict[str, Any]:
         def kind(value: Any) -> str:
@@ -337,7 +350,7 @@ class FakePlex:
             if key not in self.library_prefs:
                 return Response(404, b"Not Found", {})
             if method == "GET":
-                return _json(200, self._settings(self.library_prefs[key]))
+                return _json(200, self._library_settings(self.library_prefs[key]))
             return Response(200, b"", {})  # accepted and ignored, like the real server
         section_path = url.path.split("/")
         if (

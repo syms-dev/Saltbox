@@ -572,11 +572,13 @@ def plex_library_task(ctx: SetupContext, plex: Service, role: str) -> Task:
                     return item
         return None
 
+    def current_prefs(key: str) -> dict[str, Any]:
+        return plex_settings(ctx.plex(plex).get(f"/library/sections/{key}/prefs"))
+
     def pref_changes(key: str) -> dict[str, Any]:
         if not wanted_prefs:
             return {}
-        current = plex_settings(ctx.plex(plex).get(f"/library/sections/{key}/prefs"))
-        return plex_differences(current, wanted_prefs)
+        return plex_differences(current_prefs(key), wanted_prefs)
 
     def check() -> tuple[str, str]:
         if not ctx.found.plex_token:
@@ -584,8 +586,16 @@ def plex_library_task(ctx: SetupContext, plex: Service, role: str) -> Task:
         found = section()
         if found is None:
             return "todo", f"will add '{title_name}' on {folder} and scan it"
-        if pref_changes(str(found.get("key"))):
-            return "todo", f"'{found.get('title')}': will turn off video preview thumbnails"
+        changes = pref_changes(str(found.get("key")))
+        if changes:
+            reported = ", ".join(
+                f"{k}={current_prefs(str(found.get('key'))).get(k)!r}" for k in changes
+            )
+            return (
+                "todo",
+                f"'{found.get('title')}': will turn off video preview thumbnails "
+                f"(Plex reports {reported})",
+            )
         return "done", f"'{found.get('title')}' uses {folder}"
 
     def apply() -> None:
@@ -688,9 +698,13 @@ def arr_settings_task(
 
 
 def plex_value(value: Any) -> str:
+    """Plex reports booleans as true/false, 1/0 or "true"/"false"; compare them as 1/0."""
     if isinstance(value, bool):
         return "1" if value else "0"
-    return str(value)
+    text = str(value).strip()
+    if text.lower() in ("true", "false"):
+        return "1" if text.lower() == "true" else "0"
+    return text
 
 
 def plex_settings(data: Any) -> dict[str, Any]:

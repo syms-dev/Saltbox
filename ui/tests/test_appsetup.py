@@ -456,3 +456,29 @@ def test_existing_library_gets_thumbnails_turned_off(box) -> None:
     setup.apply()
     assert plex.library_prefs["9"] == {"enableBIFGeneration": False}
     assert not any(sec["title"] == "Movies" for sec in plex.sections)  # not duplicated
+
+
+def test_plex_library_bools_reported_as_text(box) -> None:
+    setup, apps, *_ = box
+    apps["plex"].library_bools_as_text = True
+    setup.apply()
+    tasks = by_id(setup.status())
+    assert tasks["plex:radarr"].status == "done"
+    assert tasks["plex:sonarr"].status == "done"
+
+
+def test_plex_library_detail_shows_reported_value(box) -> None:
+    setup, apps, *_ = box
+    plex = apps["plex"]
+    plex.sections.append(
+        {
+            "key": "9",
+            "title": "My Movies",
+            "type": "movie",
+            "agent": "tv.plex.agents.movie",
+            "Location": [{"id": 9, "path": "/mnt/unionfs/Media/Movies"}],
+        }
+    )
+    plex.library_prefs["9"] = {"enableBIFGeneration": True}
+    task = by_id(setup.status())["plex:radarr"]
+    assert "Plex reports enableBIFGeneration=True" in task.detail

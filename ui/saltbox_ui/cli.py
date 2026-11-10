@@ -461,7 +461,17 @@ def _build_web(layout: Layout) -> int:
         if result.returncode != 0:
             emit({"error": f"npm {' '.join(step)} failed with exit code {result.returncode}"})
             return 1
-    emit({"built": str(source / "dist")})
+    result = {"built": str(source / "dist")}
+    if shutil.which("systemctl"):
+        # Pick up the new build if the daemon is running; does nothing otherwise.
+        restart = subprocess.run(
+            ["systemctl", "try-restart", "saltbox-ui.service"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        result["daemon_restarted"] = restart.returncode == 0
+    emit(result)
     return 0
 
 
