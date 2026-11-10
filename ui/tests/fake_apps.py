@@ -137,9 +137,13 @@ class FakeArr:
 
 
 class FakeQbit:
-    def __init__(self, user: str, password: str):
+    """qBittorrent 5 style: a wrong password is a 401, the cookie name is configurable."""
+
+    def __init__(self, user: str, password: str, *, cookie_name: str = "SID", status_on_fail=401):
         self.user = user
         self.password = password
+        self.cookie_name = cookie_name
+        self.status_on_fail = status_on_fail
         self.preferences: dict[str, Any] = {"save_path": "/downloads/", "temp_path_enabled": False}
         self.logins = 0
 
@@ -148,10 +152,13 @@ class FakeQbit:
             form = dict(urllib.parse.parse_qsl((body or b"").decode()))
             if form.get("username") == self.user and form.get("password") == self.password:
                 self.logins += 1
-                return Response(200, b"Ok.", {"set-cookie": "SID=s3cr3t; HttpOnly; path=/"})
-            return Response(200, b"Fails.", {})
-        if headers.get("Cookie") != "SID=s3cr3t":
-            return Response(403, b"Forbidden", {})
+                cookies = f"theme=dark; path=/\n{self.cookie_name}=s3cr3t; HttpOnly; path=/"
+                return Response(200, b"Ok.", {"set-cookie": cookies})
+            if self.status_on_fail == 200:
+                return Response(200, b"Fails.", {})
+            return Response(self.status_on_fail, b"Unauthorized", {})
+        if headers.get("Cookie") != f"{self.cookie_name}=s3cr3t":
+            return Response(401, b"Unauthorized", {})
         if path == "/api/v2/app/preferences" and method == "GET":
             return _json(200, self.preferences)
         if path == "/api/v2/app/setPreferences" and method == "POST":
@@ -159,6 +166,31 @@ class FakeQbit:
             self.preferences.update(json.loads(form["json"]))
             return Response(200, b"", {})
         return Response(404, b"Not Found", {})
+
+
+class FakeSab:
+    def __init__(self, api_key: str, *, servers: int = 1):
+        self.api_key = api_key
+        self.servers = [{"name": f"news{i}.example.com"} for i in range(servers)]
+        self.categories = ["*", "movies", "tv", "audio", "software"]
+
+    def handle(self, method: str, path: str, headers: dict[str, str], body: bytes | None):
+        url = urllib.parse.urlsplit(path)
+        query = dict(urllib.parse.parse_qsl(url.query))
+        if url.path != "/api":
+            return Response(404, b"Not Found", {})
+        if query.get("apikey") != self.api_key:
+            return _json(200, {"status": False, "error": "API Key Incorrect"})
+        mode = query.get("mode")
+        if mode == "get_config" and query.get("section") == "servers":
+            return _json(200, {"config": {"servers": self.servers}})
+        if mode == "get_cats":
+            return _json(200, {"categories": self.categories})
+        if mode == "set_config" and query.get("section") == "categories":
+            if query["name"] not in self.categories:
+                self.categories.append(query["name"])
+            return _json(200, {"config": {"categories": [{"name": query["name"]}]}})
+        return _json(200, {"status": False, "error": "not implemented"})
 
 
 class FakePlex:

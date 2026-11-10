@@ -54,19 +54,24 @@ def urllib_transport(
     request = urllib.request.Request(url, data=body, headers=headers, method=method)
     try:
         with _NO_PROXY.open(request, timeout=TIMEOUT) as response:
-            return Response(
-                response.status,
-                response.read(),
-                {k.lower(): v for k, v in response.headers.items()},
-            )
+            return Response(response.status, response.read(), _headers(response.headers))
     except urllib.error.HTTPError as error:
-        return Response(
-            error.code, error.read(), {k.lower(): v for k, v in (error.headers or {}).items()}
-        )
+        return Response(error.code, error.read(), _headers(error.headers))
     except (urllib.error.URLError, TimeoutError, OSError) as error:
         reason = getattr(error, "reason", error)
         host = urllib.parse.urlsplit(url).netloc
         raise SetupError(f"cannot reach {host}: {reason}") from error
+
+
+def _headers(message: Any) -> dict[str, str]:
+    """Lower-cased headers; repeated Set-Cookie headers are kept, one per line."""
+    if message is None:
+        return {}
+    headers = {k.lower(): v for k, v in message.items()}
+    cookies = message.get_all("Set-Cookie") if hasattr(message, "get_all") else None
+    if cookies:
+        headers["set-cookie"] = "\n".join(cookies)
+    return headers
 
 
 def describe_error(response: Response) -> str:

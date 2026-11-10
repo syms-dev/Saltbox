@@ -9,7 +9,7 @@ from saltbox_ui.appsetup.discover import discover, sabnzbd_api_key, xml_api_key
 from saltbox_ui.config import ConfigService, Inventory
 from saltbox_ui.layout import Layout
 from saltbox_ui.plex import write_plex_facts
-from tests.fake_apps import FakeArr, FakeNetwork, FakePlex, FakeQbit
+from tests.fake_apps import FakeArr, FakeNetwork, FakePlex, FakeQbit, FakeSab
 
 KEYS = {"sonarr": "s" * 32, "radarr": "r" * 32, "lidarr": "l" * 32, "prowlarr": "p" * 32}
 
@@ -181,7 +181,7 @@ def test_failures_are_reported_per_task(box) -> None:
     net.down.add("radarr")
     tasks = by_id(setup.apply())
     assert tasks["qbittorrent:folders"].status == "error"
-    assert "login refused" in tasks["qbittorrent:folders"].detail
+    assert "rejected user 'seed'" in tasks["qbittorrent:folders"].detail
     assert tasks["radarr:rootfolder"].status == "error"
     assert "cannot reach radarr:7878" in tasks["radarr:rootfolder"].detail
     assert tasks["sonarr:rootfolder"].status == "done"
@@ -189,16 +189,61 @@ def test_failures_are_reported_per_task(box) -> None:
 
 
 def test_missing_api_key_and_sabnzbd(box, scratch_layout: Layout) -> None:
-    setup, apps, _net, _ = box
+    setup, apps, net, _ = box
     (scratch_layout.appdata / "lidarr" / "config.xml").write_text("<Config></Config>")
     install(scratch_layout, "sabnzbd")
     (scratch_layout.appdata / "sabnzbd" / "sabnzbd.ini").write_text("[misc]\napi_key = sabkey\n")
+    sab = net.add("sabnzbd", FakeSab("sabkey"))
     tasks = by_id(setup.apply())
     assert tasks["lidarr:apikey"].status == "manual"
     assert "prowlarr:lidarr" not in tasks
-    sab = next(c for c in apps["sonarr"].downloadclients if c["implementation"] == "Sabnzbd")
-    sab_values = {f["name"]: f["value"] for f in sab["fields"]}
-    assert sab_values["apiKey"] == "sabkey" and sab_values["tvCategory"] == "sonarr"
+    assert tasks["sabnzbd:categories"].status == "done"
+    assert {"sonarr", "radarr"} <= set(sab.categories)
+    assert all(c["implementation"] != "Sabnzbd" for c in apps["lidarr"].downloadclients)
+    client = next(c for c in apps["sonarr"].downloadclients if c["implementation"] == "Sabnzbd")
+    values = {f["name"]: f["value"] for f in client["fields"]}
+    assert values["apiKey"] == "sabkey" and values["tvCategory"] == "sonarr"
+    # categories are created before any app is pointed at them
+    calls = [url for _, url in net.calls]
+    first_category = next(i for i, u in enumerate(calls) if "section=categories" in u)
+    first_sab_client = next(
+        i for i, (m, u) in enumerate(net.calls) if m == "POST" and "downloadclient" in u
+    )
+    assert first_category < first_sab_client
+
+
+def test_sabnzbd_without_a_usenet_server_is_skipped(box, scratch_layout: Layout) -> None:
+    setup, apps, net, _ = box
+    install(scratch_layout, "sabnzbd")
+    (scratch_layout.appdata / "sabnzbd" / "sabnzbd.ini").write_text("[misc]\napi_key = sabkey\n")
+    net.add("sabnzbd", FakeSab("sabkey", servers=0))
+    tasks = by_id(setup.apply())
+    assert tasks["sabnzbd:categories"].status == "skip"
+    assert "no Usenet server" in tasks["sabnzbd:categories"].detail
+    assert tasks["sonarr:sabnzbd"].status == "skip"
+    assert all(c["implementation"] != "Sabnzbd" for c in apps["sonarr"].downloadclients)
+    assert summarize(list(tasks.values()))["error"] == 0
+
+
+@pytest.mark.parametrize("status_on_fail", [401, 200])
+def test_qbittorrent_wrong_password_is_explained(box, status_on_fail) -> None:
+    setup, apps, *_ = box
+    apps["qbittorrent"].password = "changed-in-the-ui"
+    apps["qbittorrent"].status_on_fail = status_on_fail
+    task = by_id(setup.status())["qbittorrent:folders"]
+    assert task.status == "error"
+    assert "rejected user 'seed'" in task.detail
+    assert "accounts.yml" in task.detail
+
+
+def test_qbittorrent_ban_and_renamed_cookie(box) -> None:
+    setup, apps, *_ = box
+    apps["qbittorrent"].cookie_name = "QBT_SID_8080"
+    assert by_id(setup.apply())["qbittorrent:folders"].status == "done"
+    apps["qbittorrent"].password = "nope"
+    apps["qbittorrent"].status_on_fail = 403
+    task = by_id(setup.status())["qbittorrent:folders"]
+    assert "banned" in task.detail
 
 
 def test_extra_instances_need_their_own_root_folder(box, scratch_layout: Layout) -> None:

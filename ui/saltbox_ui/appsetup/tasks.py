@@ -19,8 +19,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .discover import API_VERSION, Discovery, Service
-from .http import Client, SetupError, Transport
+from .discover import API_VERSION, ARR_ROLES, Discovery, Service
+from .http import Client, Response, SetupError, Transport
 
 MEDIA_ROOT = "/mnt/unionfs/Media"
 ROOT_FOLDERS = {"sonarr": "TV", "radarr": "Movies", "lidarr": "Music"}
@@ -91,6 +91,7 @@ class SetupContext:
     transport: Transport | None = None
     ensure_dir: Callable[[Path], None] | None = None
     _qbit_cookie: str = field(default="", repr=False)
+    _sab_servers: dict[str, int] = field(default_factory=dict, repr=False)
 
     # -- clients -----------------------------------------------------------
     def arr(self, service: Service) -> Client:
@@ -118,24 +119,71 @@ class SetupContext:
                 "/api/v2/auth/login",
                 form={"username": self.found.user, "password": self.found.password},
                 headers={"Referer": service.host_url},
+                ok=(200, 401, 403),
             )
-            cookie = response.headers.get("set-cookie", "")
-            if "Ok" not in response.text or "SID=" not in cookie:
+            if response.status == 403:
                 raise SetupError(
-                    f"{service.name}: login refused; it should accept the user and "
-                    "password from accounts.yml"
+                    f"{service.name}: this server's address is banned after too many failed "
+                    "logins; restart qBittorrent to lift the ban"
                 )
-            self._qbit_cookie = cookie.split(";", 1)[0]
+            cookie = session_cookie(response.headers.get("set-cookie", ""))
+            if response.status == 401 or "Ok" not in response.text or not cookie:
+                raise SetupError(
+                    f"{service.name}: rejected user '{self.found.user}' with the password from "
+                    "accounts.yml, so the other apps can't log in either. Its login was set "
+                    "before Saltbox could, or changed in its web UI"
+                )
+            self._qbit_cookie = cookie
         client.headers["Cookie"] = self._qbit_cookie
         client.headers["Referer"] = service.host_url
         return client
+
+    def sab(self, service: Service) -> Client:
+        return SabClient(
+            service.host_url, service.api_key, transport=self.transport, name=service.name
+        )
+
+    def sab_servers(self, service: Service) -> int:
+        """How many Usenet servers SABnzbd has; categories are pointless without one."""
+        if service.name not in self._sab_servers:
+            data = self.sab(service).get(
+                "/api", params={"mode": "get_config", "section": "servers", "output": "json"}
+            )
+            servers = ((data or {}).get("config") or {}).get("servers") or []
+            self._sab_servers[service.name] = len(servers)
+        return self._sab_servers[service.name]
 
     def make_dir(self, path: str) -> None:
         if self.ensure_dir is not None:
             self.ensure_dir(Path(path))
 
 
+class SabClient(Client):
+    """SABnzbd's API takes the key as a query parameter on every call."""
+
+    def __init__(self, base_url: str, api_key: str, **kwargs: Any):
+        super().__init__(base_url, **kwargs)
+        self.api_key = api_key
+
+    def request(self, method: str, path: str, **kwargs: Any) -> Response:
+        params = {**(kwargs.pop("params", None) or {}), "apikey": self.api_key}
+        response = super().request(method, path, params=params, **kwargs)
+        data = response.json()
+        if isinstance(data, dict) and data.get("status") is False:
+            raise SetupError(f"{self.name}: {data.get('error') or 'request refused'}")
+        return response
+
+
 # -- helpers -----------------------------------------------------------------
+def session_cookie(header: str) -> str:
+    """The qBittorrent session cookie (``SID`` or a renamed one) from Set-Cookie lines."""
+    pairs = [line.split(";", 1)[0].strip() for line in header.splitlines() if "=" in line]
+    for pair in pairs:
+        if "sid" in pair.split("=", 1)[0].lower():
+            return pair
+    return pairs[0] if pairs else ""
+
+
 def schema_item(client: Client, resource: str, implementation: str) -> dict[str, Any]:
     for item in client.get(f"/{resource}/schema") or []:
         if str(item.get("implementation", "")).lower() == implementation.lower():
@@ -231,8 +279,12 @@ def download_client_task(
     label: str,
     category: str,
     values: dict[str, Any],
+    requires: Callable[[], tuple[str, str] | None] | None = None,
 ) -> Task:
     def check() -> tuple[str, str]:
+        blocked = requires() if requires else None
+        if blocked:
+            return blocked
         existing = ctx.arr(app).get("/downloadclient") or []
         for item in existing:
             if str(item.get("implementation", "")).lower() == implementation.lower():
@@ -349,6 +401,48 @@ def plex_library_task(ctx: SetupContext, plex: Service, role: str) -> Task:
     return Task(f"{plex.name}:{role}", "Plex", f"{title_name} library", check, apply)
 
 
+def sab_blocker(ctx: SetupContext, sab: Service) -> tuple[str, str] | None:
+    if ctx.sab_servers(sab) == 0:
+        return "skip", "skipped: SABnzbd has no Usenet server yet"
+    return None
+
+
+def sab_categories_task(ctx: SetupContext, sab: Service, categories: list[str]) -> Task:
+    def missing() -> list[str]:
+        data = ctx.sab(sab).get("/api", params={"mode": "get_cats", "output": "json"}) or {}
+        have = {str(c).lower() for c in data.get("categories") or []}
+        return [c for c in categories if c.lower() not in have]
+
+    def check() -> tuple[str, str]:
+        if sab_blocker(ctx, sab):
+            return (
+                "skip",
+                "SABnzbd has no Usenet server. Add your provider in SABnzbd and run this "
+                "again, or ignore it if you don't use Usenet",
+            )
+        absent = missing()
+        if not absent:
+            return "done", f"categories {', '.join(categories)} exist"
+        return "todo", f"will add categories {', '.join(absent)}"
+
+    def apply() -> None:
+        client = ctx.sab(sab)
+        for category in missing():
+            client.get(
+                "/api",
+                params={
+                    "mode": "set_config",
+                    "section": "categories",
+                    "keyword": category,
+                    "name": category,
+                    "dir": category,
+                    "output": "json",
+                },
+            )
+
+    return Task(f"{sab.name}:categories", "SABnzbd", "Categories", check, apply)
+
+
 def manual_task(task_id: str, app: str, title: str, text: str) -> Task:
     return Task(task_id, app, title, lambda: ("manual", text))
 
@@ -396,6 +490,10 @@ def build_tasks(ctx: SetupContext) -> list[Task]:
 
     if qbit:
         tasks.append(qbit_folders_task(ctx, qbit))
+    if sab and sab.api_key:
+        categories = [arr.name for role in ARR_ROLES for arr in found.installed(role)]
+        if categories:
+            tasks.append(sab_categories_task(ctx, sab, categories))
     for role in ("sonarr", "radarr", "lidarr"):
         for arr in found.installed(role):
             if not arr.api_key:
@@ -443,6 +541,7 @@ def build_tasks(ctx: SetupContext) -> list[Task]:
                             "useSsl": False,
                             "apiKey": sab.api_key,
                         },
+                        requires=lambda sab=sab: sab_blocker(ctx, sab),
                     )
                 )
             if autoscan:
