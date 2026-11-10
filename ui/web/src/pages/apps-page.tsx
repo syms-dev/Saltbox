@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 
-import { useApps } from '../api/queries';
+import { formatWhen } from '../format';
+import { Link, useNavigate } from 'react-router-dom';
+
+import { useApps, useCheckUpdates, useUpdateAll, useUpdateApp, useUpdates } from '../api/queries';
 import type { App } from '../api/types';
+import { OpenLinks, UpdateBadge, overallUpdate } from '../components/app-links';
 import { ErrorMessage, Loading } from '../components/query-state';
 import { StatusBadge } from '../components/status-badge';
 import styles from './apps-page.module.css';
@@ -71,41 +74,7 @@ export function AppsPage(): React.ReactNode {
         </span>
       </div>
       {installed.length > 0 && filter === 'all' && needle === '' && category === '' ? (
-        <section className="card">
-          <h2>Installed</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>App</th>
-                <th>Instances</th>
-                <th>Containers</th>
-              </tr>
-            </thead>
-            <tbody>
-              {installed.map((app) => (
-                <tr key={`${app.repo}/${app.role}`}>
-                  <td>
-                    <Link to={`/apps/${app.repo}/${app.role}`}>{app.title}</Link>
-                  </td>
-                  <td>{app.instances.join(', ')}</td>
-                  <td className="row">
-                    {app.containers.length === 0 ? (
-                      <span className="muted">none</span>
-                    ) : (
-                      app.containers.map((c) => (
-                        <StatusBadge
-                          key={c.name}
-                          label={`${c.name} ${c.health ?? c.status}`}
-                          status={c.health ?? c.status}
-                        />
-                      ))
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+        <InstalledApps apps={installed} />
       ) : null}
       <div className="grid">
         {shown.map((app) => (
@@ -124,5 +93,114 @@ export function AppsPage(): React.ReactNode {
         ))}
       </div>
     </div>
+  );
+}
+
+function checkedLabel(checkedAt: number | null, running: boolean): string {
+  if (running) return 'Checking for updates…';
+  if (checkedAt === null) return 'Not checked for updates yet';
+  return `Updates checked ${formatWhen(new Date(checkedAt * 1000).toISOString())}`;
+}
+
+type InstalledAppsProps = { apps: App[] };
+
+function InstalledApps({ apps }: InstalledAppsProps): React.ReactNode {
+  const updates = useUpdates();
+  const check = useCheckUpdates();
+  const updateOne = useUpdateApp();
+  const updateAll = useUpdateAll();
+  const navigate = useNavigate();
+  const pending = apps.filter((app) => app.update_available);
+  const busy = updateOne.isPending || updateAll.isPending;
+  const error = updateOne.error ?? updateAll.error ?? check.error;
+
+  function runUpdate(app: App): void {
+    if (!window.confirm(`Update ${app.title}? It restarts for a minute or two while the new image is installed.`)) {
+      return;
+    }
+    updateOne.mutate({ repo: app.repo, role: app.role }, { onSuccess: (job) => void navigate(`/jobs/${job.id}`) });
+  }
+
+  function runAll(): void {
+    const names = pending.map((app) => app.title).join(', ');
+    if (!window.confirm(`Update ${names}? Each restarts for a minute or two.`)) return;
+    updateAll.mutate(undefined, { onSuccess: (job) => void navigate(`/jobs/${job.id}`) });
+  }
+
+  return (
+    <section className="card">
+      <div className={`row ${styles['installedHeader']}`}>
+        <h2 className={styles['installedTitle']}>Installed</h2>
+        <span className="muted">{checkedLabel(updates.data?.checked_at ?? null, updates.data?.running ?? false)}</span>
+        <button
+          disabled={check.isPending || updates.data?.running === true}
+          onClick={() => check.mutate()}
+          type="button"
+        >
+          Check now
+        </button>
+        {pending.length > 0 ? (
+          <button className="primary" disabled={busy} onClick={runAll} type="button">
+            Update all ({pending.length})
+          </button>
+        ) : null}
+      </div>
+      {error !== null ? <ErrorMessage error={error} /> : null}
+      <table>
+        <thead>
+          <tr>
+            <th>App</th>
+            <th>Containers</th>
+            <th>Updates</th>
+          </tr>
+        </thead>
+        <tbody>
+          {apps.map((app) => {
+            const state = overallUpdate(app.containers.map((c) => c.update));
+            return (
+              <tr key={`${app.repo}/${app.role}`}>
+                <td>
+                  <div className={styles['appCell']}>
+                    <Link to={`/apps/${app.repo}/${app.role}`}>{app.title}</Link>
+                    <OpenLinks urls={app.urls.slice(0, 1)} />
+                  </div>
+                </td>
+                <td>
+                  <div className="row">
+                    {app.containers.length === 0 ? (
+                      <span className="muted">none</span>
+                    ) : (
+                      app.containers.map((c) => (
+                        <StatusBadge
+                          key={c.name}
+                          label={`${c.name} ${c.health ?? c.status}`}
+                          status={c.health ?? c.status}
+                        />
+                      ))
+                    )}
+                  </div>
+                </td>
+                <td>
+                  <div className="row">
+                    <UpdateBadge
+                      detail={app.containers
+                        .map((c) => c.update_detail)
+                        .filter(Boolean)
+                        .join('; ')}
+                      state={state}
+                    />
+                    {state === 'update' ? (
+                      <button disabled={busy} onClick={() => runUpdate(app)} type="button">
+                        Update
+                      </button>
+                    ) : null}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
   );
 }

@@ -7,8 +7,9 @@ lock file still guards against a job started elsewhere (the TUI, ``sbx``).
 
 from __future__ import annotations
 
+import contextlib
 import threading
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 from ..runner import Job, JobRunning, SbRunner
@@ -20,6 +21,7 @@ class JobManager:
         self._thread: threading.Thread | None = None
         self._current: Job | None = None
         self._guard = threading.Lock()
+        self.on_finish: list[Callable[[Job], None]] = []
 
     @property
     def current(self) -> Job | None:
@@ -74,6 +76,14 @@ class JobManager:
         return job
 
     def _execute(self, job: Job) -> None:
+        try:
+            self._run_job(job)
+        finally:
+            for hook in list(self.on_finish):
+                with contextlib.suppress(Exception):  # a hook must never stop the job thread
+                    hook(job)
+
+    def _run_job(self, job: Job) -> None:
         try:
             self.runner.execute(job)
         except JobRunning:

@@ -76,6 +76,7 @@ def overview(request: Request) -> dict[str, Any]:
             ),
         },
         "containers": _container_summary(containers),
+        "updates": _updates_summary(svc),
         "services": read_motd_services(layout),
         "jobs": {
             **svc.jobs.status(),
@@ -93,6 +94,8 @@ def apps(request: Request, all: bool = False) -> list[dict[str, Any]]:
     svc = services(request)
     containers = _containers_or_none()
     by_name = {c["name"]: c for c in containers or []}
+    updates = svc.updates.status_by_container()
+    svc.updates.ensure_fresh()
     result = []
     for app in svc.catalog.apps(include_hidden=all):
         if not all and not is_listed_app(app):
@@ -104,10 +107,12 @@ def apps(request: Request, all: bool = False) -> list[dict[str, Any]]:
         # for the few roles that store generated values.
         data["installed"] = any((svc.layout.appdata / name).is_dir() for name in instances)
         data["containers"] = [
-            {"name": name, "status": by_name[name]["status"], "health": by_name[name]["health"]}
+            _container_view(by_name[name], updates.get(name))
             for name in instances
             if name in by_name
         ]
+        data["urls"] = [url for c in data["containers"] for url in c["urls"]]
+        data["update_available"] = any(c["update"] == "update" for c in data["containers"])
         result.append(data)
     return sorted(result, key=lambda item: str(item["title"]).lower())
 
@@ -120,8 +125,18 @@ def app_detail(request: Request, repo: str, role: str) -> dict[str, Any]:
         raise HTTPException(404, f"unknown app {repo}/{role}")
     defaults = svc.catalog.defaults(role, repo)
     instances = svc.inventory.instances(role, app.default_instances or [role])
+    containers = {c["name"]: c for c in _containers_or_none() or []}
+    updates = svc.updates.status_by_container()
+    views = [
+        _container_view(containers[name], updates.get(name))
+        for name in instances
+        if name in containers
+    ]
     return {
         "app": app.as_dict(),
+        "containers": views,
+        "urls": [url for view in views for url in view["urls"]],
+        "update_available": any(view["update"] == "update" for view in views),
         "instances": instances,
         "fields": [f.as_dict() for f in defaults.visible()] if defaults else [],
         "overrides": svc.inventory.overrides_for(role, instances),
@@ -281,6 +296,111 @@ def host(request: Request) -> dict[str, Any]:
         "mounts": mounts(),
         "units": systemd_units(),
         "reboot_required": reboot_required(),
+    }
+
+
+# -- updates -------------------------------------------------------------------
+@router.get("/updates")
+def updates_status(request: Request) -> dict[str, Any]:
+    svc = services(request)
+    svc.updates.ensure_fresh()
+    return svc.updates.cached()
+
+
+@router.post("/updates/check", status_code=202)
+def updates_check(request: Request) -> dict[str, Any]:
+    svc = services(request)
+    started = svc.updates.refresh()
+    return {"started": started, **svc.updates.cached()}
+
+
+@router.post("/apps/{repo}/{role}/update", status_code=202)
+def update_app(request: Request, repo: str, role: str) -> dict[str, Any]:
+    svc = services(request)
+    app = svc.catalog.app(role, repo)
+    if app is None:
+        raise HTTPException(404, f"unknown app {repo}/{role}")
+    return _start_update(svc, [app])
+
+
+@router.post("/updates/apply", status_code=202)
+def update_all(request: Request) -> dict[str, Any]:
+    svc = services(request)
+    pending = {
+        name
+        for name, status in svc.updates.status_by_container().items()
+        if status.get("status") == "update"
+    }
+    apps = [
+        app
+        for app in svc.catalog.apps()
+        if pending & set(svc.inventory.instances(app.role, app.default_instances or [app.role]))
+    ]
+    if not apps:
+        raise HTTPException(409, "nothing to update")
+    return _start_update(svc, apps)
+
+
+def _start_update(svc, apps: list) -> dict[str, Any]:
+    """Re-run each app's tag, which pulls its image and recreates its container.
+
+    Containers routed through another container (qBittorrent inside Gluetun)
+    cannot start against a recreated one, so their apps are re-run as well.
+    """
+    tags: list[str] = []
+    names: set[str] = set()
+    for app in apps:
+        tag = app.sb_tag or app.install_tag or app.role
+        if tag not in tags:
+            tags.append(tag)
+        names.update(svc.inventory.instances(app.role, app.default_instances or [app.role]))
+    for container in _containers_or_none() or []:
+        mode = str(container.get("network_mode", ""))
+        if mode.startswith("container:") and mode.split(":", 1)[1] in names:
+            dependent = _app_for_container(svc, container["name"])
+            tag = dependent and (dependent.sb_tag or dependent.install_tag or dependent.role)
+            if tag and tag not in tags:
+                tags.append(tag)
+    try:
+        job = svc.jobs.start("install", tags=tags)
+    except JobRunning as error:
+        raise HTTPException(409, str(error)) from error
+    return job.as_dict()
+
+
+def _app_for_container(svc, name: str):
+    for app in svc.catalog.apps(include_hidden=True):
+        if name in svc.inventory.instances(app.role, app.default_instances or [app.role]):
+            return app
+    return None
+
+
+def _updates_summary(svc) -> dict[str, Any]:
+    cached = svc.updates.cached()
+    pending = sorted(
+        {
+            name
+            for status in cached.get("images", {}).values()
+            if status.get("status") == "update"
+            for name in status.get("containers", [])
+        }
+    )
+    return {
+        "checked_at": cached.get("checked_at"),
+        "running": cached["running"],
+        "pending": pending,
+    }
+
+
+def _container_view(container: dict[str, Any], update: dict[str, Any] | None) -> dict[str, Any]:
+    return {
+        "name": container["name"],
+        "status": container["status"],
+        "health": container["health"],
+        "urls": list(container.get("urls") or []),
+        "image": container.get("image_ref") or container.get("image", ""),
+        "update": (update or {}).get("status", "unknown"),
+        "update_detail": (update or {}).get("detail", ""),
     }
 
 

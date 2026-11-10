@@ -21,6 +21,7 @@ function overview(overrides: Partial<Overview> = {}): Overview {
     install: { configs_present: true, installed: true, roles_with_facts: ['sonarr'] },
     jobs: { busy: false, current: null, lock: null, recent: [] },
     services: [],
+    updates: { checked_at: null, pending: [], running: false },
     ...overrides,
   };
 }
@@ -75,6 +76,14 @@ describe('OverviewPage', () => {
     expect(screen.getByText('plex is not running')).toBeInTheDocument();
     expect(screen.getByText(/\/ is 98% full/)).toBeInTheDocument();
     expect(screen.getByText('A reboot is pending')).toBeInTheDocument();
+  });
+
+  it('lists app updates that are waiting', async () => {
+    renderPage(overview({ updates: { checked_at: 1, pending: ['sonarr', 'radarr'], running: false } }));
+    expect(await screen.findByRole('link', { name: '2 app updates available: sonarr, radarr' })).toHaveAttribute(
+      'href',
+      '/apps',
+    );
   });
 
   it('flags Docker being unreachable', async () => {

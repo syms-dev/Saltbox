@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { installRequest } from '../api/client';
-import { useAppDetail, useJobs, useStartJob, useUpdateOverrides } from '../api/queries';
+import { useAppDetail, useJobs, useStartJob, useUpdateApp, useUpdateOverrides } from '../api/queries';
 import type { Field } from '../api/types';
+import { OpenLinks, UpdateBadge, overallUpdate } from '../components/app-links';
 import { ErrorMessage, Loading } from '../components/query-state';
 import styles from './app-page.module.css';
 
@@ -126,6 +127,7 @@ export function AppPage(): React.ReactNode {
   const detail = useAppDetail(repo, role);
   const jobs = useJobs();
   const start = useStartJob();
+  const update = useUpdateApp();
   const navigate = useNavigate();
   const [showHidden, setShowHidden] = useState(false);
   if (detail.isPending) return <Loading what="app" />;
@@ -133,6 +135,11 @@ export function AppPage(): React.ReactNode {
   const { app, facts, fields, instances, overrides } = detail.data;
   const tag = app.sb_tag ?? app.install_tag ?? app.role;
   const busy = jobs.data?.busy ?? false;
+
+  function runUpdate(): void {
+    if (!window.confirm(`Update ${app.title}? It restarts for a minute or two.`)) return;
+    update.mutate({ repo, role }, { onSuccess: (job) => void navigate(`/jobs/${job.id}`) });
+  }
 
   function run(): void {
     start.mutate(installRequest([tag]), { onSuccess: (job) => void navigate(`/jobs/${job.id}`) });
@@ -156,10 +163,25 @@ export function AppPage(): React.ReactNode {
             Project
           </a>
         ) : null}
+        <OpenLinks urls={detail.data.urls} />
       </div>
       {app.summary !== '' ? <p className="muted">{app.summary}</p> : null}
       <section className="card">
         <div className="row">
+          {detail.data.containers.length > 0 ? (
+            <UpdateBadge
+              detail={detail.data.containers
+                .map((c) => c.update_detail)
+                .filter(Boolean)
+                .join('; ')}
+              state={overallUpdate(detail.data.containers.map((c) => c.update))}
+            />
+          ) : null}
+          {detail.data.update_available ? (
+            <button className="primary" disabled={busy || update.isPending} onClick={runUpdate} type="button">
+              Update
+            </button>
+          ) : null}
           <button className="primary" disabled={busy || start.isPending} onClick={run} type="button">
             Run <code>sb install {tag}</code>
           </button>

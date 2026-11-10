@@ -19,6 +19,7 @@ import type {
   JobsResponse,
   Meta,
   Overview,
+  UpdatesResponse,
 } from './types';
 
 export const QUERY_KEYS = {
@@ -28,6 +29,7 @@ export const QUERY_KEYS = {
   JOBS: 'jobs',
   META: 'meta',
   OVERVIEW: 'overview',
+  UPDATES: 'updates',
 } as const;
 
 const OVERVIEW_REFRESH_MS = 15_000;
@@ -156,5 +158,48 @@ export function useValidateConfig(): UseMutationResult<Record<string, Issue[]>, 
   return useMutation({
     mutationFn: () => apiPost<Record<string, Issue[]>>(API_ROUTES.CONFIG_VALIDATE),
     onSuccess: () => void client.invalidateQueries({ queryKey: [QUERY_KEYS.OVERVIEW] }),
+  });
+}
+
+const UPDATES_POLL_MS = 3_000;
+
+export function useUpdates(): UseQueryResult<UpdatesResponse> {
+  return useQuery({
+    queryFn: () => apiFetch<UpdatesResponse>(API_ROUTES.UPDATES),
+    queryKey: [QUERY_KEYS.UPDATES],
+    refetchInterval: (query) => (query.state.data?.running === true ? UPDATES_POLL_MS : false),
+  });
+}
+
+function invalidateUpdates(client: ReturnType<typeof useQueryClient>): void {
+  void client.invalidateQueries({ queryKey: [QUERY_KEYS.UPDATES] });
+  void client.invalidateQueries({ queryKey: [QUERY_KEYS.APPS] });
+  void client.invalidateQueries({ queryKey: [QUERY_KEYS.OVERVIEW] });
+  void client.invalidateQueries({ queryKey: [QUERY_KEYS.JOBS] });
+}
+
+export function useCheckUpdates(): UseMutationResult<UpdatesResponse, Error, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPost<UpdatesResponse>(API_ROUTES.UPDATES_CHECK),
+    onSuccess: () => invalidateUpdates(client),
+  });
+}
+
+type UpdateAppInput = { repo: string; role: string };
+
+export function useUpdateApp(): UseMutationResult<Job, Error, UpdateAppInput> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ repo, role }: UpdateAppInput) => apiPost<Job>(API_ROUTES.appUpdate(repo, role)),
+    onSuccess: () => invalidateUpdates(client),
+  });
+}
+
+export function useUpdateAll(): UseMutationResult<Job, Error, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPost<Job>(API_ROUTES.UPDATES_APPLY),
+    onSuccess: () => invalidateUpdates(client),
   });
 }

@@ -20,6 +20,7 @@ from ..layout import Layout
 from ..runner import SbRunner
 from .jobs import JobManager
 from .routes import router
+from .updates import UpdateService
 
 log = logging.getLogger("saltbox_ui.daemon")
 
@@ -39,6 +40,7 @@ class Services:
     token: str | None = None
     web_dir: Path | None = None
     app_setup_factory: Callable[[Layout], Any] | None = None
+    updates: UpdateService = field(init=False)
 
     def __post_init__(self) -> None:
         self.config = ConfigService(self.layout)
@@ -46,6 +48,11 @@ class Services:
         self.catalog = Catalog(self.layout)
         self.runner = SbRunner(self.layout)
         self.jobs = JobManager(self.runner)
+        self.updates = UpdateService(self.layout)
+        # An install job pulls new images; check again once it has finished.
+        self.jobs.on_finish.append(
+            lambda job: self.updates.refresh() if job.kind == "install" else None
+        )
 
 
 class BearerTokenMiddleware(BaseHTTPMiddleware):

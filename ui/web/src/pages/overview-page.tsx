@@ -13,6 +13,14 @@ type Attention = { href?: string; text: string; tone: 'danger' | 'warn' };
 
 export function attentionItems(data: Overview): Attention[] {
   const items: Attention[] = [];
+  const pendingUpdates = data.updates?.pending ?? [];
+  if (pendingUpdates.length > 0) {
+    items.push({
+      href: '/apps',
+      text: `${pendingUpdates.length} app update${pendingUpdates.length === 1 ? '' : 's'} available: ${pendingUpdates.join(', ')}`,
+      tone: 'warn',
+    });
+  }
   if (!data.containers.available) {
     items.push({ text: "Docker isn't reachable from the daemon, so app status is unknown", tone: 'danger' });
   }

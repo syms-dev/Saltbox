@@ -8,12 +8,14 @@ missing or fails. Both return the same records.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from collections.abc import Callable
 from typing import Any
 
 MANAGED_LABEL = "com.github.saltbox.saltbox_managed"
+HOST_RE = re.compile(r"Host\(`([^`]+)`\)")
 
 Runner = Callable[[list[str]], tuple[int, str]]
 
@@ -26,14 +28,44 @@ def _run(args: list[str]) -> tuple[int, str]:
     return result.returncode, result.stdout if result.returncode == 0 else result.stderr
 
 
+def web_urls(name: str, labels: dict[str, str]) -> list[str]:
+    """The addresses Traefik serves a container on, from its router labels.
+
+    Saltbox names the HTTPS router after the container, with ``-http`` and
+    ``-api`` variants beside it; the main router comes first, and rules that
+    only match a path prefix (the API routes) are skipped.
+    """
+    rules: list[tuple[int, str]] = []
+    for key, value in labels.items():
+        if not (key.startswith("traefik.http.routers.") and key.endswith(".rule")):
+            continue
+        router = key[len("traefik.http.routers.") : -len(".rule")]
+        if "PathPrefix" in str(value) or router.endswith("-api"):
+            continue
+        rank = 0 if router == name else (1 if router == f"{name}-http" else 2)
+        rules.append((rank, str(value)))
+    urls: list[str] = []
+    for _, rule in sorted(rules):
+        for host in HOST_RE.findall(rule):
+            url = f"https://{host}"
+            if url not in urls:
+                urls.append(url)
+    return urls
+
+
 def _record(attrs: dict[str, Any], image: str = "") -> dict[str, Any]:
     config = attrs.get("Config") or {}
     labels = config.get("Labels") or {}
     state = attrs.get("State") or {}
+    name = str(attrs.get("Name", "")).lstrip("/")
     return {
-        "name": str(attrs.get("Name", "")).lstrip("/"),
+        "name": name,
         "id": str(attrs.get("Id", ""))[:12],
         "image": image or str(config.get("Image", "")),
+        "image_ref": str(config.get("Image", "")),
+        "image_id": str(attrs.get("Image", "")),
+        "network_mode": str((attrs.get("HostConfig") or {}).get("NetworkMode", "")),
+        "urls": web_urls(name, labels),
         "status": str(state.get("Status", "")),
         "health": (state.get("Health") or {}).get("Status"),
         "started_at": state.get("StartedAt"),

@@ -9,6 +9,8 @@ function app(overrides: Partial<App>): App {
     categories: [],
     containers: [],
     default_instances: [],
+    update_available: false,
+    urls: [],
     docs_url: '',
     install_tag: null,
     installed: false,

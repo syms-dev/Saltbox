@@ -64,19 +64,41 @@ export type Service = Record<string, unknown> & { service: string };
 export type Overview = {
   config_issues: Record<string, Issue[]>;
   containers: ContainerSummary;
+  updates: UpdatesSummary;
   host: { disks: Disk[]; mounts: Mount[]; reboot_required: boolean; units: Unit[] };
   install: { configs_present: boolean; installed: boolean; roles_with_facts: string[] };
   jobs: JobsStatus & { recent: Job[] };
   services: Service[];
 };
 
-export type ContainerState = { health: string | null; name: string; status: string };
+export type UpdateState = 'current' | 'unknown' | 'update';
+
+export type ContainerState = {
+  health: string | null;
+  image: string;
+  name: string;
+  status: string;
+  update: UpdateState;
+  update_detail: string;
+  urls: string[];
+};
+
+export type UpdatesSummary = { checked_at: number | null; pending: string[]; running: boolean };
+
+export type UpdatesResponse = {
+  checked_at: number | null;
+  error: string;
+  images: Record<string, { containers: string[]; detail: string; image: string; status: UpdateState }>;
+  running: boolean;
+};
 
 export type App = {
   app_links: unknown[];
   categories: string[];
   containers: ContainerState[];
   default_instances: string[];
+  update_available: boolean;
+  urls: string[];
   docs_url: string;
   install_tag: string | null;
   installed: boolean;
@@ -112,7 +134,10 @@ export type Field = {
 };
 
 export type AppDetail = {
-  app: Omit<App, 'containers' | 'installed' | 'instances'>;
+  app: Omit<App, 'containers' | 'installed' | 'instances' | 'update_available' | 'urls'>;
+  containers: ContainerState[];
+  update_available: boolean;
+  urls: string[];
   facts: Record<string, Record<string, string>>;
   fields: Field[];
   instances: string[];
