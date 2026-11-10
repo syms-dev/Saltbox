@@ -58,6 +58,36 @@ class Job:
         return cls(**known)
 
 
+def trust_repos(env: dict[str, str], repos: Iterable[Path]) -> dict[str, str]:
+    """Mark ``repos`` as safe for git in ``env``, keeping any config entries already there.
+
+    The daemon runs as root from systemd while the checkouts belong to the
+    Saltbox user. ``sudo sb`` gets away with that because git honours
+    ``SUDO_UID``; without it git refuses the repository ("dubious
+    ownership") and sb fails before Ansible starts. ``GIT_CONFIG_*`` entries
+    count as command-line config, which is where git accepts
+    ``safe.directory``, and they reach every git that sb and Ansible start.
+    """
+    try:
+        count = int(env.get("GIT_CONFIG_COUNT", "0"))
+    except ValueError:
+        count = 0
+    present = {
+        env.get(f"GIT_CONFIG_VALUE_{i}")
+        for i in range(count)
+        if env.get(f"GIT_CONFIG_KEY_{i}") == "safe.directory"
+    }
+    for repo in repos:
+        if str(repo) in present:
+            continue
+        env[f"GIT_CONFIG_KEY_{count}"] = "safe.directory"
+        env[f"GIT_CONFIG_VALUE_{count}"] = str(repo)
+        present.add(str(repo))
+        count += 1
+    env["GIT_CONFIG_COUNT"] = str(count)
+    return env
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
@@ -193,6 +223,10 @@ class SbRunner:
             env.setdefault("TERM", "dumb")
             env.setdefault("ANSIBLE_FORCE_COLOR", "0")
             env.setdefault("NO_COLOR", "1")
+            trust_repos(
+                env,
+                (self.layout.repo, self.layout.sandbox_repo, self.layout.saltbox_mod_repo),
+            )
             with open(log_path, "w", encoding="utf-8") as log:
                 log.write(f"$ {job.command_line}\n")
                 try:

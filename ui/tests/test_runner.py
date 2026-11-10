@@ -1,10 +1,13 @@
 import fcntl
+import os
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
 
 from saltbox_ui.layout import Layout
-from saltbox_ui.runner import JobRunning, SbRunner
+from saltbox_ui.runner import JobRunning, SbRunner, trust_repos
 
 
 def test_install_command_building(scratch_layout: Layout):
@@ -73,3 +76,37 @@ def test_lock_prevents_concurrent_jobs(scratch_layout: Layout, fake_sb: Path):
             runner.install(["core"])
         assert runner.is_locked() == {"job": "other"}
     assert runner.is_locked() is None
+
+
+def test_trust_repos_appends_to_existing_git_config():
+    env = {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.pager", "GIT_CONFIG_VALUE_0": "cat"}
+    trust_repos(env, [Path("/srv/git/saltbox"), Path("/opt/sandbox"), Path("/srv/git/saltbox")])
+    assert env["GIT_CONFIG_COUNT"] == "3"
+    assert env["GIT_CONFIG_KEY_0"] == "core.pager"
+    assert (env["GIT_CONFIG_KEY_1"], env["GIT_CONFIG_VALUE_1"]) == (
+        "safe.directory",
+        "/srv/git/saltbox",
+    )
+    assert (env["GIT_CONFIG_KEY_2"], env["GIT_CONFIG_VALUE_2"]) == (
+        "safe.directory",
+        "/opt/sandbox",
+    )
+    trust_repos(env, [Path("/opt/sandbox")])
+    assert env["GIT_CONFIG_COUNT"] == "3"
+
+
+@pytest.mark.skipif(
+    os.geteuid() != 0 or shutil.which("git") is None, reason="needs root and git to chown a repo"
+)
+def test_trust_repos_lets_root_use_a_repo_owned_by_another_user(tmp_path: Path):
+    repo = tmp_path / "saltbox"
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    for path in [repo, *repo.rglob("*")]:
+        os.chown(path, 65534, 65534)
+    base = {k: v for k, v in os.environ.items() if not k.startswith(("SUDO_", "GIT_CONFIG"))}
+    base["HOME"] = str(tmp_path)  # no global config with its own safe.directory
+    command = ["git", "-C", str(repo), "rev-parse", "--git-dir"]
+    refused = subprocess.run(command, env=base, capture_output=True, text=True)
+    assert refused.returncode != 0 and "dubious ownership" in refused.stderr
+    allowed = subprocess.run(command, env=trust_repos(dict(base), [repo]), capture_output=True)
+    assert allowed.returncode == 0
