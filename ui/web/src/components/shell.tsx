@@ -1,19 +1,35 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { Activity, Cable, FileCog, House, LayoutGrid, LoaderCircle, Search, Server, TriangleAlert } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 
-import { useJobs, useMeta } from '../api/queries';
-import type { Meta } from '../api/types';
-import { StatusBadge } from './status-badge';
+import { apiFetch, API_ROUTES } from '../api/client';
+import { useJobs, useMeta, useOverview } from '../api/queries';
+import type { Job, Meta } from '../api/types';
+import { formatDuration } from '../format';
+import { CommandPalette } from './command-palette';
+import { useToast } from './feedback';
 import styles from './shell.module.css';
 
+const ICON = 18;
+
 const NAV = [
-  { label: 'Overview', to: '/' },
-  { label: 'Apps', to: '/apps' },
-  { label: 'Jobs', to: '/jobs' },
-  { label: 'Config', to: '/config' },
+  { icon: <House size={ICON} />, label: 'Home', short: 'Home', to: '/' },
+  { icon: <LayoutGrid size={ICON} />, label: 'Apps', short: 'Apps', to: '/apps' },
+  { icon: <Activity size={ICON} />, label: 'Activity', short: 'Activity', to: '/activity' },
+  { icon: <Server size={ICON} />, label: 'System', short: 'System', to: '/system' },
+  { icon: <Cable size={ICON} />, label: 'Connect apps', short: 'Connect', to: '/connect' },
+  { icon: <FileCog size={ICON} />, label: 'Config', short: 'Config', to: '/config' },
 ] as const;
 
+/** The bottom bar has room for five; Connect lives on the Apps page and in search there. */
+const TABS = NAV.filter((item) => item.to !== '/connect');
+
 function navClass({ isActive }: { isActive: boolean }): string {
-  return isActive ? `${styles['navLink']} ${styles['navLinkActive']}` : (styles['navLink'] ?? '');
+  return isActive ? `${styles['navLink']} ${styles['active']}` : (styles['navLink'] ?? '');
+}
+
+function tabClass({ isActive }: { isActive: boolean }): string {
+  return isActive ? `${styles['tab']} ${styles['active']}` : (styles['tab'] ?? '');
 }
 
 export function versionLine(meta: Meta): string {
@@ -22,37 +38,162 @@ export function versionLine(meta: Meta): string {
   return `ui ${meta.version} · ${branch ?? 'detached'}@${commit ?? '?'}`;
 }
 
+/** "sb install sonarr" from a job, without the path to sb. */
+export function jobTitle(job: Pick<Job, 'command_line'>): string {
+  return job.command_line.replace(/^\S*\/(?=sb\b)/, '');
+}
+
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
+
+function RunningJob({ job }: { job: Job }): React.ReactNode {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <Link className={styles['jobBanner']} to={`/activity/${job.id}`}>
+      <LoaderCircle aria-hidden="true" className="spin" size={16} />
+      <span className={styles['jobText']}>
+        Running <code>{jobTitle(job)}</code>
+      </span>
+      <span className={styles['jobTime']}>{formatDuration(job.started_at, null)}</span>
+      <span className={styles['jobLink']}>View log</span>
+    </Link>
+  );
+}
+
+/** Tell the person when a job they may have walked away from finishes. */
+function useJobFinishedToast(current: Job | null): void {
+  const toast = useToast();
+  const previous = useRef<Job | null>(null);
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = current;
+    if (before === null || current?.id === before.id) return;
+    void apiFetch<Job>(API_ROUTES.job(before.id))
+      .then((job) => {
+        const ok = job.status === 'succeeded';
+        toast({
+          href: `/activity/${job.id}`,
+          linkLabel: ok ? 'View log' : 'See what failed',
+          title: `${jobTitle(job)} ${ok ? 'finished' : job.status}`,
+          tone: ok ? 'ok' : 'danger',
+        });
+      })
+      .catch(() => undefined);
+  }, [current, toast]);
+}
+
 export function Shell(): React.ReactNode {
   const meta = useMeta();
   const jobs = useJobs();
+  const overview = useOverview();
+  const [searching, setSearching] = useState(false);
   const current = jobs.data?.current ?? null;
+  useJobFinishedToast(current);
+  const closeSearch = useCallback(() => setSearching(false), []);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent): void {
+      const typing = event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
+      if ((event.key === 'k' && (event.metaKey || event.ctrlKey)) || (event.key === '/' && !typing)) {
+        event.preventDefault();
+        setSearching(true);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const domain = meta.data?.domain ?? null;
+  const updates = overview.data?.updates.pending.length ?? 0;
+  const saltbox = overview.data?.updates.saltbox?.length ?? 0;
+  const problems = (overview.data?.containers.unhealthy.length ?? 0) + (overview.data?.containers.stopped.length ?? 0);
+
+  const searchButton = (
+    <button className={styles['searchButton']} onClick={() => setSearching(true)} type="button">
+      <Search aria-hidden="true" size={16} />
+      <span className={styles['searchLabel']}>Search</span>
+      <kbd className={styles['searchKey']}>{IS_MAC ? '⌘K' : 'Ctrl K'}</kbd>
+    </button>
+  );
+
   return (
     <div className={styles['shell']}>
       <aside className={styles['sidebar']}>
-        <div className={styles['brand']}>
-          <span className={styles['brandName']}>Saltbox</span>
-          <span className={`muted ${styles['brandVersion']}`}>{meta.data ? versionLine(meta.data) : ''}</span>
-        </div>
+        <Link className={styles['brand']} to="/">
+          <span aria-hidden="true" className={styles['mark']} />
+          <span className={styles['brandText']}>
+            <span className={styles['brandName']}>Saltbox</span>
+            <span className={styles['brandDomain']}>{domain ?? 'server'}</span>
+          </span>
+        </Link>
+        {searchButton}
         <nav aria-label="Main" className={styles['nav']}>
           {NAV.map((item) => (
             <NavLink className={navClass} end={item.to === '/'} key={item.to} to={item.to}>
-              {item.label}
+              {item.icon}
+              <span>{item.label}</span>
+              {item.to === '/apps' && updates > 0 ? (
+                <span className={styles['badge']} title="updates available">
+                  {updates}
+                </span>
+              ) : null}
+              {item.to === '/system' && saltbox > 0 ? (
+                <span className={styles['badge']} title="Saltbox update available">
+                  1
+                </span>
+              ) : null}
+              {item.to === '/' && problems > 0 ? (
+                <span className={`${styles['badge']} ${styles['badgeDanger']}`} title="apps need attention">
+                  {problems}
+                </span>
+              ) : null}
             </NavLink>
           ))}
         </nav>
-        {current !== null ? (
-          <div className={styles['currentJob']}>
-            <StatusBadge status={current.status} />
-            <NavLink to={`/jobs/${current.id}`}>
-              {current.kind} {current.tags.join(',')}
-            </NavLink>
-          </div>
-        ) : null}
-        {meta.isError ? <p className={styles['offline']}>The daemon is not reachable.</p> : null}
+        <div className={styles['sidebarFoot']}>
+          {meta.isError ? (
+            <span className={styles['offline']}>
+              <TriangleAlert size={14} /> Daemon unreachable
+            </span>
+          ) : (
+            <span className="muted">{meta.data ? versionLine(meta.data) : ''}</span>
+          )}
+        </div>
       </aside>
+
+      <header className={styles['topbar']}>
+        <Link className={styles['brand']} to="/">
+          <span aria-hidden="true" className={styles['mark']} />
+          <span className={styles['brandName']}>{domain ?? 'Saltbox'}</span>
+        </Link>
+        {searchButton}
+      </header>
+
       <main className={styles['main']}>
-        <Outlet />
+        {current === null ? null : <RunningJob job={current} />}
+        {meta.isError ? (
+          <p className="note danger" role="alert">
+            The Saltbox UI daemon is not answering. Check <code>systemctl status saltbox-ui</code> on the server.
+          </p>
+        ) : null}
+        <div className={styles['content']}>
+          <Outlet />
+        </div>
       </main>
+
+      <nav aria-label="Main" className={styles['tabbar']}>
+        {TABS.map((item) => (
+          <NavLink className={tabClass} end={item.to === '/'} key={item.to} to={item.to}>
+            {item.icon}
+            <span>{item.short}</span>
+          </NavLink>
+        ))}
+      </nav>
+
+      {searching ? <CommandPalette onClose={closeSearch} /> : null}
     </div>
   );
 }

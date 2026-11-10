@@ -1,0 +1,82 @@
+.flush {
+  margin: 0;
+}
+
+.pill {
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+}
+
+.apps {
+  columns: 2 26rem;
+  column-gap: var(--space-4);
+}
+
+.apps > section {
+  break-inside: avoid;
+  margin-bottom: var(--space-4);
+}
+
+.tasks {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tasks li {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.icon {
+  display: inline-flex;
+  padding-top: 2px;
+}
+
+.task {
+  display: grid;
+  min-width: 0;
+}
+
+.taskTitle {
+  font-weight: 550;
+}
+
+.detail {
+  color: var(--color-fg-muted);
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+}
+
+.done {
+  color: var(--color-ok);
+}
+
+.todo {
+  color: var(--color-info);
+}
+
+.error {
+  color: var(--color-danger);
+}
+
+.manual {
+  color: var(--color-warn);
+}
+
+.skip {
+  color: var(--color-fg-muted);
+}
+
+.tasks li .task {
+  color: var(--color-fg);
+}

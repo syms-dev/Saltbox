@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 
 import { App } from './app';
+import { FeedbackProvider } from './components/feedback';
 import './theme.css';
 
 const queryClient = new QueryClient({
@@ -17,7 +18,9 @@ createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <FeedbackProvider>
+          <App />
+        </FeedbackProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

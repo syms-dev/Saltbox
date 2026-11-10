@@ -1,0 +1,249 @@
+.hero {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+}
+
+.heroTitle {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-1);
+}
+
+.hero p {
+  margin: 0;
+}
+
+.heroIcon {
+  align-items: center;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex: none;
+  height: 3.25rem;
+  justify-content: center;
+  width: 3.25rem;
+}
+
+.heroGood {
+  background: var(--color-ok-soft);
+  color: var(--color-ok);
+}
+
+.heroBad {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+/* -- attention ------------------------------------------------------------------- */
+.attention {
+  display: grid;
+  list-style: none;
+  margin: calc(var(--space-2) * -1) 0;
+  padding: 0;
+}
+
+.item {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+.item:last-child {
+  border-bottom: 0;
+}
+
+.itemIcon {
+  display: inline-flex;
+}
+
+.danger .itemIcon {
+  color: var(--color-danger);
+}
+
+.warn .itemIcon {
+  color: var(--color-warn);
+}
+
+.info .itemIcon {
+  color: var(--color-info);
+}
+
+.itemText {
+  display: grid;
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.itemActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* -- layout --------------------------------------------------------------------- */
+.columns {
+  align-items: start;
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: minmax(0, 1fr) 20rem;
+}
+
+@media (max-width: 80rem) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.rail {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+}
+
+.sectionHead {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.sectionHead h2,
+.sectionHead h3 {
+  margin: 0;
+}
+
+/* -- launcher --------------------------------------------------------------------- */
+.launcher {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tileWrap {
+  position: relative;
+}
+
+.tile {
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-fg);
+  display: flex;
+  gap: var(--space-3);
+  min-height: 4.25rem;
+  padding: var(--space-3) var(--space-8) var(--space-3) var(--space-3);
+  transition:
+    border-color 120ms,
+    box-shadow 120ms,
+    transform 120ms;
+}
+
+.tile:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.tileText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tileTitle {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tileOpen {
+  bottom: var(--space-3);
+  color: var(--color-fg-muted);
+  position: absolute;
+  right: var(--space-3);
+}
+
+.pin {
+  color: var(--color-fg-muted);
+  opacity: 0;
+  position: absolute;
+  right: var(--space-1);
+  top: var(--space-1);
+}
+
+.tileWrap:hover .pin,
+.pin:focus-visible,
+.pinned {
+  opacity: 1;
+}
+
+.pinned {
+  color: var(--color-warn);
+}
+
+@media (hover: none) {
+  .pin {
+    opacity: 1;
+  }
+}
+
+/* -- side cards ---------------------------------------------------------------------- */
+.plain {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+}
+
+.ok,
+.due {
+  align-items: flex-start;
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+}
+
+.ok {
+  color: var(--color-ok);
+}
+
+.due {
+  color: var(--color-info);
+}
+
+.diskLine {
+  align-items: baseline;
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+}
+
+.jobLine {
+  align-items: center;
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+}
+
+.jobName {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

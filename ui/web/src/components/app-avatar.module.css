@@ -1,0 +1,52 @@
+.avatar {
+  align-items: center;
+  background: hsl(var(--hue) 55% 92%);
+  border-radius: var(--radius-md);
+  color: hsl(var(--hue) 45% 28%);
+  display: inline-flex;
+  flex: none;
+  font-weight: 700;
+  justify-content: center;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  position: relative;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .avatar {
+    background: hsl(var(--hue) 30% 20%);
+    color: hsl(var(--hue) 70% 80%);
+  }
+}
+
+.sm {
+  font-size: 0.7rem;
+  height: 1.75rem;
+  width: 1.75rem;
+}
+
+.md {
+  font-size: 0.85rem;
+  height: 2.5rem;
+  width: 2.5rem;
+}
+
+.lg {
+  border-radius: var(--radius-lg);
+  font-size: 1.25rem;
+  height: 3.5rem;
+  width: 3.5rem;
+}
+
+.icon {
+  height: 70%;
+  object-fit: contain;
+  width: 70%;
+}
+
+.hidden {
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}

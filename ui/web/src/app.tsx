@@ -1,33 +1,50 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 
 import { Shell } from './components/shell';
+import { ActivityPage } from './pages/activity-page';
 import { AppPage } from './pages/app-page';
 import { AppsPage } from './pages/apps-page';
 import { ConfigPage } from './pages/config-page';
+import { ConnectPage } from './pages/connect-page';
+import { HomePage } from './pages/home-page';
 import { JobPage } from './pages/job-page';
-import { JobsPage } from './pages/jobs-page';
 import { NotFoundPage } from './pages/not-found-page';
-import { OverviewPage } from './pages/overview-page';
+import { SystemPage } from './pages/system-page';
 
 export const ROUTES = {
+  ACTIVITY: '/activity',
   APPS: '/apps',
   CONFIG: '/config',
-  JOBS: '/jobs',
-  OVERVIEW: '/',
+  CONNECT: '/connect',
+  DISCOVER: '/apps/discover',
+  HOME: '/',
+  SYSTEM: '/system',
   app: (repo: string, role: string) => `/apps/${repo}/${role}` as const,
   configFile: (name: string) => `/config/${name}` as const,
-  job: (id: string) => `/jobs/${id}` as const,
+  job: (id: string) => `/activity/${id}` as const,
 } as const;
+
+/** Links from before the redesign (/jobs/<id>) keep working. */
+function OldJobLink(): React.ReactNode {
+  const { id = '' } = useParams();
+  return <Navigate replace to={ROUTES.job(id)} />;
+}
 
 export function App(): React.ReactNode {
   return (
     <Routes>
       <Route element={<Shell />}>
-        <Route element={<OverviewPage />} index />
-        <Route element={<AppsPage />} path="apps" />
+        <Route element={<HomePage />} index />
+        <Route element={<AppsPage tab="installed" />} path="apps" />
+        <Route element={<AppsPage tab="discover" />} path="apps/discover" />
         <Route element={<AppPage />} path="apps/:repo/:role" />
-        <Route element={<JobsPage />} path="jobs" />
-        <Route element={<JobPage />} path="jobs/:id" />
+        <Route element={<ActivityPage />} path="activity" />
+        <Route element={<JobPage />} path="activity/:id" />
+        <Route element={<Navigate replace to={ROUTES.ACTIVITY} />} path="jobs" />
+        <Route element={<OldJobLink />} path="jobs/:id" />
+        <Route element={<SystemPage />} path="system" />
+        <Route element={<Navigate replace to="/system" />} path="storage" />
+        <Route element={<ConnectPage />} path="connect" />
         <Route element={<Navigate replace to="/config/accounts" />} path="config" />
         <Route element={<ConfigPage />} path="config/:name" />
         <Route element={<NotFoundPage />} path="*" />

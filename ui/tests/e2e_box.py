@@ -84,6 +84,8 @@ containers = json.load(open({inspect!r}))
 args = sys.argv[1:]
 if args[:1] == ["ps"]:
     print("\\n".join(c["Id"] for c in containers))
+elif args[:2] == ["inspect", "-f"]:
+    print("")  # no network addresses: the daemon reaches apps by name
 elif args[:1] == ["inspect"]:
     print(json.dumps([c for c in containers if c["Id"] in args[1:]]))
 elif args[:2] == ["image", "inspect"]:
@@ -93,6 +95,20 @@ elif args[:2] == ["image", "inspect"]:
             repo = c["Config"]["Image"].rsplit(":", 1)[0]
             out.append({{"Id": c["Image"], "RepoDigests": [repo + "@sha256:" + c["Image"][7:]]}})
     print(json.dumps(out))
+elif args[:1] in (["start"], ["stop"], ["restart"]):
+    name = args[-1]
+    for c in containers:
+        if c["Name"] == "/" + name:
+            c["State"]["Status"] = "exited" if args[0] == "stop" else "running"
+            if args[0] != "stop" and "Health" in c["State"]:
+                c["State"]["Health"]["Status"] = "healthy"
+    json.dump(containers, open({inspect!r}, "w"))
+    print(name)
+elif args[:1] == ["logs"]:
+    name = args[-1]
+    for i in range(1, 41):
+        level = "WARN" if i % 13 == 0 else "INFO"
+        print(f"2026-11-10T06:{{i:02d}}:00.000000000Z [{{level}}] {{name}}: e2e log line {{i}}")
 else:
     sys.exit("fake docker: unsupported " + " ".join(args))
 """
@@ -152,7 +168,8 @@ def build_box(root: Path) -> Layout:
     (repo / "inventories" / "host_vars").mkdir(parents=True)
     (repo / "inventories" / "host_vars" / "localhost.yml").write_text("---\n")
     for name in ("accounts", "settings"):
-        shutil.copy(repo / "defaults" / f"{name}.yml.default", repo / f"{name}.yml")
+        text = (repo / "defaults" / f"{name}.yml.default").read_text()
+        (repo / f"{name}.yml").write_text(text.replace("testsaltbox.ml", DOMAIN))
 
     # A checkout one commit behind the branch it tracks.
     upstream = root / "upstream.git"

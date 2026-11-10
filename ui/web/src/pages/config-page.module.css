@@ -1,22 +1,25 @@
+.flush {
+  margin: 0;
+}
+
 .layout {
+  align-items: start;
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: 16rem 1fr;
+  grid-template-columns: 17rem minmax(0, 1fr);
 }
 
 .files {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  display: grid;
+  gap: 2px;
 }
 
 .file {
   border-radius: var(--radius-sm);
   color: var(--color-fg);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  display: grid;
+  gap: 2px;
   padding: var(--space-2) var(--space-3);
-  word-break: break-all;
 }
 
 .file:hover {
@@ -25,13 +28,39 @@
 }
 
 .file:global(.active) {
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
+  background: var(--color-accent-soft);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.fileName {
+  align-items: center;
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.fileHelp {
+  color: var(--color-fg-muted);
+  font-size: var(--text-xs);
+}
+
+.errorCount {
+  background: var(--color-danger-soft);
+  border-radius: var(--radius-full);
+  color: var(--color-danger);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 0 0.45em;
 }
 
 .editor {
+  line-height: 1.55;
   min-height: 60vh;
   resize: vertical;
+  tab-size: 2;
   width: 100%;
 }
 
@@ -55,8 +84,23 @@
   color: var(--color-ok);
 }
 
-@media (max-width: 48rem) {
+@media (max-width: 56rem) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .files {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding-bottom: var(--space-1);
+  }
+
+  .file {
+    flex: none;
+  }
+
+  .fileHelp {
+    display: none;
   }
 }

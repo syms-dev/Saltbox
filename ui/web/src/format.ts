@@ -36,3 +36,28 @@ export function formatDuration(start: string | null, end: string | null): string
 export function titleCase(value: string): string {
   return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+const RELATIVE_STEPS: [number, Intl.RelativeTimeFormatUnit][] = [
+  [60, 'second'],
+  [60, 'minute'],
+  [24, 'hour'],
+  [7, 'day'],
+  [4.35, 'week'],
+  [12, 'month'],
+  [Number.POSITIVE_INFINITY, 'year'],
+];
+
+/** "5 minutes ago", "in 2 hours"; accepts an ISO string or epoch seconds. */
+export function formatRelative(when: string | number | null, now: number = Date.now()): string {
+  if (when === null) return '';
+  const time = typeof when === 'number' ? when * MS_PER_SECOND : new Date(when).getTime();
+  if (Number.isNaN(time)) return String(when);
+  let value = (time - now) / MS_PER_SECOND;
+  if (Math.abs(value) < 45) return 'just now';
+  const format = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  for (const [size, unit] of RELATIVE_STEPS) {
+    if (Math.abs(value) < size) return format.format(Math.round(value), unit);
+    value /= size;
+  }
+  return format.format(Math.round(value), 'year');
+}

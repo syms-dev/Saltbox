@@ -42,6 +42,7 @@ export type JobRequest = {
 export type Disk = {
   free: number;
   path: string;
+  paths?: string[];
   percent: number;
   total: number;
   used: number;
@@ -49,7 +50,7 @@ export type Disk = {
 
 export type Mount = { source: string; target: string; type: string };
 
-export type Unit = Record<string, string>;
+export type Unit = { active: string; description: string; sub: string; unit: string };
 
 export type ContainerSummary = {
   available: boolean;
@@ -106,7 +107,7 @@ export type UpdatesResponse = {
 };
 
 export type App = {
-  app_links: unknown[];
+  app_links: AppLink[];
   categories: string[];
   containers: ContainerState[];
   default_instances: string[];
@@ -149,6 +150,7 @@ export type Field = {
 export type AppDetail = {
   app: Omit<App, 'containers' | 'installed' | 'instances' | 'update_available' | 'urls'>;
   containers: ContainerState[];
+  installed: boolean;
   update_available: boolean;
   urls: string[];
   facts: Record<string, Record<string, string>>;
@@ -183,6 +185,7 @@ export type Inventory = {
 };
 
 export type Meta = {
+  domain?: string | null;
   layout: Record<string, string>;
   saltbox: { branch: string | null; commit: string | null; remote: string | null };
   version: string;
@@ -190,3 +193,15 @@ export type Meta = {
 };
 
 export type StreamMessage = { text: string; type: 'log' } | { job: Job; type: 'done' };
+
+export type ContainerAction = 'restart' | 'start' | 'stop';
+
+export type ContainerLogs = { lines: string[]; name: string };
+
+export type SetupStatus = 'done' | 'error' | 'manual' | 'skip' | 'todo';
+
+export type SetupTask = { app: string; detail: string; id: string; status: SetupStatus; title: string };
+
+export type SetupResponse = { summary: Partial<Record<SetupStatus, number>>; tasks: SetupTask[] };
+
+export type AppLink = { name: string; purpose: string; url: string };

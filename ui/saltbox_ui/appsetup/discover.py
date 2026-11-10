@@ -10,6 +10,7 @@ same login), and the Plex token from ``/opt/saltbox/plex.ini``.
 from __future__ import annotations
 
 import configparser
+import ipaddress
 import re
 import shutil
 import socket
@@ -100,8 +101,13 @@ def default_resolver(name: str) -> str | None:
         check=False,
         timeout=10,
     )
-    addresses = result.stdout.split() if result.returncode == 0 else []
-    return addresses[0] if addresses else None
+    for address in result.stdout.split() if result.returncode == 0 else []:
+        try:
+            parsed = ipaddress.ip_address(address)
+        except ValueError:
+            continue
+        return f"[{parsed}]" if parsed.version == 6 else str(parsed)
+    return None
 
 
 def xml_api_key(path: Path) -> str:

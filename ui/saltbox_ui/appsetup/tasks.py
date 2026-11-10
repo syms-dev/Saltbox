@@ -182,6 +182,8 @@ class Task:
             self.status, self.detail = self.check()
         except SetupError as error:
             self.status, self.detail = "error", str(error)
+        except Exception as error:  # one broken check must not take the others down
+            self.status, self.detail = "error", f"{type(error).__name__}: {error}"
         return self
 
     def as_dict(self) -> dict[str, str]:
@@ -971,6 +973,8 @@ def apply_all(tasks: list[Task], on_task: Callable[[Task], None] | None = None) 
                 task.apply()
             except SetupError as error:
                 task.status, task.detail = "error", str(error)
+            except Exception as error:  # report it on this task and carry on with the rest
+                task.status, task.detail = "error", f"{type(error).__name__}: {error}"
             else:
                 task.refresh()
                 if task.status == "todo":

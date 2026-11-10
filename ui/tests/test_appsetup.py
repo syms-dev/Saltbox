@@ -554,3 +554,52 @@ def test_no_vpn_port_tasks_without_gluetun(box) -> None:
     tasks = by_id(setup.status())
     assert "qbittorrent:vpnport" not in tasks and "portsync:timer" not in tasks
     assert setup.sync_port() is None
+
+
+def test_one_broken_check_does_not_take_down_the_rest() -> None:
+    from saltbox_ui.appsetup.tasks import Task, apply_all, check_all
+
+    def broken() -> tuple[str, str]:
+        raise ValueError("'' does not appear to be an IPv4 or IPv6 address")
+
+    def crashing_apply() -> None:
+        raise KeyError("missing")
+
+    tasks = [
+        Task("a", "qbittorrent", "Login", broken),
+        Task("b", "sonarr", "Root folder", lambda: ("done", "")),
+        Task("c", "radarr", "Root folder", lambda: ("todo", ""), apply=crashing_apply),
+    ]
+    checked = check_all(tasks)
+    assert [t.status for t in checked] == ["error", "done", "todo"]
+    assert "does not appear" in checked[0].detail
+    applied = apply_all(tasks)
+    assert applied[2].status == "error" and "KeyError" in applied[2].detail
+
+
+def test_malformed_addresses_are_setup_errors() -> None:
+    from saltbox_ui.appsetup.http import SetupError, urllib_transport
+
+    with pytest.raises(SetupError, match="bad address"):
+        urllib_transport("GET", "http://[]:8080/api/v2/app/version", {}, None)
+
+
+def test_resolver_takes_only_ip_addresses(monkeypatch) -> None:
+    import importlib
+    import subprocess as sp
+
+    discover = importlib.import_module("saltbox_ui.appsetup.discover")
+
+    def no_dns(name: str) -> str:
+        raise OSError("unknown host")
+
+    monkeypatch.setattr(discover.socket, "gethostbyname", no_dns)
+    monkeypatch.setattr(discover.shutil, "which", lambda name: "/usr/bin/docker")
+    cases = [("[] ", None), ("172.19.0.5 ", "172.19.0.5"), ("fd00::5", "[fd00::5]"), ("", None)]
+    for output, expected in cases:
+
+        def run(*args, out=output, **kwargs):
+            return sp.CompletedProcess(args, 0, out, "")
+
+        monkeypatch.setattr(discover.subprocess, "run", run)
+        assert discover.default_resolver("qbittorrent") == expected

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -11,21 +12,43 @@ SALTBOX_MOUNT_TYPES = {"fuse.rclone", "fuse.mergerfs", "nfs", "nfs4", "cifs"}
 DEFAULT_PATHS = ("/", "/opt", "/mnt/local", "/srv")
 
 
-def disk_usage(paths: tuple[str, ...] = DEFAULT_PATHS) -> list[dict[str, Any]]:
-    result = []
-    for path in paths:
-        if not Path(path).exists():
+def disk_usage(
+    paths: tuple[str, ...] = DEFAULT_PATHS, *, mount_root: str | None = "/mnt"
+) -> list[dict[str, Any]]:
+    """Usage per filesystem for Saltbox's paths and every mountpoint directly under /mnt.
+
+    Paths on the same filesystem (``/``, ``/opt`` and ``/srv`` usually are) are reported
+    once, with all their paths, so a pool of drives shows each drive and the pool.
+    """
+    candidates = list(paths)
+    if mount_root is not None and Path(mount_root).is_dir():
+        try:
+            children = sorted(Path(mount_root).iterdir())
+        except OSError:
+            children = []
+        candidates += [str(c) for c in children if os.path.ismount(c)]
+    result: list[dict[str, Any]] = []
+    by_device: dict[int, dict[str, Any]] = {}
+    for path in candidates:
+        try:
+            device = os.stat(path).st_dev
+            usage = shutil.disk_usage(path)
+        except OSError:
             continue
-        usage = shutil.disk_usage(path)
-        result.append(
-            {
-                "path": path,
-                "total": usage.total,
-                "used": usage.used,
-                "free": usage.free,
-                "percent": round(usage.used / usage.total * 100, 1) if usage.total else 0.0,
-            }
-        )
+        if device in by_device:
+            if path not in by_device[device]["paths"]:
+                by_device[device]["paths"].append(path)
+            continue
+        entry = {
+            "path": path,
+            "paths": [path],
+            "total": usage.total,
+            "used": usage.used,
+            "free": usage.free,
+            "percent": round(usage.used / usage.total * 100, 1) if usage.total else 0.0,
+        }
+        by_device[device] = entry
+        result.append(entry)
     return result
 
 

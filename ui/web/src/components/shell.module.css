@@ -1,94 +1,280 @@
 .shell {
+  /* The sidebar's colour runs the full height of the page, however long it scrolls. */
+  background: linear-gradient(
+    to right,
+    var(--color-surface) calc(var(--sidebar-width) - 1px),
+    var(--color-border) calc(var(--sidebar-width) - 1px) var(--sidebar-width),
+    transparent var(--sidebar-width)
+  );
   display: grid;
-  /* minmax(0, ...) stops one long line (a job's tag list) from widening the page */
-  grid-template-columns: 14rem minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   min-height: 100%;
 }
 
+/* -- sidebar (desktop) ------------------------------------------------------------- */
 .sidebar {
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-4);
+  height: 100vh;
+  padding: var(--space-4) var(--space-3);
+  position: sticky;
+  top: 0;
 }
 
 .brand {
+  align-items: center;
+  color: var(--color-fg);
   display: flex;
-  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+}
+
+.brand:hover {
+  text-decoration: none;
+}
+
+/* The mark: a salt crystal, drawn in CSS so it follows the theme. */
+.mark {
+  background: linear-gradient(135deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 55%, #7fe3d6));
+  border-radius: 0.4rem;
+  flex: none;
+  height: 1.75rem;
+  position: relative;
+  transform: rotate(45deg) scale(0.82);
+  width: 1.75rem;
+}
+
+.mark::after {
+  border: 2px solid var(--color-surface);
+  border-radius: 0.2rem;
+  content: '';
+  inset: 0.42rem;
+  position: absolute;
+}
+
+.brandText {
+  display: grid;
+  line-height: 1.2;
+  min-width: 0;
 }
 
 .brandName {
-  font-size: var(--text-lg);
+  font-size: var(--text-md);
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.brandVersion {
+.brandDomain {
+  color: var(--color-fg-muted);
   font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchButton {
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
+  color: var(--color-fg-muted);
+  font-weight: 450;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.searchLabel {
+  flex: 1;
+  text-align: left;
 }
 
 .nav {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  display: grid;
+  gap: 2px;
 }
 
 .navLink {
+  align-items: center;
   border-radius: var(--radius-sm);
-  color: var(--color-fg);
+  color: var(--color-fg-muted);
+  display: flex;
+  font-size: var(--text-md);
+  font-weight: 550;
+  gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
 }
 
 .navLink:hover {
   background: var(--color-surface-2);
+  color: var(--color-fg);
   text-decoration: none;
 }
 
 /* :hover sticks after a tap on touch screens, so the active style must win over it */
-.navLinkActive,
-.navLinkActive:hover {
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
+.navLink.active,
+.navLink.active:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
 }
 
-.currentJob {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  display: flex;
-  flex-direction: column;
-  font-size: var(--text-sm);
-  gap: var(--space-1);
-  padding: var(--space-2);
+.badge {
+  background: var(--color-warn-soft);
+  border-radius: var(--radius-full);
+  color: var(--color-warn);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  margin-left: auto;
+  min-width: 1.4rem;
+  padding: 0 0.4rem;
+  text-align: center;
+}
+
+.badgeDanger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.sidebarFoot {
+  font-size: var(--text-xs);
+  margin-top: auto;
+  overflow-wrap: anywhere;
+  padding: 0 var(--space-2);
 }
 
 .offline {
+  align-items: center;
   color: var(--color-danger);
-  font-size: var(--text-sm);
+  display: inline-flex;
+  gap: var(--space-1);
 }
 
+/* -- main ------------------------------------------------------------------------- */
 .main {
   min-width: 0;
   overflow-wrap: break-word;
-  padding: var(--space-6);
+  padding: var(--space-6) var(--space-8) var(--space-10);
 }
 
-@media (max-width: 48rem) {
+.content {
+  margin: 0 auto;
+  max-width: var(--content-max);
+}
+
+.jobBanner {
+  align-items: center;
+  background: var(--color-info-soft);
+  border: 1px solid color-mix(in srgb, var(--color-info) 30%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--color-info);
+  display: flex;
+  gap: var(--space-3);
+  margin: 0 auto var(--space-5);
+  max-width: var(--content-max);
+  padding: var(--space-2) var(--space-4);
+}
+
+.jobBanner:hover {
+  text-decoration: none;
+}
+
+.jobText {
+  color: var(--color-fg);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jobTime {
+  font-variant-numeric: tabular-nums;
+}
+
+.jobLink {
+  font-weight: 600;
+}
+
+/* -- top bar and tab bar (phones, tablets in portrait) ---------------------------------- */
+.topbar,
+.tabbar {
+  display: none;
+}
+
+@media (max-width: 63.99rem) {
   .shell {
+    background: none;
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
   }
 
   .sidebar {
-    border-bottom: 1px solid var(--color-border);
-    border-right: 0;
+    display: none;
   }
 
-  .nav {
-    flex-direction: row;
-    flex-wrap: wrap;
+  .topbar {
+    align-items: center;
+    backdrop-filter: blur(8px);
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    gap: var(--space-3);
+    justify-content: space-between;
+    padding: var(--space-2) var(--space-4);
+    padding-top: calc(var(--space-2) + env(safe-area-inset-top));
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .topbar .searchButton {
+    max-width: 12rem;
+    width: auto;
   }
 
   .main {
-    padding: var(--space-4);
+    padding: var(--space-4) var(--space-4) calc(var(--tabbar-height) + var(--space-8) + env(safe-area-inset-bottom));
+  }
+
+  .tabbar {
+    background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--color-border);
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    left: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    position: fixed;
+    right: 0;
+    z-index: 20;
+  }
+
+  .tab {
+    align-items: center;
+    color: var(--color-fg-muted);
+    display: flex;
+    flex-direction: column;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    gap: 2px;
+    height: var(--tabbar-height);
+    justify-content: center;
+  }
+
+  .tab:hover {
+    text-decoration: none;
+  }
+
+  .tab.active {
+    color: var(--color-accent);
+  }
+}
+
+@media (max-width: 30rem) {
+  .searchKey {
+    display: none;
   }
 }

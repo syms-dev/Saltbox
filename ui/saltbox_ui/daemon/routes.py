@@ -32,6 +32,7 @@ from ..state import (
     redact_value,
     systemd_units,
 )
+from ..state.containers import CONTAINER_ACTIONS, container_action, container_logs
 from ..yamlio import coerce_scalar, find_duplicate_keys, load_text, write_atomic
 
 router = APIRouter()
@@ -52,7 +53,17 @@ def meta(request: Request) -> dict[str, Any]:
         "layout": svc.layout.as_dict(),
         "saltbox": _git_describe(svc.layout.repo),
         "web": bool(svc.web_dir and (svc.web_dir / "index.html").exists()),
+        "domain": _domain(svc),
     }
+
+
+def _domain(svc) -> str | None:
+    """The box's domain from accounts.yml, for page titles; None until it is set."""
+    try:
+        value = svc.config.get("accounts", "user.domain")
+    except Exception:  # missing or unreadable accounts.yml
+        return None
+    return str(value) if value and str(value) != "testsaltbox.ml" else None
 
 
 @router.get("/overview")
@@ -138,6 +149,7 @@ def app_detail(request: Request, repo: str, role: str) -> dict[str, Any]:
         "containers": views,
         "urls": [url for view in views for url in view["urls"]],
         "update_available": any(view["update"] == "update" for view in views),
+        "installed": bool(views) or any((svc.layout.appdata / n).is_dir() for n in instances),
         "instances": instances,
         "fields": [f.as_dict() for f in defaults.visible()] if defaults else [],
         "overrides": svc.inventory.overrides_for(role, instances),
@@ -417,6 +429,43 @@ def _container_view(container: dict[str, Any], update: dict[str, Any] | None) ->
         "update": (update or {}).get("status", "unknown"),
         "update_detail": (update or {}).get("detail", ""),
     }
+
+
+# -- containers ----------------------------------------------------------------
+def _managed_container(name: str) -> dict[str, Any]:
+    """The Saltbox-managed container called ``name``; 404 for anything else."""
+    containers = _containers_or_none()
+    if containers is None:
+        raise HTTPException(503, "docker is not reachable from the daemon")
+    for container in containers:
+        if container["name"] == name and container["managed"]:
+            return container
+    raise HTTPException(404, f"no Saltbox container named {name}")
+
+
+@router.post("/containers/{name}/{action}")
+def container_act(request: Request, name: str, action: str) -> dict[str, Any]:
+    """Start, stop or restart one of Saltbox's containers."""
+    if action not in CONTAINER_ACTIONS:
+        raise HTTPException(404, f"unknown action {action}")
+    svc = services(request)
+    _managed_container(name)
+    try:
+        container_action(name, action)
+    except RuntimeError as error:
+        raise HTTPException(502, str(error)) from error
+    update = svc.updates.status_by_container().get(name)
+    return _container_view(_managed_container(name), update)
+
+
+@router.get("/containers/{name}/logs")
+def container_log(request: Request, name: str, tail: int = 300) -> dict[str, Any]:
+    _managed_container(name)
+    try:
+        lines = container_logs(name, tail)
+    except RuntimeError as error:
+        raise HTTPException(502, str(error)) from error
+    return {"name": name, "lines": lines}
 
 
 # -- app setup ---------------------------------------------------------------

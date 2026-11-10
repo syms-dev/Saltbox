@@ -1,0 +1,23 @@
+.meter {
+  background: var(--color-surface-3);
+  border-radius: var(--radius-full);
+  height: 0.5rem;
+  overflow: hidden;
+}
+
+.fill {
+  border-radius: var(--radius-full);
+  height: 100%;
+}
+
+.ok {
+  background: var(--color-accent);
+}
+
+.warn {
+  background: var(--color-warn);
+}
+
+.danger {
+  background: var(--color-danger);
+}

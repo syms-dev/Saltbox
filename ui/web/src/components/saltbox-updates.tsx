@@ -1,9 +1,7 @@
-import { useNavigate } from 'react-router-dom';
-
-import { useCheckUpdates, useJobs, useUpdateSaltbox, useUpdates } from '../api/queries';
+import { useCheckUpdates, useJobs, useUpdates } from '../api/queries';
+import { useJobActions } from '../lib/actions';
 import type { RepoStatus } from '../api/types';
 import { UpdateBadge } from './app-links';
-import { ErrorMessage } from './query-state';
 import styles from './saltbox-updates.module.css';
 
 /** "saltbox: main at abc1234", with the remote commit when it differs. */
@@ -18,23 +16,15 @@ export function SaltboxUpdates(): React.ReactNode {
   const updates = useUpdates();
   const jobs = useJobs();
   const check = useCheckUpdates();
-  const update = useUpdateSaltbox();
-  const navigate = useNavigate();
+  const actions = useJobActions();
   const repos = updates.data?.repos ?? [];
   const behind = repos.filter((repo) => repo.status === 'update');
-  const busy = (jobs.data?.busy ?? false) || update.isPending;
-
-  function run(): void {
-    const names = behind.length > 0 ? behind.map((repo) => repo.name).join(', ') : 'the Saltbox checkouts';
-    const message = `Run sb update? It resets ${names} to the latest commit on their branches and refreshes the settings files. Apps keep running.`;
-    if (!window.confirm(message)) return;
-    update.mutate(undefined, { onSuccess: (job) => void navigate(`/jobs/${job.id}`) });
-  }
+  const busy = jobs.data?.busy ?? false;
 
   return (
     <section className="card">
       <div className="row">
-        <h3 className={styles['title']}>Saltbox</h3>
+        <h2 className={styles['title']}>Saltbox version</h2>
         <button
           disabled={check.isPending || updates.data?.running === true}
           onClick={() => check.mutate()}
@@ -42,7 +32,12 @@ export function SaltboxUpdates(): React.ReactNode {
         >
           Check now
         </button>
-        <button className={behind.length > 0 ? 'primary' : ''} disabled={busy} onClick={run} type="button">
+        <button
+          className={behind.length > 0 ? 'primary' : ''}
+          disabled={busy}
+          onClick={() => void actions.updateSaltbox()}
+          type="button"
+        >
           Run <code>sb update</code>
         </button>
       </div>
@@ -60,7 +55,6 @@ export function SaltboxUpdates(): React.ReactNode {
           ))}
         </ul>
       )}
-      {update.isError ? <ErrorMessage error={update.error} /> : null}
     </section>
   );
 }

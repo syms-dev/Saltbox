@@ -51,7 +51,10 @@ _NO_PROXY = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 def urllib_transport(
     method: str, url: str, headers: dict[str, str], body: bytes | None
 ) -> Response:
-    request = urllib.request.Request(url, data=body, headers=headers, method=method)
+    try:
+        request = urllib.request.Request(url, data=body, headers=headers, method=method)
+    except ValueError as error:  # a malformed address, e.g. a container with no host
+        raise SetupError(f"bad address {url!r}: {error}") from error
     try:
         with _NO_PROXY.open(request, timeout=TIMEOUT) as response:
             return Response(response.status, response.read(), _headers(response.headers))

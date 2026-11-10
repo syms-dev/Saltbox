@@ -107,3 +107,54 @@ def list_containers(*, all_containers: bool = True) -> list[dict[str, Any]]:
         image = ", ".join(container.image.tags) if container.image else ""
         result.append(_record(container.attrs or {}, image))
     return sorted(result, key=lambda c: c["name"])
+
+
+# -- actions -------------------------------------------------------------------
+CONTAINER_ACTIONS = ("start", "stop", "restart")
+MAX_LOG_LINES = 2000
+
+
+def container_action(name: str, action: str, runner: Runner | None = None) -> None:
+    """Start, stop or restart a container through the docker CLI."""
+    if action not in CONTAINER_ACTIONS:
+        raise ValueError(f"unknown action {action!r}")
+    code, output = (runner or _run_long)(["docker", action, "--", name])
+    if code != 0:
+        raise RuntimeError(output.strip() or f"docker {action} {name} failed")
+
+
+def container_logs(name: str, tail: int = 300, runner: Runner | None = None) -> list[str]:
+    """The last ``tail`` log lines of a container, stdout and stderr merged, oldest first."""
+    tail = max(1, min(int(tail), MAX_LOG_LINES))
+    code, output = (runner or _run_merged)(
+        ["docker", "logs", "--tail", str(tail), "--timestamps", "--", name]
+    )
+    if code != 0:
+        raise RuntimeError(output.strip() or f"docker logs {name} failed")
+    return output.splitlines()[-tail:]
+
+
+def _run_long(args: list[str]) -> tuple[int, str]:
+    """Like ``_run`` with the time a container needs to stop (docker's 10 s plus slack)."""
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, check=False, timeout=90)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return 127, str(error)
+    return result.returncode, result.stdout if result.returncode == 0 else result.stderr
+
+
+def _run_merged(args: list[str]) -> tuple[int, str]:
+    """Run with stderr folded into stdout: containers log to both."""
+    try:
+        result = subprocess.run(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            errors="replace",
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return 127, str(error)
+    return result.returncode, result.stdout

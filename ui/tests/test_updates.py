@@ -338,3 +338,49 @@ def test_saltbox_checkouts_are_reported_and_updated_with_sb_update(client) -> No
     services.updates.wait(5)
     assert checks  # sb update triggered a fresh check
     assert http.get("/api/overview").json()["updates"]["saltbox"] == []
+
+
+# -- container actions and logs ---------------------------------------------------
+def test_container_actions_and_logs(client, monkeypatch: pytest.MonkeyPatch) -> None:
+    from saltbox_ui.state import containers as containers_module
+
+    http, _ = client
+    calls: list[list[str]] = []
+
+    def docker(args):
+        calls.append(args)
+        if args[1] == "logs":
+            return 0, "2026-11-10T01:00:00Z started\n2026-11-10T01:00:01Z ready\n"
+        return 0, ""
+
+    monkeypatch.setattr(containers_module, "_run_long", docker)
+    monkeypatch.setattr(containers_module, "_run_merged", docker)
+    restarted = http.post("/api/containers/sonarr/restart")
+    assert restarted.status_code == 200
+    assert restarted.json()["name"] == "sonarr" and restarted.json()["update"] == "update"
+    assert calls[-1] == ["docker", "restart", "--", "sonarr"]
+    logs = http.get("/api/containers/sonarr/logs?tail=5").json()
+    assert logs["lines"][-1].endswith("ready")
+    assert calls[-1] == ["docker", "logs", "--tail", "5", "--timestamps", "--", "sonarr"]
+    assert http.get("/api/containers/sonarr/logs?tail=999999").status_code == 200
+    assert calls[-1][3] == "2000"  # capped
+
+
+def test_container_actions_refuse_unknown_names_and_actions(client, monkeypatch) -> None:
+    from saltbox_ui.state import containers as containers_module
+
+    http, _ = client
+    monkeypatch.setattr(containers_module, "_run_long", lambda args: (0, ""))
+    assert http.post("/api/containers/sonarr/remove").status_code == 404
+    assert http.post("/api/containers/not-ours/restart").status_code == 404
+    assert http.get("/api/containers/not-ours/logs").status_code == 404
+    assert http.post("/api/containers/-v/stop").status_code == 404
+
+
+def test_container_action_failure_is_reported(client, monkeypatch) -> None:
+    from saltbox_ui.state import containers as containers_module
+
+    http, _ = client
+    monkeypatch.setattr(containers_module, "_run_long", lambda args: (1, "is not running"))
+    response = http.post("/api/containers/sonarr/stop")
+    assert response.status_code == 502 and "is not running" in response.json()["detail"]

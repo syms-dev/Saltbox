@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 
 import {
@@ -7,6 +7,7 @@ import {
   useInventory,
   useSaveConfig,
   useSaveInventory,
+  useOverview,
   useValidateConfig,
 } from '../api/queries';
 import type { Issue } from '../api/types';
@@ -51,6 +52,12 @@ function Editor({ initial, isSaving, issues, onSave, path, saveError, source }: 
     if (text === base) setText(initial);
   }
   const dirty = text !== base;
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const warn = (event: BeforeUnloadEvent): void => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
   return (
     <div className="stack">
       <p className="muted">
@@ -61,6 +68,12 @@ function Editor({ initial, isSaving, issues, onSave, path, saveError, source }: 
         aria-label="File contents"
         className={`mono ${styles['editor']}`}
         onChange={(event) => setText(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 's' && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            if (dirty && !isSaving) onSave(text);
+          }
+        }}
         spellCheck={false}
         value={text}
       />
@@ -114,42 +127,57 @@ function InventoryEditor(): React.ReactNode {
   );
 }
 
+const DESCRIPTIONS: Record<string, string> = {
+  accounts: 'Your user, password, domain and Cloudflare login',
+  adv_settings: 'DNS records, Traefik, GPU and other advanced options',
+  backup_config: 'Where and when backups run',
+  hetzner_vlan: 'Hetzner vSwitch networking',
+  inventory: 'Per-app overrides (the settings Apps → Settings writes)',
+  providers: 'API keys for DNS and other providers',
+  settings: 'Paths, downloads folder, rclone remotes, shell',
+};
+
 export function ConfigPage(): React.ReactNode {
   const { name = 'accounts' } = useParams();
   const files = useConfigFiles();
   const validate = useValidateConfig();
+  const overview = useOverview();
+  const issues = validate.data ?? overview.data?.config_issues ?? {};
+  const errorsIn = (file: string): number => (issues[file] ?? []).filter((i) => i.level === 'error').length;
+  const total = Object.keys(issues).reduce((sum, file) => sum + errorsIn(file), 0);
+  const entries = [
+    ...(files.data ?? []).map((file) => ({ exists: file.exists, filename: file.filename, name: file.name })),
+    { exists: true, filename: 'inventories/host_vars/localhost.yml', name: INVENTORY },
+  ];
   return (
     <div className="stack">
       <div className="row">
-        <h1 style={{ margin: 0 }}>Config</h1>
+        <h1 className={styles['flush']}>Config</h1>
+        <span className="spacer" />
+        <span className={`small ${total > 0 ? styles['error'] : 'muted'}`}>
+          {total === 0 ? 'No validation errors' : `${total} error${total === 1 ? '' : 's'} across all files`}
+        </span>
         <button disabled={validate.isPending} onClick={() => validate.mutate()} type="button">
           Validate all
         </button>
-        {validate.data !== undefined ? (
-          <span className="muted">
-            {
-              Object.values(validate.data)
-                .flat()
-                .filter((i) => i.level === 'error').length
-            }{' '}
-            errors across all files
-          </span>
-        ) : null}
       </div>
       <p className="muted">
-        The same files <code>sb validate-config</code> checks. Comments are kept; saving validates against the schema.
+        The files <code>sb</code> reads, checked against the same schema as <code>sb validate-config</code>. Comments
+        are kept when you save. Changes take effect the next time the affected apps are installed.
       </p>
       <div className={styles['layout']}>
         <nav aria-label="Config files" className={styles['files']}>
-          {files.data?.map((file) => (
+          {entries.map((file) => (
             <NavLink className={styles['file'] ?? ''} key={file.name} to={`/config/${file.name}`}>
-              {file.filename}
-              {file.exists ? '' : <span className="muted"> (missing)</span>}
+              <span className={styles['fileName']}>
+                {file.filename}
+                {errorsIn(file.name) > 0 ? <span className={styles['errorCount']}>{errorsIn(file.name)}</span> : null}
+              </span>
+              <span className={styles['fileHelp']}>
+                {file.exists ? (DESCRIPTIONS[file.name] ?? '') : 'Not created yet'}
+              </span>
             </NavLink>
           ))}
-          <NavLink className={styles['file'] ?? ''} to={`/config/${INVENTORY}`}>
-            inventories/host_vars/localhost.yml
-          </NavLink>
         </nav>
         <section className="card">{name === INVENTORY ? <InventoryEditor /> : <FileEditor name={name} />}</section>
       </div>

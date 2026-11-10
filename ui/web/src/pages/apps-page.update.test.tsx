@@ -1,123 +1,98 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { App } from '../api/types';
+import { makeApp, renderAt, stubApi } from '../test-utils';
 import { AppsPage } from './apps-page';
 
-function app(role: string, update: 'current' | 'update'): App {
-  return {
-    app_links: [],
-    categories: [],
+function installed(role: string, update: 'current' | 'update'): App {
+  return makeApp({
     containers: [
       { health: 'healthy', image: `img/${role}`, name: role, status: 'running', update, update_detail: '', urls: [] },
     ],
-    default_instances: [role],
-    docs_url: '',
-    install_tag: role,
     installed: true,
-    instances: [role],
-    link: '',
-    main_tags: [],
-    repo: 'saltbox',
     role,
     sb_tag: role,
-    section: 'apps',
-    selector: null,
-    summary: '',
-    supports_instances: true,
-    tags: [role],
     title: role.charAt(0).toUpperCase() + role.slice(1),
     update_available: update === 'update',
-    urls: [`https://${role}.thesyms.ca`],
-    when: [],
-  };
-}
-
-const JOB = {
-  command: ['sb', 'install', 'sonarr'],
-  command_line: 'sb install sonarr',
-  finished_at: null,
-  id: 'job1',
-  kind: 'install',
-  log_path: null,
-  returncode: null,
-  started_at: null,
-  status: 'running',
-  tags: ['sonarr'],
-};
-
-function respond(data: unknown): Promise<Response> {
-  return Promise.resolve(new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } }));
+    urls: [`https://${role}.example.com`],
+  });
 }
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  vi.restoreAllMocks();
 });
 
 describe('installed apps', () => {
-  it('links to each app and updates the one that needs it', async () => {
-    const calls: string[] = [];
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string, init?: RequestInit) => {
-        calls.push(`${init?.method ?? 'GET'} ${url}`);
-        if (url === '/api/apps') return respond([app('sonarr', 'update'), app('radarr', 'current')]);
-        if (url === '/api/updates') {
-          return respond({ checked_at: 1_800_000_000, error: '', images: {}, running: false });
-        }
-        if (url === '/api/apps/saltbox/sonarr/update') return respond(JOB);
-        return respond({});
-      }),
-    );
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/apps']}>
-          <Routes>
-            <Route element={<AppsPage />} path="/apps" />
-            <Route element={<p>job page</p>} path="/jobs/:id" />
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>,
-    );
-    expect(await screen.findByRole('link', { name: 'Open sonarr.thesyms.ca' })).toHaveAttribute(
+  it('lists apps with their state and updates one after a confirmation', async () => {
+    const api = stubApi({
+      '/apps': [installed('sonarr', 'update'), installed('radarr', 'current')],
+      '/jobs': { busy: false, current: null, jobs: [], lock: null },
+      'POST /apps/saltbox/sonarr/update': { id: 'job1', kind: 'install', status: 'running', tags: ['sonarr'] },
+      '/updates': { checked_at: 1, error: '', images: {}, running: false },
+    });
+    renderAt(<AppsPage tab="installed" />, '/apps');
+    const list = await screen.findByRole('list', { name: 'Installed apps' });
+    expect(within(list).getAllByText('Running')).toHaveLength(2);
+    expect(within(list).getByText('Up to date')).toBeInTheDocument();
+    expect(within(list).getByRole('link', { name: 'Open Sonarr' })).toHaveAttribute(
       'href',
-      'https://sonarr.thesyms.ca',
+      'https://sonarr.example.com',
     );
-    expect(screen.getByText('update available')).toBeInTheDocument();
-    expect(screen.getByText('up to date')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Update all (1)' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
-    expect(confirm).toHaveBeenCalled();
-    await waitFor(() => expect(screen.getByText('job page')).toBeInTheDocument());
-    expect(calls).toContain('POST /api/apps/saltbox/sonarr/update');
+    fireEvent.click(within(list).getByRole('button', { name: /Update/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Update Sonarr?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Update Sonarr' }));
+    expect(await screen.findByText('job page')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api).toHaveBeenCalledWith('/api/apps/saltbox/sonarr/update', expect.objectContaining({ method: 'POST' })),
+    );
   });
 
-  it('does nothing when the update is not confirmed', async () => {
-    const calls: string[] = [];
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string, init?: RequestInit) => {
-        calls.push(`${init?.method ?? 'GET'} ${url}`);
-        if (url === '/api/apps') return respond([app('sonarr', 'update')]);
-        return respond({ checked_at: null, error: '', images: {}, running: false });
-      }),
-    );
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter>
-          <AppsPage />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    );
-    fireEvent.click(await screen.findByRole('button', { name: 'Update' }));
-    expect(calls.some((c) => c.startsWith('POST'))).toBe(false);
+  it('cancelling the dialog starts nothing', async () => {
+    const api = stubApi({
+      '/apps': [installed('sonarr', 'update')],
+      '/jobs': { busy: false, current: null, jobs: [], lock: null },
+      '/updates': { checked_at: 1, error: '', images: {}, running: false },
+    });
+    renderAt(<AppsPage tab="installed" />, '/apps');
+    const list = await screen.findByRole('list', { name: 'Installed apps' });
+    fireEvent.click(within(list).getByRole('button', { name: /Update/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Update Sonarr?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(api.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'POST')).toBe(false);
+  });
+
+  it('filters to apps with updates from the chip', async () => {
+    stubApi({
+      '/apps': [installed('sonarr', 'update'), installed('radarr', 'current')],
+      '/jobs': { busy: false, current: null, jobs: [], lock: null },
+      '/updates': { checked_at: 1, error: '', images: {}, running: false },
+    });
+    renderAt(<AppsPage tab="installed" />, '/apps');
+    fireEvent.click(await screen.findByRole('button', { name: /Updates/ }));
+    const list = screen.getByRole('list', { name: 'Installed apps' });
+    expect(within(list).queryByText('Radarr')).not.toBeInTheDocument();
+    expect(within(list).getByText('Sonarr')).toBeInTheDocument();
+  });
+});
+
+describe('discover', () => {
+  it('installs an app from the catalog after a confirmation', async () => {
+    const api = stubApi({
+      '/apps': [makeApp({ categories: ['Content Acquisition Apps > Collection Manager'] })],
+      '/jobs': { busy: false, current: null, jobs: [], lock: null },
+      'POST /jobs': { id: 'job2', kind: 'install', status: 'running', tags: ['sonarr'] },
+    });
+    renderAt(<AppsPage tab="discover" />, '/apps/discover');
+    fireEvent.click(await screen.findByRole('button', { name: /Install/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Install Sonarr?' });
+    expect(dialog).toHaveTextContent('sb install sonarr');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Install Sonarr' }));
+    expect(await screen.findByText('job page')).toBeInTheDocument();
+    const call = api.mock.calls.find(([url, init]) => url === '/api/jobs' && (init as RequestInit).method === 'POST');
+    expect(JSON.parse((call?.[1] as RequestInit).body as string)).toEqual({ kind: 'install', tags: ['sonarr'] });
   });
 });

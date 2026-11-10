@@ -1,57 +1,37 @@
 import { describe, expect, it } from 'vitest';
 
-import type { App } from '../api/types';
-import { matchesApp } from './apps-page';
+import { makeApp } from '../test-utils';
+import { inGroup, matchesText, subcategory } from './apps-page';
 
-function app(overrides: Partial<App>): App {
-  return {
-    app_links: [],
-    categories: [],
-    containers: [],
-    default_instances: [],
-    update_available: false,
-    urls: [],
-    docs_url: '',
-    install_tag: null,
-    installed: false,
-    instances: [],
-    link: '',
-    main_tags: [],
-    repo: 'saltbox',
-    role: 'sonarr',
-    sb_tag: 'sonarr',
-    section: 'apps',
-    selector: null,
-    summary: 'TV series manager',
-    supports_instances: true,
-    tags: ['sonarr'],
-    title: 'Sonarr',
-    when: [],
-    ...overrides,
-  };
-}
-
-describe('matchesApp', () => {
-  const sonarr = app({ categories: ['Media Management'], installed: true });
-  const tdarr = app({ repo: 'sandbox', role: 'tdarr', summary: 'Transcoding', title: 'Tdarr' });
-
-  it('matches title, role, summary and category text case-insensitively', () => {
-    expect(matchesApp(sonarr, 'SONARR', 'all', '')).toBe(true);
-    expect(matchesApp(sonarr, 'series', 'all', '')).toBe(true);
-    expect(matchesApp(sonarr, 'media management', 'all', '')).toBe(true);
-    expect(matchesApp(sonarr, 'radarr', 'all', '')).toBe(false);
+describe('catalog filters', () => {
+  const sonarr = makeApp({ categories: ['Content Acquisition Apps > Collection Manager'], installed: true });
+  const tdarr = makeApp({
+    categories: ['Accessories > File Processing'],
+    repo: 'sandbox',
+    role: 'tdarr',
+    summary: 'Transcoding',
+    title: 'Tdarr',
   });
 
-  it('applies the installed and repository filters', () => {
-    expect(matchesApp(sonarr, '', 'installed', '')).toBe(true);
-    expect(matchesApp(tdarr, '', 'installed', '')).toBe(false);
-    expect(matchesApp(tdarr, '', 'sandbox', '')).toBe(true);
-    expect(matchesApp(tdarr, '', 'saltbox', '')).toBe(false);
+  it('matches every word against title, role, summary and categories', () => {
+    expect(matchesText(sonarr, 'SONARR')).toBe(true);
+    expect(matchesText(sonarr, 'tv manager')).toBe(true);
+    expect(matchesText(sonarr, 'collection')).toBe(true);
+    expect(matchesText(sonarr, 'tv radarr')).toBe(false);
+    expect(matchesText(sonarr, '  ')).toBe(true);
   });
 
-  it('narrows by category', () => {
-    expect(matchesApp(sonarr, '', 'all', 'Media Management')).toBe(true);
-    expect(matchesApp(tdarr, '', 'all', 'Media Management')).toBe(false);
+  it('groups by the top category and offers popular picks', () => {
+    expect(inGroup(sonarr, 'Content Acquisition Apps')).toBe(true);
+    expect(inGroup(tdarr, 'Content Acquisition Apps')).toBe(false);
+    expect(inGroup(sonarr, 'popular')).toBe(true);
+    expect(inGroup(tdarr, 'popular')).toBe(false);
+    expect(inGroup(tdarr, '')).toBe(true);
+  });
+
+  it('names the kind of app from the category path', () => {
+    expect(subcategory(tdarr)).toBe('File Processing');
+    expect(subcategory(makeApp())).toBe('');
   });
 });
 

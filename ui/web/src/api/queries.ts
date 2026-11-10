@@ -19,7 +19,11 @@ import type {
   JobRequest,
   JobsResponse,
   Meta,
+  ContainerAction,
+  ContainerLogs,
+  ContainerState,
   Overview,
+  SetupResponse,
   UpdatesResponse,
 } from './types';
 
@@ -29,7 +33,9 @@ export const QUERY_KEYS = {
   INVENTORY: 'inventory',
   JOBS: 'jobs',
   META: 'meta',
+  LOGS: 'logs',
   OVERVIEW: 'overview',
+  SETUP: 'setup',
   UPDATES: 'updates',
 } as const;
 
@@ -37,31 +43,37 @@ const OVERVIEW_REFRESH_MS = 15_000;
 const JOBS_REFRESH_MS = 3_000;
 
 export function useMeta(): UseQueryResult<Meta> {
-  return useQuery({ queryFn: () => apiFetch<Meta>(API_ROUTES.META), queryKey: [QUERY_KEYS.META] });
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<Meta>(API_ROUTES.META, { signal }),
+    queryKey: [QUERY_KEYS.META],
+  });
 }
 
 export function useOverview(): UseQueryResult<Overview> {
   return useQuery({
-    queryFn: () => apiFetch<Overview>(API_ROUTES.OVERVIEW),
+    queryFn: ({ signal }) => apiFetch<Overview>(API_ROUTES.OVERVIEW, { signal }),
     queryKey: [QUERY_KEYS.OVERVIEW],
     refetchInterval: OVERVIEW_REFRESH_MS,
   });
 }
 
 export function useApps(): UseQueryResult<App[]> {
-  return useQuery({ queryFn: () => apiFetch<App[]>(API_ROUTES.APPS), queryKey: [QUERY_KEYS.APPS] });
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<App[]>(API_ROUTES.APPS, { signal }),
+    queryKey: [QUERY_KEYS.APPS],
+  });
 }
 
 export function useAppDetail(repo: string, role: string): UseQueryResult<AppDetail> {
   return useQuery({
-    queryFn: () => apiFetch<AppDetail>(API_ROUTES.appDetail(repo, role)),
+    queryFn: ({ signal }) => apiFetch<AppDetail>(API_ROUTES.appDetail(repo, role), { signal }),
     queryKey: [QUERY_KEYS.APPS, repo, role],
   });
 }
 
 export function useJobs(): UseQueryResult<JobsResponse> {
   return useQuery({
-    queryFn: () => apiFetch<JobsResponse>(API_ROUTES.JOBS),
+    queryFn: ({ signal }) => apiFetch<JobsResponse>(API_ROUTES.JOBS, { signal }),
     queryKey: [QUERY_KEYS.JOBS],
     refetchInterval: JOBS_REFRESH_MS,
   });
@@ -69,7 +81,7 @@ export function useJobs(): UseQueryResult<JobsResponse> {
 
 export function useJob(id: string): UseQueryResult<Job> {
   return useQuery({
-    queryFn: () => apiFetch<Job>(API_ROUTES.job(id)),
+    queryFn: ({ signal }) => apiFetch<Job>(API_ROUTES.job(id), { signal }),
     queryKey: [QUERY_KEYS.JOBS, id],
     refetchInterval: (query) => (query.state.data?.status === 'running' ? JOBS_REFRESH_MS : false),
   });
@@ -77,20 +89,23 @@ export function useJob(id: string): UseQueryResult<Job> {
 
 export function useConfigFiles(): UseQueryResult<ConfigFileSummary[]> {
   return useQuery({
-    queryFn: () => apiFetch<ConfigFileSummary[]>(API_ROUTES.CONFIG),
+    queryFn: ({ signal }) => apiFetch<ConfigFileSummary[]>(API_ROUTES.CONFIG, { signal }),
     queryKey: [QUERY_KEYS.CONFIG],
   });
 }
 
 export function useConfigFile(name: string): UseQueryResult<ConfigFile> {
   return useQuery({
-    queryFn: () => apiFetch<ConfigFile>(API_ROUTES.configFile(name)),
+    queryFn: ({ signal }) => apiFetch<ConfigFile>(API_ROUTES.configFile(name), { signal }),
     queryKey: [QUERY_KEYS.CONFIG, name],
   });
 }
 
 export function useInventory(): UseQueryResult<Inventory> {
-  return useQuery({ queryFn: () => apiFetch<Inventory>(API_ROUTES.INVENTORY), queryKey: [QUERY_KEYS.INVENTORY] });
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<Inventory>(API_ROUTES.INVENTORY, { signal }),
+    queryKey: [QUERY_KEYS.INVENTORY],
+  });
 }
 
 export function useStartJob(): UseMutationResult<Job, Error, JobRequest> {
@@ -168,7 +183,7 @@ const UPDATES_POLL_MS = 3_000;
 export function useUpdates(): UseQueryResult<UpdatesResponse> {
   const client = useQueryClient();
   const result = useQuery({
-    queryFn: () => apiFetch<UpdatesResponse>(API_ROUTES.UPDATES),
+    queryFn: ({ signal }) => apiFetch<UpdatesResponse>(API_ROUTES.UPDATES, { signal }),
     queryKey: [QUERY_KEYS.UPDATES],
     refetchInterval: (query) => (query.state.data?.running === true ? UPDATES_POLL_MS : false),
   });
@@ -177,8 +192,10 @@ export function useUpdates(): UseQueryResult<UpdatesResponse> {
   useEffect(() => {
     if (checkedAt === seen.current) return;
     seen.current = checkedAt;
-    void client.invalidateQueries({ queryKey: [QUERY_KEYS.OVERVIEW] });
-    void client.invalidateQueries({ queryKey: [QUERY_KEYS.APPS] });
+    // A first load still in flight would otherwise be reused as is, from before the check.
+    for (const key of [QUERY_KEYS.OVERVIEW, QUERY_KEYS.APPS]) {
+      void client.cancelQueries({ queryKey: [key] }).then(() => client.invalidateQueries({ queryKey: [key] }));
+    }
   }, [checkedAt, client]);
   return result;
 }
@@ -222,5 +239,47 @@ export function useUpdateSaltbox(): UseMutationResult<Job, Error, void> {
   return useMutation({
     mutationFn: () => apiPost<Job>(API_ROUTES.SALTBOX_UPDATE),
     onSuccess: () => invalidateUpdates(client),
+  });
+}
+
+type ContainerActionInput = { action: ContainerAction; name: string };
+
+/** Start, stop or restart a container; refreshes everything that shows container state. */
+export function useContainerAction(): UseMutationResult<ContainerState, Error, ContainerActionInput> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ action, name }: ContainerActionInput) =>
+      apiPost<ContainerState>(API_ROUTES.containerAction(name, action)),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: [QUERY_KEYS.APPS] });
+      void client.invalidateQueries({ queryKey: [QUERY_KEYS.OVERVIEW] });
+      void client.invalidateQueries({ queryKey: [QUERY_KEYS.LOGS] });
+    },
+  });
+}
+
+const LOGS_LIVE_MS = 4_000;
+
+export function useContainerLogs(name: string, tail: number, live: boolean): UseQueryResult<ContainerLogs> {
+  return useQuery({
+    enabled: name !== '',
+    queryFn: ({ signal }) => apiFetch<ContainerLogs>(API_ROUTES.containerLogs(name, tail), { signal }),
+    queryKey: [QUERY_KEYS.LOGS, name, tail],
+    refetchInterval: live ? LOGS_LIVE_MS : false,
+  });
+}
+
+export function useSetup(): UseQueryResult<SetupResponse> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<SetupResponse>(API_ROUTES.SETUP, { signal }),
+    queryKey: [QUERY_KEYS.SETUP],
+  });
+}
+
+export function useApplySetup(): UseMutationResult<SetupResponse, Error, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPost<SetupResponse>(API_ROUTES.SETUP_APPLY),
+    onSuccess: (data) => client.setQueryData([QUERY_KEYS.SETUP], data),
   });
 }

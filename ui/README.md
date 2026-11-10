@@ -211,6 +211,28 @@ answers at `https://saltbox.<domain>` once Traefik has a certificate. The API
 is documented at `/api/docs` on the daemon; `sbx daemon token` prints the
 token for curl.
 
+What the web app does:
+
+- **Home** leads with what needs you, each item with the button that fixes it:
+  restart an unhealthy app, start a stopped one, apply updates, open a config
+  file with errors, retry a failed job. Below it, a launcher for your apps
+  (star the ones you use most), updates, storage and recent activity.
+- **Apps**: installed apps with health, update and restart buttons, and a
+  Discover tab to browse and install anything in the Saltbox and Sandbox
+  catalogs. Each app has a page with its containers (restart, stop, start),
+  live logs, inventory overrides and role defaults, docs and links.
+- **Activity**: every `sb` job with a live log. A failed job says which task
+  failed and why, and can be run again. Any `sb install` tag can be run here.
+- **System**: disks (each drive and pool once), mounts, Saltbox's systemd
+  services, and the Saltbox checkouts against their branches, with
+  `sb update`.
+- **Connect apps**: the post-install wiring from the TUI's setup step.
+- **Config**: the YAML files `sb` reads, with the same validation.
+- Search with Ctrl+K (⌘K) or `/` to open any app, page or action.
+
+Every action asks first and says what will happen; the app icons come from
+the apps themselves through Traefik, so nothing loads from outside the server.
+
 Development: start `saltbox-uid --no-token --no-uds --port 8701` against a
 checkout (same `SALTBOX_*` variables as above) and `npm run dev` in `web/`;
 Vite proxies `/api` to the daemon.

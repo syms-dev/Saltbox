@@ -131,3 +131,15 @@ def test_containers_from_the_docker_cli() -> None:
     assert found[0]["managed"] is False and found[0]["status"] == "exited"
     assert calls[1][:2] == ["docker", "inspect"]
     assert list_containers_cli(lambda args: (0, "")) == []
+
+
+def test_disk_usage_reports_each_filesystem_once(tmp_path) -> None:
+    from saltbox_ui.state.host import disk_usage
+
+    first, second = tmp_path / "opt", tmp_path / "srv"
+    first.mkdir()
+    second.mkdir()
+    disks = disk_usage((str(first), str(second), str(tmp_path / "missing")), mount_root=None)
+    assert len(disks) == 1
+    assert disks[0]["paths"] == [str(first), str(second)]
+    assert 0 <= disks[0]["percent"] <= 100
