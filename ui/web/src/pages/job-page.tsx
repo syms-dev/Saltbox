@@ -30,6 +30,11 @@ export function recap(log: string): Record<string, number> | null {
 
 export function JobPage(): React.ReactNode {
   const { id = '' } = useParams();
+  // Keyed by job, so moving from one job's page to another starts with an empty log.
+  return <JobView id={id} key={id} />;
+}
+
+function JobView({ id }: { id: string }): React.ReactNode {
   const job = useJob(id);
   const stream = useJobStream(id);
   const cancel = useCancelJob();

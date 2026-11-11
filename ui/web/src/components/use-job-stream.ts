@@ -15,6 +15,7 @@ type JobStream = {
 /**
  * Follow a job's log over the daemon's WebSocket. Reconnects until the daemon
  * sends the final record, so a flaky proxy does not leave the page stale.
+ * Mount it under a `key` of the job id: state starts empty for each job.
  */
 export function useJobStream(id: string): JobStream {
   const [text, setText] = useState('');
@@ -24,16 +25,17 @@ export function useJobStream(id: string): JobStream {
 
   useEffect(() => {
     finished.current = false;
-    setText('');
-    setDone(null);
     let socket: WebSocket | null = null;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let closedByUs = false;
 
     function connect(): void {
-      setText('');
       socket = new WebSocket(jobStreamUrl(id));
-      socket.onopen = () => setConnected(true);
+      // Every connection replays the log from its start, so begin again from nothing.
+      socket.onopen = () => {
+        setText('');
+        setConnected(true);
+      };
       socket.onmessage = (event: MessageEvent<string>) => {
         const message = JSON.parse(event.data) as StreamMessage;
         if (message.type === 'log') {

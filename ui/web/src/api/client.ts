@@ -65,7 +65,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   if (init?.body !== undefined && init.body !== null) headers.set('Content-Type', 'application/json');
   const response = await fetch(`${BASE}${path}`, { ...init, headers });
   if (!response.ok) {
-    let body: ErrorBody | null = null;
+    let body: ErrorBody | null;
     try {
       body = (await response.json()) as ErrorBody;
     } catch {

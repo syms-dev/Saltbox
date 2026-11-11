@@ -231,7 +231,6 @@ export function CommandPalette({ onClose }: CommandPaletteProps): React.ReactNod
     }
   }
 
-  let lastGroup = '';
   return (
     <dialog
       aria-label="Search and commands"
@@ -268,8 +267,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps): React.ReactNod
       <ul className={styles['results']} id="command-results" role="listbox">
         {results.length === 0 ? <li className={styles['none']}>Nothing matches “{query}”.</li> : null}
         {results.map((command, index) => {
-          const heading = command.group !== lastGroup ? command.group : null;
-          lastGroup = command.group;
+          const heading = command.group !== results[index - 1]?.group ? command.group : null;
           return (
             <li key={command.id} role="presentation">
               {heading === null ? null : <div className={styles['group']}>{heading}</div>}
