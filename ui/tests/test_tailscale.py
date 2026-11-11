@@ -53,6 +53,9 @@ def test_only_the_owner_gets_in_over_tailscale(daemon) -> None:
     )
     owner = {"Tailscale-User-Login": "Owner@Example.com"}
     assert tailnet.get("/api/meta", headers=owner).status_code == 200
+    # tailscale serve is a proxy too; its forwarding headers must not trip the SSO check
+    forwarded = {**owner, "X-Forwarded-Host": "saltbox.tail1234.ts.net"}
+    assert tailnet.get("/api/meta", headers=forwarded).status_code == 200
     # the page itself loads for anyone who can reach it; the data does not
     assert tailnet.get("/").status_code == 200
     # browsers' cross-site protection still applies to the owner

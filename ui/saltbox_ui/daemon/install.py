@@ -208,6 +208,56 @@ def enable_web(
     return result
 
 
+def disable_web(
+    layout: Layout,
+    *,
+    unit_dir: Path = Path("/etc/systemd/system"),
+    traefik_dir: Path | None = None,
+    purge: bool = False,
+    run: Any = None,
+) -> dict[str, Any]:
+    """Undo ``enable_web``: stop the service and remove everything it put on the host.
+
+    Removes the systemd unit, the Traefik route (Traefik drops the address when the
+    file goes), the VPN port-sync timer and the Tailscale address. Saltbox itself,
+    its config files and the apps are not touched. ``purge`` also deletes the state
+    directory: the API token, job history and logs, alert and maintenance settings.
+    """
+    from ..appsetup.vpnport import UNIT as PORTSYNC
+    from ..state.system import SERVE_PORT
+    from ..state.system import run as run_command
+
+    ctl = run or systemctl
+    removed: list[str] = []
+    steps: dict[str, str] = {}
+    for unit in (UNIT_NAME, f"{PORTSYNC}.timer"):
+        code, output = ctl("disable", "--now", unit)
+        steps[f"disable {unit}"] = "ok" if code == 0 else (output or f"exit {code}")
+    targets = [
+        unit_dir / UNIT_NAME,
+        unit_dir / f"{PORTSYNC}.service",
+        unit_dir / f"{PORTSYNC}.timer",
+        (traefik_dir or (layout.appdata / "traefik")) / ROUTE_FILENAME,
+    ]
+    for path in targets:
+        if path.exists():
+            path.unlink()
+            removed.append(str(path))
+    code, output = ctl("daemon-reload")
+    steps["daemon-reload"] = "ok" if code == 0 else (output or f"exit {code}")
+    if run is None and shutil.which("tailscale"):
+        code, output = run_command(["tailscale", "serve", f"--https={SERVE_PORT}", "off"])
+        steps["tailscale serve off"] = "ok" if code == 0 else (output.strip() or f"exit {code}")
+    if purge and layout.state_dir.exists():
+        shutil.rmtree(layout.state_dir)
+        removed.append(str(layout.state_dir))
+    return {
+        "removed": removed,
+        "steps": steps,
+        "state_kept": None if purge else str(layout.state_dir),
+    }
+
+
 def url_for(layout: Layout, subdomain: str = DEFAULT_SUBDOMAIN) -> str | None:
     config = ConfigService(layout)
     domain = route_settings(config)["domain"]

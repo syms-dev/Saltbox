@@ -13,7 +13,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 
-import { apiFetch, API_ROUTES } from '../api/client';
+import { ApiError, apiFetch, API_ROUTES } from '../api/client';
 import { useJobs, useMeta, useOverview } from '../api/queries';
 import type { Job, Meta } from '../api/types';
 import { formatDuration } from '../format';
@@ -188,7 +188,13 @@ export function Shell(): React.ReactNode {
         {current === null ? null : <RunningJob job={current} />}
         {meta.isError ? (
           <p className="note danger" role="alert">
-            The Saltbox UI daemon is not answering. Check <code>systemctl status saltbox-ui</code> on the server.
+            {meta.error instanceof ApiError && meta.error.status === 403 ? (
+              <>Access refused: {meta.error.message}.</>
+            ) : (
+              <>
+                The Saltbox UI daemon is not answering. Check <code>systemctl status saltbox-ui</code> on the server.
+              </>
+            )}
           </p>
         ) : null}
         <div className={styles['content']}>

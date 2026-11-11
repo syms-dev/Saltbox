@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hmac
 import logging
+import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -46,6 +47,7 @@ class Services:
     token: str | None = None
     web_dir: Path | None = None
     tailscale_socket: str | None = None
+    admin_check: bool = True
     app_setup_factory: Callable[[Layout], Any] | None = None
     updates: UpdateService = field(init=False)
     automation: AutomationService = field(init=False)
@@ -99,12 +101,25 @@ class DaemonGuard:
     Traefik would add the token to it: a page on a sibling app's subdomain
     shares the Authelia cookie and must not be able to start jobs here.
 
+    A request that came through a reverse proxy (it carries ``X-Forwarded-Host``,
+    which Traefik always sets and a client cannot remove) must also say who
+    signed in: ``Remote-User`` from Authelia or ``X-authentik-username`` from
+    authentik. Only the Saltbox user from accounts.yml, or a member of the
+    ``admins`` group, is let in. Traefik deletes these headers from the client's
+    request before copying the sign-on's answer, so they cannot be forged, and an
+    SSO rule that lets people through without signing in sends none, which is
+    refused. Without this, every SSO user, and anyone covered by a bypass rule,
+    would control a daemon that runs as root.
+
     This is plain ASGI rather than ``BaseHTTPMiddleware``, which never sees
     WebSocket connections.
     """
 
     SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
     SAME_SITE = frozenset({"same-origin", "none"})
+    USER_HEADERS = ("remote-user", "x-authentik-username")
+    GROUP_HEADERS = ("remote-groups", "x-authentik-groups")
+    ADMIN_GROUP = "admins"
 
     def __init__(
         self,
@@ -112,9 +127,11 @@ class DaemonGuard:
         token: str,
         tailscale_socket: str | None = None,
         tailscale_owner: Callable[[], str | None] | None = None,
+        admin_user: Callable[[], str | None] | None = None,
     ):
         self.app = app
         self.token = token
+        self.admin_user = admin_user
         self.tailscale_socket = tailscale_socket
         self.tailscale_owner = tailscale_owner or TailscaleOwner()
 
@@ -152,12 +169,33 @@ class DaemonGuard:
             return "only the Tailscale account that owns this server can open it"
         return None
 
+    def _sso_refusal(self, headers: Headers) -> str | None:
+        """For proxied requests: the signed-in person must be the Saltbox admin."""
+        user = next((headers[h].strip() for h in self.USER_HEADERS if headers.get(h)), "")
+        if not user:
+            return (
+                "no signed-in user came with this request; this app needs single sign-on "
+                "(Authelia) in front of it, without a bypass rule"
+            )
+        groups: set[str] = set()
+        for header in self.GROUP_HEADERS:
+            groups |= {g.strip().lower() for g in re.split(r"[,|]", headers.get(header, ""))}
+        admin = (self.admin_user() if self.admin_user else None) or ""
+        if user.lower() == admin.lower() or self.ADMIN_GROUP in groups:
+            return None
+        return f"signed in as {user}, but only the Saltbox admin can use this app"
+
     def _refusal(self, scope: Scope, headers: Headers) -> str | None:
         if scope.get("client") is not None:
             header = headers.get("authorization", "")
             presented = header[7:] if header.lower().startswith("bearer ") else ""
             if not presented or not hmac.compare_digest(presented, self.token):
                 return "unauthorised"
+            # The Unix sockets have their own gates (root only; the Tailscale owner).
+            if self.admin_user is not None and headers.get("x-forwarded-host"):
+                refused = self._sso_refusal(headers)
+                if refused:
+                    return refused
         if scope["type"] == "websocket":
             origin = headers.get("origin")
             if origin and urlsplit(origin).netloc != headers.get("host", ""):
@@ -169,6 +207,15 @@ class DaemonGuard:
         return None
 
 
+def _admin_user(services: Services) -> str | None:
+    """The Saltbox user from accounts.yml: the one person the web app is for."""
+    try:
+        value = services.config.get("accounts", "user.name")
+    except Exception:  # missing or unreadable accounts.yml: only the admins group gets in
+        return None
+    return str(value) if value else None
+
+
 def create_app(
     layout: Layout | None = None,
     *,
@@ -176,12 +223,14 @@ def create_app(
     web_dir: Path | None = None,
     services: Services | None = None,
     tailscale_socket: str | None = None,
+    admin_check: bool = True,
 ) -> FastAPI:
     services = services or Services(
         layout or Layout.from_env(),
         token=token,
         web_dir=web_dir,
         tailscale_socket=tailscale_socket,
+        admin_check=admin_check,
     )
     app = FastAPI(
         title="saltbox-ui",
@@ -194,7 +243,10 @@ def create_app(
     app.include_router(router, prefix="/api")
     if services.token:
         app.add_middleware(
-            DaemonGuard, token=services.token, tailscale_socket=services.tailscale_socket
+            DaemonGuard,
+            token=services.token,
+            tailscale_socket=services.tailscale_socket,
+            admin_user=(lambda: _admin_user(services)) if services.admin_check else None,
         )
     if services.web_dir and (services.web_dir / "index.html").exists():
         _mount_web(app, services.web_dir)
@@ -225,10 +277,12 @@ def _mount_web(app: FastAPI, web_dir: Path) -> None:
 
 
 def default_web_dir(layout: Layout) -> Path | None:
-    """The built web app: the repo checkout first, then next to the package."""
+    """The built web app: a checkout's build first, then the one shipped in the package."""
+    package = Path(__file__).resolve().parents[1]
     candidates = [
         layout.repo / "ui" / "web" / "dist",
-        Path(__file__).resolve().parents[2] / "web" / "dist",
+        package.parent / "web" / "dist",  # an editable install from a checkout
+        package / "web_dist",  # a wheel built with the web app inside
     ]
     for candidate in candidates:
         if (candidate / "index.html").exists():

@@ -35,6 +35,12 @@ saltbox-uid = "saltbox_ui.daemon.main:main"
 [tool.hatch.build.targets.wheel]
 packages = ["saltbox_ui"]
 
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["saltbox_ui", "tests", "hatch_build.py", "README.md", "web/dist"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

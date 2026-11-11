@@ -33,6 +33,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-uds", action="store_true", help="do not listen on a Unix socket")
     parser.add_argument("--no-token", action="store_true", help="development only: no auth")
     parser.add_argument(
+        "--no-admin-check",
+        action="store_true",
+        default=os.environ.get("SALTBOX_UI_ADMIN_CHECK", "").lower() in {"off", "0", "false"},
+        help="let every single-sign-on user in, not only the Saltbox admin (not recommended)",
+    )
+    parser.add_argument(
         "--web", default=os.environ.get("SALTBOX_UI_WEB"), help="directory with the built web app"
     )
     parser.add_argument("--log-level", default="info")
@@ -106,7 +112,11 @@ def main(argv: list[str] | None = None) -> int:
     token = None if args.no_token else ensure_token(layout)
     tailscale_socket = None if args.no_uds else tailscale_socket_for(args.uds)
     app = create_app(
-        layout, token=token, web_dir=web_dir(args.web, layout), tailscale_socket=tailscale_socket
+        layout,
+        token=token,
+        web_dir=web_dir(args.web, layout),
+        tailscale_socket=tailscale_socket,
+        admin_check=not args.no_admin_check,
     )
     app.state.services.automation.start()
     # Parse every role's defaults once in the background, so the first Apps page is quick.

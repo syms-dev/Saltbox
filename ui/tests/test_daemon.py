@@ -430,3 +430,81 @@ def test_git_describe_reads_a_repo_owned_by_someone_else(tmp_path: Path, monkeyp
     described = _git_describe(repo)
     assert described["branch"] == "claude/x"
     assert described["commit"]
+
+
+def test_only_the_saltbox_admin_gets_in_through_the_proxy(
+    scratch_layout: Layout, fake_sb: Path
+) -> None:
+    """Traefik adds the token to whatever single sign-on lets through, so the daemon checks
+    who signed in: other SSO users, and requests a bypass rule let through, are refused."""
+    from starlette.websockets import WebSocketDisconnect
+
+    scratch_layout.config_file("accounts").write_text("---\nuser:\n  name: seed\n")
+    client = TestClient(create_app(services=Services(scratch_layout, token="s3cret")))
+    auth = {"Authorization": "Bearer s3cret"}
+    proxied = {**auth, "X-Forwarded-Host": "saltbox.example.com"}
+
+    assert client.get("/api/meta", headers=auth).status_code == 200  # root's curl, not proxied
+    bypass = client.get("/api/meta", headers=proxied)
+    assert bypass.status_code == 403 and "no signed-in user" in bypass.json()["error"]
+    guest = client.get("/api/meta", headers={**proxied, "Remote-User": "guest"})
+    assert guest.status_code == 403 and "signed in as guest" in guest.json()["error"]
+    assert client.get("/api/meta", headers={**proxied, "Remote-User": "Seed"}).status_code == 200
+    in_group = {**proxied, "Remote-User": "partner", "Remote-Groups": "family,admins"}
+    assert client.get("/api/meta", headers=in_group).status_code == 200
+    authentik = {**proxied, "X-authentik-username": "partner", "X-authentik-groups": "admins|x"}
+    assert client.get("/api/meta", headers=authentik).status_code == 200
+    refused = client.post(
+        "/api/jobs", json={"kind": "validate"}, headers={**proxied, "Remote-User": "guest"}
+    )
+    assert refused.status_code == 403
+
+    job = client.post("/api/jobs", json={"kind": "validate"}, headers=auth).json()
+    stream = f"/api/jobs/{job['id']}/stream"
+    with (
+        pytest.raises(WebSocketDisconnect) as closed,
+        client.websocket_connect(stream, headers={**proxied, "Remote-User": "guest"}) as ws,
+    ):
+        ws.receive_json()
+    assert closed.value.code == 4403
+
+    open_door = TestClient(
+        create_app(services=Services(scratch_layout, token="s3cret", admin_check=False))
+    )
+    assert (
+        open_door.get("/api/meta", headers={**proxied, "Remote-User": "guest"}).status_code == 200
+    )
+
+
+def test_disable_web_removes_what_enable_put_there(scratch_layout: Layout, tmp_path: Path) -> None:
+    from saltbox_ui.daemon.install import disable_web, enable_web
+
+    scratch_layout.config_file("accounts").write_text("---\nuser:\n  domain: example.com\n")
+    units, traefik = tmp_path / "units", tmp_path / "traefik"
+    enable_web(scratch_layout, unit_dir=units, traefik_dir=traefik, start=False)
+    (units / "saltbox-ui-portsync.timer").write_text("[Timer]\n")
+    assert (units / "saltbox-ui.service").exists() and (traefik / "saltbox-ui.yml").exists()
+    calls: list[tuple[str, ...]] = []
+
+    def ctl(*args: str) -> tuple[int, str]:
+        calls.append(args)
+        return 0, ""
+
+    result = disable_web(scratch_layout, unit_dir=units, traefik_dir=traefik, run=ctl)
+    assert ("disable", "--now", "saltbox-ui.service") in calls and ("daemon-reload",) in calls
+    assert not list(units.iterdir()) and not (traefik / "saltbox-ui.yml").exists()
+    assert (scratch_layout.state_dir / "api-token").exists()  # kept unless purged
+    assert result["state_kept"] == str(scratch_layout.state_dir)
+    disable_web(scratch_layout, unit_dir=units, traefik_dir=traefik, run=ctl, purge=True)
+    assert not scratch_layout.state_dir.exists()
+
+
+def test_packaged_web_app_is_found(scratch_layout: Layout, monkeypatch, tmp_path: Path) -> None:
+    from saltbox_ui.daemon import app as daemon_app
+
+    package = tmp_path / "site-packages" / "saltbox_ui"
+    (package / "daemon").mkdir(parents=True)
+    (package / "web_dist").mkdir()
+    (package / "web_dist" / "index.html").write_text("<html></html>")
+    monkeypatch.setattr(daemon_app, "__file__", str(package / "daemon" / "app.py"))
+    assert daemon_app.default_web_dir(scratch_layout) == package / "web_dist"

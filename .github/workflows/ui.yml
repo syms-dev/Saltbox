@@ -2,7 +2,7 @@ name: UI
 
 on:
   push:
-    branches: [master]
+    branches: [master, 'claude/**']
     paths:
       - 'ui/**'
       - 'schema/**'
@@ -129,4 +129,48 @@ jobs:
       - name: End to end tests
         working-directory: ui/web
         run: npm run e2e
+
+  package:
+    name: Package with the web app inside
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-saltbox-uv
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/web/package-lock.json
+
+      - name: Build the web app
+        working-directory: ui/web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Build the wheel
+        working-directory: ui
+        run: |
+          uv python install --managed-python --no-bin "$(< ../.python-version)"
+          uv build --wheel --python "$(< ../.python-version)" --out-dir dist
+
+      - name: Install it somewhere clean and serve the web app from it
+        run: |
+          uv venv --python "$(< .python-version)" /tmp/clean
+          uv pip install --python /tmp/clean/bin/python ui/dist/*.whl
+          mkdir -p /tmp/box/repo /tmp/box/opt /tmp/box/state
+          cd /tmp/box
+          SALTBOX_REPO=/tmp/box/repo SALTBOX_APPDATA=/tmp/box/opt SALTBOX_UI_STATE=/tmp/box/state \
+            /tmp/clean/bin/saltbox-uid --host 127.0.0.1 --port 8795 --no-uds --no-token &
+          for i in $(seq 30); do curl -sf -o /dev/null http://127.0.0.1:8795/api/meta && break; sleep 1; done
+          curl -sf http://127.0.0.1:8795/api/meta | grep -q '"web":true'
+          curl -sf http://127.0.0.1:8795/ | grep -q '<div id="root">'
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: saltbox-ui-wheel
+          path: ui/dist/*.whl
+          retention-days: 14
 

@@ -246,6 +246,23 @@ put back when you save, and logs have known secrets replaced. Every action asks
 first and says what will happen. App icons come from the apps themselves
 through Traefik, so nothing loads from outside the server.
 
+**Who gets in.** Through Traefik, only the Saltbox user from accounts.yml (or a
+member of Authelia's `admins` group) can use the app. The daemon reads the
+`Remote-User` header that Authelia returns (or `X-authentik-username`); Traefik
+strips any copy a client sends. Other single-sign-on users are refused, and so
+is a request that an SSO bypass rule let through without signing in.
+`saltbox-uid --no-admin-check` (or `SALTBOX_UI_ADMIN_CHECK=off`) turns this off.
+
+**Removing it.** `sudo sbx daemon disable` stops the service and removes its
+systemd unit, Traefik route, the VPN port-sync timer and the Tailscale address.
+Saltbox, its config and the apps are untouched. `--purge` also deletes
+`/var/lib/saltbox-ui` (token, job logs, alert and maintenance settings).
+
+**Without Node on the server.** A wheel built after `npm run build` carries the
+web app inside it (`hatch_build.py`), so an installed daemon serves it directly.
+CI builds that wheel, installs it in a clean environment and checks the page
+loads.
+
 **Over Tailscale.** System → Tailscale → Turn on runs
 `tailscale serve --bg --https=8443 unix:/run/saltbox-ui/tailscale.sock`, so the
 app answers at `https://<name>.<tailnet>.ts.net:8443/` for the Tailscale account

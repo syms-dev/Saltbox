@@ -153,6 +153,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = daemon_sub.add_parser("route", help="write the Traefik route for saltbox.<domain>")
     p.add_argument("--subdomain", default="saltbox")
     p.add_argument("--traefik-dir", help="Traefik config directory (default: <appdata>/traefik)")
+    p = daemon_sub.add_parser(
+        "disable", help="stop the web face and remove its unit, route, timer and Tailscale address"
+    )
+    p.add_argument("--purge", action="store_true", help="also delete its state: token, job logs")
     daemon_sub.add_parser("build-web", help="build the web app with npm (needs nodejs and npm)")
     daemon_sub.add_parser("unit", help="print the systemd unit")
     daemon_sub.add_parser("url", help="print the web URL")
@@ -395,6 +399,7 @@ def _daemon(args: argparse.Namespace, layout: Layout) -> int:
     from .daemon.app import ensure_token, read_token
     from .daemon.install import (
         UNIT_NAME,
+        disable_web,
         enable_web,
         install_unit,
         systemctl,
@@ -422,6 +427,9 @@ def _daemon(args: argparse.Namespace, layout: Layout) -> int:
     if args.action == "enable":
         web = Path(args.web) if args.web else None
         emit(enable_web(layout, subdomain=args.subdomain, web=web, start=not args.no_start))
+        return 0
+    if args.action == "disable":
+        emit(disable_web(layout, purge=args.purge))
         return 0
     if args.action == "route":
         token = ensure_token(layout)
