@@ -59,7 +59,10 @@ jobs:
           .venv/bin/sbx catalog apps | python3 -c 'import json,sys; a=json.load(sys.stdin); assert len(a) > 50, a; print(len(a), "apps")'
           .venv/bin/sbx catalog fields sonarr > /dev/null
           .venv/bin/sbx run install core --dry-run
-          .venv/bin/sbx install preflight > /dev/null
+          # A runner is not a Saltbox server: preflight exits 3 when a blocking check fails.
+          # What matters here is that it runs and reports every check.
+          .venv/bin/sbx install preflight > /tmp/preflight.json || [ "$?" -eq 3 ]
+          python3 -c 'import json; c=json.load(open("/tmp/preflight.json")); c=c.get("checks", c) if isinstance(c, dict) else c; assert len(c) >= 10, c; print(len(c), "preflight checks")'
           .venv/bin/sbx daemon unit | grep -q ExecStart
 
   web:
