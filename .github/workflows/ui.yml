@@ -105,6 +105,7 @@ jobs:
   e2e:
     name: Web app end to end (daemon + browser)
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -127,7 +128,14 @@ jobs:
         working-directory: ui/web
         run: |
           npm ci --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
+          # Chromium's system packages come from Ubuntu's package mirror, which
+          # the runners cannot always reach, and apt then retries for ten minutes
+          # before failing the job. Give it three; if it fails, the tests run on
+          # the packages the runner image already has and say so.
+          if ! sudo env "PATH=$PATH" timeout 180 node_modules/.bin/playwright install-deps chromium; then
+            echo "::warning::Chromium's system packages could not be installed; the tests run on the runner image's own."
+          fi
 
       - name: End to end tests
         working-directory: ui/web
