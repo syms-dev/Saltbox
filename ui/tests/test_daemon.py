@@ -371,13 +371,19 @@ def test_enable_web_writes_everything(scratch_layout: Layout, tmp_path: Path) ->
     assert result["steps"] == {}
 
 
-def test_default_web_dir_prefers_the_checkout(scratch_layout: Layout) -> None:
+def test_default_web_dir_is_the_source_trees_build(
+    scratch_layout: Layout, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An editable install serves web/dist from the source tree it was installed from."""
+    from saltbox_ui.daemon import app as daemon_app
     from saltbox_ui.daemon.app import default_web_dir
     from saltbox_ui.daemon.install import enable_web
 
-    dist = scratch_layout.repo / "ui" / "web" / "dist"
-    bundled = Path(__file__).resolve().parents[1] / "web" / "dist"
-    assert default_web_dir(scratch_layout) in (None, bundled)
+    package = tmp_path / "src" / "saltbox_ui"
+    (package / "daemon").mkdir(parents=True)
+    monkeypatch.setattr(daemon_app, "__file__", str(package / "daemon" / "app.py"))
+    assert default_web_dir(scratch_layout) is None
+    dist = tmp_path / "src" / "web" / "dist"
     dist.mkdir(parents=True)
     (dist / "index.html").write_text("<html></html>")
     assert default_web_dir(scratch_layout) == dist

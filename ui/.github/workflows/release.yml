@@ -1,0 +1,47 @@
+name: Release
+
+# Pushing a tag like v0.1.0 builds the wheel (with the web app inside) and
+# attaches it to a GitHub release. The tag must match the version in pyproject.toml.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.13.4"
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: The tag matches the package version
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME, package $version" >&2; exit 1; }
+
+      - name: Build the web app
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Build the wheel and check the web app is in it
+        run: |
+          uv build --wheel --python 3.12 --out-dir dist
+          python3 -c 'import glob,zipfile; n=zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist(); assert "saltbox_ui/web_dist/index.html" in n, "no web app in the wheel"'
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.whl --generate-notes

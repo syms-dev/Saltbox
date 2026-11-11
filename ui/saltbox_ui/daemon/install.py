@@ -197,7 +197,10 @@ def enable_web(
         "steps": {},
     }
     if web is None:
-        result["warning"] = "the web app is not built yet; run: sudo sbx daemon build-web"
+        result["warning"] = (
+            "this install has no web app: install a release wheel, or from a source "
+            "checkout run: sudo sbx daemon build-web"
+        )
     if start:
         code, output = systemctl("daemon-reload")
         result["steps"]["daemon-reload"] = output or ("ok" if code == 0 else f"exit {code}")

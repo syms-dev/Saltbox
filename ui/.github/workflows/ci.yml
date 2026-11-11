@@ -1,0 +1,162 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.13.4"
+
+jobs:
+  engine:
+    name: Engine lint and tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Fetch the pinned Saltbox commit the tests read
+        run: scripts/fetch-saltbox.sh
+
+      - name: Install
+        run: |
+          uv venv --python "${{ matrix.python }}" .venv
+          uv pip install --python .venv/bin/python -e ".[dev,docker]"
+
+      - name: Lint
+        run: |
+          .venv/bin/ruff check .
+          .venv/bin/ruff format --check .
+
+      - name: Test
+        run: .venv/bin/pytest
+
+      - name: Smoke test the CLI against the Saltbox checkout
+        env:
+          SALTBOX_REPO: ${{ github.workspace }}/tests/.saltbox
+          SALTBOX_APPDATA: /tmp/sbx-appdata
+          SALTBOX_UI_STATE: /tmp/sbx-state
+        run: |
+          .venv/bin/sbx catalog apps | python3 -c 'import json,sys; a=json.load(sys.stdin); assert len(a) > 50, a; print(len(a), "apps")'
+          .venv/bin/sbx catalog fields sonarr > /dev/null
+          .venv/bin/sbx run install core --dry-run
+          # A runner is not a Saltbox server: preflight exits 3 when a blocking check fails.
+          .venv/bin/sbx install preflight > /tmp/preflight.json || [ "$?" -eq 3 ]
+          python3 -c 'import json; c=json.load(open("/tmp/preflight.json")); c=c.get("checks", c) if isinstance(c, dict) else c; assert len(c) >= 10, c; print(len(c), "preflight checks")'
+          .venv/bin/sbx daemon unit | grep -q ExecStart
+
+  web:
+    name: Web app lint, tests and build
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Lint and typecheck
+        run: |
+          npm run format:check
+          npm run lint
+          npm run typecheck
+
+      - run: npm test
+
+      - run: npm run build
+
+  e2e:
+    name: Web app end to end (daemon + browser)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Fetch the pinned Saltbox commit the test box is built from
+        run: scripts/fetch-saltbox.sh
+
+      - name: Install the engine
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python -e ".[dev]"
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install the web app and Chromium
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: End to end tests
+        working-directory: web
+        run: npm run e2e
+
+  package:
+    name: Package with the web app inside
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build the web app
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Build the wheel
+        run: uv build --wheel --python 3.12 --out-dir dist
+
+      - name: Install it somewhere clean and serve the web app from it
+        run: |
+          uv venv --python 3.12 /tmp/clean
+          uv pip install --python /tmp/clean/bin/python dist/*.whl
+          mkdir -p /tmp/box/repo /tmp/box/opt /tmp/box/state
+          cd /tmp/box
+          SALTBOX_REPO=/tmp/box/repo SALTBOX_APPDATA=/tmp/box/opt SALTBOX_UI_STATE=/tmp/box/state \
+            /tmp/clean/bin/saltbox-uid --host 127.0.0.1 --port 8795 --no-uds --no-token &
+          for i in $(seq 30); do curl -sf -o /dev/null http://127.0.0.1:8795/api/meta && break; sleep 1; done
+          curl -sf http://127.0.0.1:8795/api/meta | grep -q '"web":true'
+          curl -sf http://127.0.0.1:8795/ | grep -q '<div id="root">'
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: saltbox-ui-wheel
+          path: dist/*.whl
+          retention-days: 14

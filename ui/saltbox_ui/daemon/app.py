@@ -277,12 +277,11 @@ def _mount_web(app: FastAPI, web_dir: Path) -> None:
 
 
 def default_web_dir(layout: Layout) -> Path | None:
-    """The built web app: a checkout's build first, then the one shipped in the package."""
+    """The built web app: the one shipped in the package, else the source tree's build."""
     package = Path(__file__).resolve().parents[1]
     candidates = [
-        layout.repo / "ui" / "web" / "dist",
-        package.parent / "web" / "dist",  # an editable install from a checkout
         package / "web_dist",  # a wheel built with the web app inside
+        package.parent / "web" / "dist",  # an editable install from a source checkout
     ]
     for candidate in candidates:
         if (candidate / "index.html").exists():

@@ -34,7 +34,10 @@ from saltbox_ui.daemon.updates import UpdateService
 from saltbox_ui.layout import Layout
 from saltbox_ui.state.updates import Registry, check_updates
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+from .saltbox_checkout import saltbox_checkout
+
+REPO_ROOT = saltbox_checkout()
+WEB_DIST = Path(__file__).resolve().parents[1] / "web" / "dist"
 DOMAIN = "e2e.example"
 UPDATED_IMAGES = {"hotio/sonarr", "qmcgaw/gluetun"}
 
@@ -357,7 +360,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--port", type=int, default=8790)
     parser.add_argument("--token", default="e2e-token")
-    parser.add_argument("--web", default=str(REPO_ROOT / "ui" / "web" / "dist"))
+    parser.add_argument("--web", default=str(WEB_DIST))
     args = parser.parse_args(argv)
 
     import uvicorn

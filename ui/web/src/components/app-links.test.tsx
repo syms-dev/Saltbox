@@ -14,9 +14,9 @@ describe('overallUpdate', () => {
 
 describe('OpenLinks', () => {
   it('opens the app in a new tab', () => {
-    render(<OpenLinks urls={['https://sonarr.thesyms.ca']} />);
-    const link = screen.getByRole('link', { name: 'Open sonarr.thesyms.ca' });
-    expect(link).toHaveAttribute('href', 'https://sonarr.thesyms.ca');
+    render(<OpenLinks urls={['https://sonarr.example.com']} />);
+    const link = screen.getByRole('link', { name: 'Open sonarr.example.com' });
+    expect(link).toHaveAttribute('href', 'https://sonarr.example.com');
     expect(link).toHaveAttribute('target', '_blank');
   });
 

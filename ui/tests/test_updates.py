@@ -45,12 +45,12 @@ def test_pinned_images_are_not_checked() -> None:
 
 def test_web_urls_prefer_the_main_router() -> None:
     labels = {
-        "traefik.http.routers.sonarr-http.rule": "Host(`sonarr.thesyms.ca`)",
-        "traefik.http.routers.sonarr-api.rule": "Host(`sonarr.thesyms.ca`) && PathPrefix(`/api`)",
-        "traefik.http.routers.sonarr.rule": "(Host(`tv.thesyms.ca`) || Host(`sonarr.thesyms.ca`))",
+        "traefik.http.routers.sonarr-http.rule": "Host(`sonarr.example.com`)",
+        "traefik.http.routers.sonarr-api.rule": "Host(`sonarr.example.com`) && PathPrefix(`/api`)",
+        "traefik.http.routers.sonarr.rule": "(Host(`t.example.com`) || Host(`sonarr.example.com`))",
         "traefik.enable": "true",
     }
-    assert web_urls("sonarr", labels) == ["https://tv.thesyms.ca", "https://sonarr.thesyms.ca"]
+    assert web_urls("sonarr", labels) == ["https://t.example.com", "https://sonarr.example.com"]
     assert web_urls("gluetun", {}) == []
 
 
@@ -214,7 +214,7 @@ CONTAINERS = [
         "managed": True,
         "image_ref": "ghcr.io/hotio/sonarr:release",
         "network_mode": "saltbox",
-        "urls": ["https://sonarr.thesyms.ca"],
+        "urls": ["https://sonarr.example.com"],
     },
     {
         "name": "gluetun",
@@ -232,7 +232,7 @@ CONTAINERS = [
         "managed": True,
         "image_ref": "saltydk/qbittorrent:latest",
         "network_mode": "container:gluetun",
-        "urls": ["https://qbittorrent.thesyms.ca"],
+        "urls": ["https://qbittorrent.example.com"],
     },
 ]
 
@@ -283,13 +283,13 @@ def test_apps_carry_links_and_update_status(client) -> None:
     http, _ = client
     apps = {a["role"]: a for a in http.get("/api/apps").json()}
     sonarr = apps["sonarr"]
-    assert sonarr["urls"] == ["https://sonarr.thesyms.ca"]
+    assert sonarr["urls"] == ["https://sonarr.example.com"]
     assert sonarr["update_available"] is True
     assert sonarr["containers"][0]["update"] == "update"
     assert apps["qbittorrent"]["update_available"] is False
     assert apps["radarr"]["containers"] == [] and apps["radarr"]["urls"] == []
     detail = http.get("/api/apps/saltbox/sonarr").json()
-    assert detail["urls"] == ["https://sonarr.thesyms.ca"] and detail["update_available"]
+    assert detail["urls"] == ["https://sonarr.example.com"] and detail["update_available"]
     overview = http.get("/api/overview").json()
     assert overview["updates"]["pending"] == ["gluetun", "sonarr"]
 

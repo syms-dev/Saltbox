@@ -9,7 +9,9 @@ import pytest
 
 from saltbox_ui.layout import Layout
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+from .saltbox_checkout import saltbox_checkout
+
+REPO_ROOT = saltbox_checkout()
 
 
 @pytest.fixture(scope="session")

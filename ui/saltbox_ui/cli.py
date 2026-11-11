@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from . import __version__
@@ -453,17 +454,28 @@ def _daemon(args: argparse.Namespace, layout: Layout) -> int:
 
 
 def _build_web(layout: Layout) -> int:
-    """npm ci and npm run build in the checkout's ui/web, output on stderr."""
+    """npm ci and npm run build in the source tree's web/, output on stderr.
+
+    Only an editable install from a source checkout has anything to build; an
+    installed wheel already carries the web app.
+    """
     import shutil
     import subprocess
 
-    source = layout.repo / "ui" / "web"
+    from .daemon.app import default_web_dir
+
+    package = Path(__file__).resolve().parent
+    source = package.parent / "web"
+    if not (source / "package.json").exists():
+        shipped = default_web_dir(layout)
+        if shipped is not None:
+            emit({"built": str(shipped), "note": "this install already includes the web app"})
+            return 0
+        emit({"error": f"no web app source at {source}; install a release wheel instead"})
+        return 1
     npm = shutil.which("npm")
     if npm is None:
         emit({"error": "npm not found; install it with: sudo apt install -y nodejs npm"})
-        return 1
-    if not (source / "package.json").exists():
-        emit({"error": f"no web app source at {source}"})
         return 1
     for step in (["ci", "--no-audit", "--no-fund"], ["run", "build"]):
         result = subprocess.run([npm, *step], cwd=source, stdout=sys.stderr, check=False)

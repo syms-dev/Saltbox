@@ -1,221 +1,34 @@
 # saltbox-ui
 
-Engine, terminal UI and web UI for Saltbox. See `docs/ui/PLAN.md` at the
-repository root for the design.
+An unofficial installer and web dashboard for [Saltbox](https://github.com/saltyorg/Saltbox).
 
-The package has two parts today:
+It sits on top of an unmodified Saltbox install. It reads Saltbox's own
+playbook, schemas and role defaults, and every change goes through Saltbox's
+`sb` command, so Saltbox's own checks and locking still apply. It never calls
+Ansible itself and it does not change any Saltbox file except the config files
+you edit through it.
 
-- the engine (phase 0): reads, validates and writes Saltbox configuration,
-  builds the app catalog from the playbooks and role defaults, runs `sb`, and
-  reads runtime state. A JSON command line, `sbx`, exposes it for scripting.
-- the TUI installer (phase 1): `saltbox-ui`, a wizard that takes a fresh
-  Ubuntu server through preflight checks, account, DNS, apps, storage (rclone
-  remotes through rclone's own question API, including headless OAuth) and the
-  install itself, and resumes after the reboot preinstall may trigger.
-- the daemon and web face (phase 2): `saltbox-uid`, a FastAPI service with
-  the one-at-a-time job queue and a WebSocket log stream, and `web/`, a React
-  app served by the daemon at `https://saltbox.<domain>` behind Traefik and
-  Authelia: overview, apps, jobs, config editor.
+**This is not part of Saltbox and the Saltbox team does not support it.** If
+something here breaks, open an issue in this repository, not in Saltbox's
+Discord or issue tracker.
 
-The package never calls Ansible directly. Every playbook run goes through the
-upstream `sb` binary so its venv handling, tag validation and locking are
-inherited unchanged.
+I wanted to install and look after my own Saltbox server without living in a
+terminal, so I built this, for fun, with an AI coding assistant (see
+[How it was built](#how-it-was-built)).
 
-## Layout
+## What it does
 
-```
-saltbox_ui/
-  layout.py        paths, mirrors sb-go's layout package, env overridable
-  yamlio.py        comment-preserving YAML load, save, duplicate key check
-  schema/          port of sb's YAML schema validator and built-in validators
-  config/          the six config files plus the inventory
-  catalog/         playbook roles and tags, role defaults parser, app catalog
-  runner.py        sb command builder and streaming job runner with a lock
-  state/           facts, ports, mounts, containers, host, MOTD, tag cache
-  installer/       install plan (JSON, resumable), preflight checks, session
-  rclone/          rclone's non-interactive config API as a question loop
-  tui/             Textual app: step screens, rclone modal, shared widgets
-  daemon/          FastAPI app, routes, job manager, systemd unit, Traefik route
-  cli.py           sbx, JSON output
-web/               React + TypeScript app (Vite), built into web/dist
-tests/             pytest suite using the real roles as fixtures
-scripts/           catalog data builder (reads a docs repo checkout)
-```
+**Terminal installer** (`saltbox-ui`): a wizard that takes a fresh Ubuntu
+server through preflight checks, account and domain, DNS and certificates,
+choosing apps, storage (rclone remotes, including headless sign-in), linking
+Plex, and the install itself. It saves progress after every step and resumes
+after a reboot or a dropped SSH session.
 
-## Development
+**Web app** (`https://saltbox.<your domain>`, behind Traefik and Authelia):
 
-```
-cd ui
-uv venv .venv && uv pip install --python .venv/bin/python -e ".[dev,docker]"
-.venv/bin/ruff check . && .venv/bin/pytest
-```
-
-Point the engine at a checkout instead of a live install with environment
-variables: `SALTBOX_REPO`, `SALTBOX_APPDATA`, `SB_BINARY`.
-
-```
-SALTBOX_REPO=$PWD/.. .venv/bin/sbx catalog apps | head
-SALTBOX_REPO=$PWD/.. .venv/bin/sbx catalog fields sonarr
-SALTBOX_REPO=$PWD/.. .venv/bin/sbx config validate
-```
-
-The web app has unit tests (Vitest) and an end-to-end suite (Playwright) that
-drives the built app in Chromium against the real daemon, with its token check
-and job runner, on a throwaway box: `tests/e2e_box.py` fakes only `sb`,
-`docker` and the image registry.
-
-```
-cd ui/web
-npm ci
-npm test            # unit tests
-npm run e2e         # builds, starts tests/e2e_box.py, runs e2e/*.spec.ts
-python -m tests.e2e_box --port 8790 --token dev   # (from ui/) the same box, to click around in
-```
-
-New pages get a case in `e2e/functional.spec.ts` and an entry in the page list
-of `e2e/layout.spec.ts`, which checks phone and tablet widths for sideways
-scrolling. Every e2e test fails on a console error.
-
-## Installer
-
-On a server that already ran the Saltbox bootstrap (`sb` and
-`/srv/git/saltbox` present), point the checkout at the fork and install the
-package. The bootstrap makes a shallow clone that only tracks `master`, so
-widen the fetch refspec first; without it the branch is fetched but never
-gets an `origin/` name and the checkout fails. The wider refspec also lets
-`sb update` follow the fork's branch afterwards.
-
-```
-cd /srv/git/saltbox
-sudo git remote set-url origin https://github.com/syms-dev/Saltbox.git
-sudo git config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
-sudo git fetch origin claude/saltbox-gui-tui-bxul3c
-sudo git checkout -B claude/saltbox-gui-tui-bxul3c origin/claude/saltbox-gui-tui-bxul3c
-
-sudo apt install -y pipx
-sudo PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install --editable /srv/git/saltbox/ui
-sudo saltbox-ui
-```
-
-`PIPX_HOME` and `PIPX_BIN_DIR` put the commands in `/usr/local/bin`, which is
-on sudo's path. A plain `sudo -H pipx install` puts them in
-`/root/.local/bin`, which is not. `--editable` makes the installed commands
-run the code in the checkout, so updating the checkout updates the UI too.
-Tested on Ubuntu 26.04 with Python 3.14.
-
-### Updating
-
-Keep using `sb update`. It fetches the checkout's current branch and resets
-to it (`git reset --hard @{u}`), so with the branch tracking the fork it
-pulls the fork, never saltyorg. When it asks whether to reset to `master`,
-answer `n`; answering `y` moves the checkout back to upstream Saltbox and
-the UI disappears. Run without a terminal, as the daemon's update job does,
-it stays on the current branch without asking. After an update that changes
-the UI's dependencies, refresh them with:
-
-```
-sudo PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install --force --editable /srv/git/saltbox/ui
-```
-
-Upstream Saltbox changes reach the server only through the fork: sync the
-fork's `master` with saltyorg on GitHub, then merge `master` into the UI
-branch.
-
-`saltbox-ui` re-executes itself through sudo when needed, keeping the
-`SALTBOX_*` variables. Progress is saved to `/var/lib/saltbox-ui/install-plan.json`
-after every step; start it again after a reboot or a dropped SSH session and
-it offers to resume. `saltbox-ui --serve 0.0.0.0:8700` serves the same wizard
-to a browser through textual-serve (install the `serve` extra); keep that
-behind SSH port forwarding, it has no authentication of its own.
-
-The same steps are scriptable:
-
-```
-sbx install preflight            # the checks the first screen shows
-sbx install plan                 # the saved plan, secrets redacted
-sbx install apply --validate     # write accounts.yml and friends from the plan
-sbx install tags                 # what the install run would pass to sb
-```
-
-To try the wizard without touching a real server, point it at a checkout and a
-fake `sb` (see `tests/conftest.py`), and set `SALTBOX_UI_NO_SUDO=1` so it does
-not re-exec as root:
-
-```
-SALTBOX_UI_NO_SUDO=1 SALTBOX_REPO=$PWD/.. SALTBOX_APPDATA=/tmp/opt \
-SALTBOX_UI_STATE=/tmp/state SB_BINARY=/tmp/fake-sb .venv/bin/saltbox-ui
-```
-
-The TUI tests drive every screen with Textual's pilot against a fake `sb` and
-a fake `rclone` that speaks the config-create protocol.
-
-## Connecting the apps
-
-After the install, `sudo saltbox-ui --setup` (or "Connect the apps" on the
-installer's last screen) makes the connections the Saltbox app docs describe:
-
-- qBittorrent saves to `/mnt/unionfs/downloads/torrents/qbittorrent/completed/`
-  with incomplete files in `incoming/`.
-- Sonarr, Radarr and Lidarr get root folders under `/mnt/unionfs/Media`,
-  qBittorrent (and SABnzbd when installed) as download clients with a
-  category per app, and an Autoscan webhook with only the file events
-  Autoscan understands.
-- Prowlarr syncs its indexers to each of them and gets qBittorrent too.
-- Plex gets Movies, TV Shows and Music libraries on the same paths, each
-  scanned once so Autoscan can update them, with video preview thumbnails
-  off.
-- The settings each app's docs page lists: qBittorrent's torrent-file
-  folders and unrar on completion; Media Management, renaming, download
-  handling and General for Sonarr, Radarr and Lidarr; and Plex's Library,
-  Network, Transcoder, DLNA, Scheduled Tasks and Remote Access settings.
-  Only fields the running version has are changed, everything else is left
-  as it was, and items the docs mark optional are skipped. Naming formats are
-  left alone: the docs call them a preference (Recyclarr can manage them).
-- qBittorrent's login: when an interrupted install left it on its own
-  temporary `admin` password, the password is read from its log and the
-  login set to the accounts.yml user and password, as Saltbox intended. A
-  login someone set on purpose is never changed.
-
-It reads API keys from each app's own config under `/opt`, the qBittorrent
-and Autoscan login from `accounts.yml`, and the Plex token from
-`/opt/saltbox/plex.ini`, and reaches the containers by name through the
-`/etc/hosts` entries Saltbox's sdhm service maintains. Each connection is
-checked before anything is added, so running it again changes nothing.
-Bazarr and Seerr are listed as manual steps with the exact values to enter:
-Seerr needs a Plex sign-in in the browser, and Bazarr has no stable API for
-its settings.
-
-The same is scriptable with `sbx setup status` and `sbx setup apply`, and
-the daemon serves it at `GET /api/setup` and `POST /api/setup/apply`.
-
-## Daemon and web app
-
-The daemon runs as root under systemd. It listens on 127.0.0.1 and on the
-Docker bridge address (172.19.0.1, which Traefik knows as
-`host.docker.internal`), plus a root-only Unix socket. Every TCP request must
-carry a bearer token kept in `/var/lib/saltbox-ui/api-token`; the Traefik
-route adds that header after Authelia has authenticated the person, so a
-browser never sees the token and a local process without root cannot drive
-the daemon.
-
-Enable it from the installer's last screen, or by hand:
-
-```
-cd /srv/git/saltbox/ui/web && npm ci && npm run build     # needs node 22
-sudo sbx daemon enable --web /srv/git/saltbox/ui/web/dist
-```
-
-That writes `/opt/traefik/saltbox-ui.yml` (file provider, watched by
-Traefik), `/etc/systemd/system/saltbox-ui.service`, and starts it. The app
-answers at `https://saltbox.<domain>` once Traefik has a certificate. The API
-is documented at `/api/docs` on the daemon; `sbx daemon token` prints the
-token for curl.
-
-What the web app does:
-
-- **Home** leads with what needs you, each item with the button that fixes it
-  (restart an unhealthy app, start a stopped one, apply updates, open a config
-  file with errors, retry a failed job, start the VPN). Then media at a glance:
+- **Home** leads with what needs you, each item with the button that fixes it:
+  restart an unhealthy app, start a stopped one, apply updates, open a config
+  file with errors, retry a failed job, start the VPN. Then media at a glance:
   the VPN (public IP, forwarded port, what is routed through it), downloads in
   qBittorrent and SABnzbd, what is playing on Plex and what Sonarr and Radarr
   expect this week; a launcher for your apps; updates, storage and activity.
@@ -228,50 +41,210 @@ What the web app does:
 - **System**: CPU, memory and the busiest containers; each drive and pool once;
   mounts and Saltbox services; Tailscale (and opening this app over it);
   backups (`sb install backup` on demand); Saltbox's own version and `sb update`.
-- **Automation**: alerts to your phone through Apprise (Saltbox's own
-  notification tool; accounts.yml's `apprise:` is the default) when an app turns
-  unhealthy or stops, a job fails, a disk passes 90%, updates arrive or the VPN
-  has a problem; and nightly maintenance that updates apps with new images
-  (except the ones you exclude) and sends one summary.
+- **Automation**: alerts to your phone through Apprise (the notification tool
+  Saltbox already installs; `apprise:` in accounts.yml is the default address)
+  when an app turns unhealthy or stops, a job fails, a disk passes 90%, updates
+  arrive or the VPN has a problem; and nightly maintenance that updates apps
+  with new images, except the ones you exclude, and sends one summary.
 - **Connect apps**: quality profiles through Recyclarr (TRaSH Guides profiles,
-  written to /opt/recyclarr with keys read from the apps, synced with a live
-  log), then the post-install wiring from the TUI's setup step, including
-  checks for the Bazarr and Seerr steps done by hand.
-- **Config**: the YAML files `sb` reads, with the same validation.
+  written to `/opt/recyclarr` with keys read from the apps), then the
+  post-install wiring the Saltbox app docs describe: download clients, root
+  folders, Prowlarr sync, FlareSolverr, Autoscan, Plex libraries and settings.
+  Steps that must be done by hand in Bazarr and Seerr are checked from those
+  apps' settings files.
+- **Config**: the YAML files `sb` reads, with the same validation as
+  `sb validate-config`.
 - Search with Ctrl+K (⌘K) or `/` to open any app, page or action.
 
-Passwords, tokens and keys never reach the browser unless you press Show
-secrets: config files show `‹hidden:user.pass›`-style placeholders that are
-put back when you save, and logs have known secrets replaced. Every action asks
-first and says what will happen. App icons come from the apps themselves
-through Traefik, so nothing loads from outside the server.
+A JSON command line, `sbx`, exposes the same engine for scripting.
 
-**Who gets in.** Through Traefik, only the Saltbox user from accounts.yml (or a
-member of Authelia's `admins` group) can use the app. The daemon reads the
-`Remote-User` header that Authelia returns (or `X-authentik-username`); Traefik
-strips any copy a client sends. Other single-sign-on users are refused, and so
-is a request that an SSO bypass rule let through without signing in.
-`saltbox-uid --no-admin-check` (or `SALTBOX_UI_ADMIN_CHECK=off`) turns this off.
+## Status: what has and has not been checked
 
-**Removing it.** `sudo sbx daemon disable` stops the service and removes its
+Version 0.1.0. Treat it as a beta.
+
+| Check | Result |
+| --- | --- |
+| Python tests (pytest) | 270 tests; pass on Python 3.12 and 3.14 |
+| Web unit tests (Vitest) | 41 tests pass |
+| End-to-end tests (Playwright, Chromium) | 58 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
+| Package | CI builds the wheel, installs it in a clean environment and loads the web app from it |
+| Real servers | **One**: Ubuntu 26.04, Python 3.14, local drives pooled with mergerfs, Plex, qBittorrent behind Gluetun (ProtonVPN) |
+
+The end-to-end tests run the real daemon and web app against a throwaway box
+where only `sb`, `docker`, `tailscale`, `apprise`, the image registry and the
+apps' HTTP APIs are faked (`tests/e2e_box.py`). That proves the UI and daemon
+work together; it does not prove they match every real server.
+
+They do not. On the one real server, these bugs got past the tests and were
+found by using it:
+
+- installs from the web app failed because systemd starts services without
+  `HOME`, and because git refuses a repository owned by another user;
+- qBittorrent 5.1 answers a successful login with 204, not "Ok.";
+- Plex ignores writes to a library's `/prefs` endpoint;
+- a VPN warning fired because Docker records `container:<id>`, not
+  `container:<name>`, for apps inside Gluetun's network;
+- Autoheal was missing from the app list because it keeps no folder in `/opt`.
+
+Each is fixed and now has a test. Expect more of the same on setups unlike
+that one. **Not yet run on any real server:**
+
+- installing this package from a release wheel (the real server runs it from a
+  source checkout);
+- the admin check behind a real Traefik and Authelia (tested with the headers
+  they send, and against Traefik's source);
+- cloud storage through the rclone wizard;
+- Ubuntu 22.04 and 24.04;
+- Jellyfin or Emby in place of Plex, and authentik in place of Authelia;
+- more than one instance of an app (`sonarr4k` and the like);
+- nightly maintenance, Back up now, and access over Tailscale.
+
+If you try one of these, an issue saying how it went is useful either way.
+
+## Install
+
+You need a server that has run Saltbox's own dependency script, so `sb` and
+`/srv/git/saltbox` exist: see the install section of the
+[Saltbox docs](https://docs.saltbox.dev).
+For a new server, stop after that script and let the wizard do the rest. For a
+server that already runs Saltbox, nothing else is needed.
+
+Install the wheel from this repository's Releases page with pipx:
+
+```
+sudo apt install -y pipx
+V=0.1.0
+sudo PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install \
+  "https://github.com/syms-dev/saltbox-ui/releases/download/v$V/saltbox_ui-$V-py3-none-any.whl"
+```
+
+`PIPX_HOME` and `PIPX_BIN_DIR` put the commands in `/usr/local/bin`, which is
+on sudo's path. The wheel carries the built web app, so the server needs no
+Node.
+
+Then, on a new server, run the installer:
+
+```
+sudo saltbox-ui
+```
+
+and on a server that already runs Saltbox, switch on the web app:
+
+```
+sudo sbx daemon enable
+```
+
+That writes a Traefik route (`/opt/traefik/saltbox-ui.yml`), a systemd unit
+(`saltbox-ui.service`) and starts it. The app answers at
+`https://saltbox.<your domain>` once Traefik has a certificate.
+
+**Updating:** install the newer wheel with `pipx install --force` and run
+`sudo systemctl restart saltbox-ui`. Saltbox itself keeps updating with
+`sb update`, from the terminal or the System page.
+
+**Removing:** `sudo sbx daemon disable` stops the service and removes its
 systemd unit, Traefik route, the VPN port-sync timer and the Tailscale address.
-Saltbox, its config and the apps are untouched. `--purge` also deletes
-`/var/lib/saltbox-ui` (token, job logs, alert and maintenance settings).
+Add `--purge` to also delete `/var/lib/saltbox-ui` (API token, job logs, alert
+and maintenance settings). Then `sudo PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx uninstall saltbox-ui`.
+Saltbox, its config and your apps are not touched.
 
-**Without Node on the server.** A wheel built after `npm run build` carries the
-web app inside it (`hatch_build.py`), so an installed daemon serves it directly.
-CI builds that wheel, installs it in a clean environment and checks the page
-loads.
+## Security model
 
-**Over Tailscale.** System → Tailscale → Turn on runs
-`tailscale serve --bg --https=8443 unix:/run/saltbox-ui/tailscale.sock`, so the
-app answers at `https://<name>.<tailnet>.ts.net:8443/` for the Tailscale account
-that owns the server, and nobody else: the daemon checks the
-`Tailscale-User-Login` header Tailscale adds on that socket, and refuses other
-users and tagged devices. It needs MagicDNS and HTTPS certificates switched on in
-the Tailscale admin console. It works when the domain, Cloudflare or Authelia do
-not, which makes it the way back in.
+The daemon runs as root, because `sb` does. That makes who can reach it the
+whole question.
 
-Development: start `saltbox-uid --no-token --no-uds --port 8701` against a
-checkout (same `SALTBOX_*` variables as above) and `npm run dev` in `web/`;
-Vite proxies `/api` to the daemon.
+- It listens on 127.0.0.1, on the Docker bridge address Traefik reaches it by,
+  and on two root-only Unix sockets. Every TCP request, HTTP or WebSocket, must
+  carry a bearer token kept in `/var/lib/saltbox-ui/api-token` (mode 0600).
+  Traefik adds it after single sign-on, so a browser never holds the token.
+- **Only the Saltbox admin gets in through Traefik.** The daemon reads the
+  `Remote-User` header Authelia returns (or `X-authentik-username`) and lets in
+  only the user from accounts.yml or a member of the `admins` group. Traefik
+  deletes any copy of those headers a client sends. Other single-sign-on users
+  are refused, and so is a request an SSO bypass rule let through without
+  signing in. `SALTBOX_UI_ADMIN_CHECK=off` turns this off.
+- Requests that change anything are refused when a browser says another site
+  started them, so a page on a sibling subdomain cannot start jobs.
+- **Secrets stay on the server.** Config files are shown with placeholders
+  such as `‹hidden:user.pass›`, which are put back when you save; known
+  passwords, tokens and API keys are replaced in job logs, container logs and
+  setup instructions. "Show secrets" reveals them on request.
+- Job records and logs are readable by root only.
+- **Over Tailscale** (optional): `tailscale serve` proxies port 8443 of the
+  server's tailnet address to one of the Unix sockets, and the daemon lets in
+  only the Tailscale account that owns the server, refusing other tailnet users
+  and tagged devices. It needs MagicDNS and HTTPS certificates enabled in the
+  Tailscale admin console.
+
+A security review of the code found and fixed: the job log WebSocket skipping
+the token check; job logs readable by any local user; and every single-sign-on
+user being trusted. If you find something else, please open an issue.
+
+## Development
+
+```
+scripts/fetch-saltbox.sh        # the pinned Saltbox commit the tests read, into tests/.saltbox
+uv venv .venv && uv pip install --python .venv/bin/python -e ".[dev,docker]"
+.venv/bin/ruff check . && .venv/bin/pytest
+
+cd web
+npm ci
+npm test                        # unit tests
+npm run e2e                     # builds the app, starts tests/e2e_box.py, runs e2e/*.spec.ts
+```
+
+`python -m tests.e2e_box --port 8790 --token dev` (from the repository root)
+starts the same throwaway box to click around in, after `npm run build`.
+
+Point the engine at a Saltbox checkout instead of a live install with
+`SALTBOX_REPO`, `SALTBOX_APPDATA`, `SALTBOX_UI_STATE` and `SB_BINARY`:
+
+```
+SALTBOX_REPO=$PWD/tests/.saltbox .venv/bin/sbx catalog apps | head
+```
+
+```
+saltbox_ui/
+  layout.py        paths, mirroring sb's layout, overridable by environment
+  yamlio.py        comment-preserving YAML load and save
+  schema/          port of sb's YAML schema validator
+  config/          the config files and the inventory
+  catalog/         playbook roles and tags, role defaults parser, app catalog
+  runner.py        sb command builder and streaming job runner with a lock
+  state/           containers, image and Saltbox updates, host, Tailscale, backups
+  installer/       install plan (resumable), preflight checks, session
+  rclone/          rclone's non-interactive config API as a question loop
+  appsetup/        post-install wiring of the apps through their own APIs
+  tui/             the Textual installer
+  daemon/          FastAPI app, routes, jobs, alerts and maintenance, systemd, Traefik
+  secrets.py       masking of secrets in what the daemon sends
+  media.py         VPN, downloads, Plex sessions, calendar
+  recyclarr.py     Recyclarr config from chosen profiles
+  cli.py           sbx
+web/               React and TypeScript app (Vite); e2e/ holds the Playwright suite
+tests/             pytest suite; e2e_box.py is the throwaway box
+scripts/           fetch-saltbox.sh; build_catalog.py (app metadata from the Saltbox docs)
+```
+
+New pages get a case in `web/e2e/functional.spec.ts` and an entry in the page
+list of `web/e2e/layout.spec.ts`.
+
+Releases: bump `version` in `pyproject.toml`, tag `v<version>` and push the
+tag. The Release workflow builds the wheel with the web app inside and attaches
+it to a GitHub release.
+
+## How it was built
+
+Almost all of this code was written by Claude (Anthropic's AI model),
+directed and tested by me on my own server. That is a reason to read the Status
+section above before trusting it, not a selling point. What was done about it:
+automated tests at three levels, run in CI on every push; a security review,
+with its findings fixed; every bug found on the real server reproduced in a
+test before it was fixed; and a list, above, of what has not been tried.
+
+## License
+
+GPL-3.0-only, the same license as Saltbox. The app catalog
+(`saltbox_ui/catalog/data/apps.json`) is generated from the Saltbox
+documentation. Saltbox is the work of the saltyorg contributors; this project
+only drives it.
