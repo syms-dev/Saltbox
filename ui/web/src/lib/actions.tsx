@@ -105,7 +105,10 @@ export function useJobActions(): {
               Runs <code>sb update</code>: resets the Saltbox checkouts to the latest commit on their branches and
               refreshes the settings files.
             </p>
-            <p>Apps keep running.</p>
+            <p>
+              If the update brings announcements they are shown with the job, and if it needs migrations the job waits
+              for you to say whether to run them. Apps keep running.
+            </p>
           </>
         ),
         confirmLabel: 'Run sb update',

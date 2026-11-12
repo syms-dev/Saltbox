@@ -40,12 +40,15 @@ after a reboot or a dropped SSH session.
   and why, and can be run again.
 - **System**: CPU, memory and the busiest containers; each drive and pool once;
   mounts and Saltbox services; Tailscale (and opening this app over it);
-  backups (`sb install backup` on demand); Saltbox's own version and `sb update`.
+  backups (`sb install backup` on demand); Saltbox's own version and `sb update`,
+  which shows the update's announcements with the job and waits for your yes or
+  no before it runs migrations.
 - **Automation**: alerts to your phone through Apprise (the notification tool
   Saltbox already installs; `apprise:` in accounts.yml is the default address)
   when an app turns unhealthy or stops, a job fails, a disk passes 90%, updates
   arrive or the VPN has a problem; and nightly maintenance that updates apps
-  with new images, except the ones you exclude, and sends one summary.
+  with new images, except the ones you exclude, and sends one summary. It does
+  not update Saltbox itself: `sb update` is made to be run by a person.
 - **Connect apps**: quality profiles through Recyclarr (TRaSH Guides profiles,
   written to `/opt/recyclarr` with keys read from the apps), then the
   post-install wiring the Saltbox app docs describe: download clients, root
@@ -64,8 +67,8 @@ Version 0.1.0. Treat it as a beta.
 
 | Check | Result |
 | --- | --- |
-| Python tests (pytest) | 270 tests; pass on Python 3.12 and 3.14 |
-| Web unit tests (Vitest) | 41 tests pass |
+| Python tests (pytest) | 285 tests; pass on Python 3.12 and 3.14 |
+| Web unit tests (Vitest) | 45 tests pass |
 | End-to-end tests (Playwright, Chromium) | 58 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
 | Package | CI builds the wheel, installs it in a clean environment and loads the web app from it |
 | Real servers | **One**: Ubuntu 26.04, Python 3.14, local drives pooled with mergerfs, Plex, qBittorrent behind Gluetun (ProtonVPN) |
@@ -84,11 +87,19 @@ found by using it:
 - Plex ignores writes to a library's `/prefs` endpoint;
 - a VPN warning fired because Docker records `container:<id>`, not
   `container:<name>`, for apps inside Gluetun's network;
-- Autoheal was missing from the app list because it keeps no folder in `/opt`.
+- Autoheal was missing from the app list because it keeps no folder in `/opt`;
+- `sb update` refuses to run without a terminal, shows announcements in a
+  full-screen viewer that waits for a key, and asks whether to run migrations.
+  The stand-in for `sb` did none of that.
 
-Each is fixed and now has a test. Expect more of the same on setups unlike
-that one. **Not yet run on any real server:**
+Each is fixed and now has a test (the `sb update` fix has not been back on the
+server yet, see below). Expect more of the same on setups unlike that one.
+**Not yet run on any real server:**
 
+- `sb update` from the web app since it was given a pseudo-terminal. It was
+  written from sb's source code (`cmd/update.go`, `saltbox/announcements.go`)
+  and is tested against a stand-in that behaves the same way at the terminal;
+  sb itself has not been run through it;
 - installing this package from a release wheel (the real server runs it from a
   source checkout);
 - the admin check behind a real Traefik and Authelia (tested with the headers

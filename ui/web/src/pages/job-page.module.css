@@ -43,3 +43,31 @@
 .flush {
   margin: 0;
 }
+
+.announcement {
+  border-top: 1px solid var(--color-border);
+  display: grid;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+}
+
+.announcementText {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.icon {
+  flex: none;
+}
+
+/* The question's own words keep the note's colour; what explains it reads as body text. */
+.question {
+  color: var(--color-fg);
+  flex: 1;
+  min-width: 0;
+}
+
+.question > strong {
+  color: var(--color-warn);
+}

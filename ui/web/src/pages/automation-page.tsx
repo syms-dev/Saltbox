@@ -137,7 +137,6 @@ function MaintenanceCard({ data }: { data: AutomationStatus }): React.ReactNode 
   const maintenance = data.settings.maintenance;
   const [enabled, setEnabled] = useState(maintenance.enabled);
   const [time, setTime] = useState(maintenance.time);
-  const [saltbox, setSaltbox] = useState(maintenance.saltbox);
   const [exclude, setExclude] = useState(maintenance.exclude);
   const apps = useApps();
   const save = useSaveAutomation();
@@ -148,7 +147,6 @@ function MaintenanceCard({ data }: { data: AutomationStatus }): React.ReactNode 
   const dirty =
     enabled !== maintenance.enabled ||
     time !== maintenance.time ||
-    saltbox !== maintenance.saltbox ||
     [...exclude].sort().join() !== [...maintenance.exclude].sort().join();
   const last = maintenance.last_run;
 
@@ -157,8 +155,7 @@ function MaintenanceCard({ data }: { data: AutomationStatus }): React.ReactNode 
       body: (
         <p>
           Checks for new images now and updates every app that has one
-          {exclude.length > 0 ? ', except the ones you excluded' : ''}
-          {saltbox ? ', after running sb update' : ''}. Updated apps restart.
+          {exclude.length > 0 ? ', except the ones you excluded' : ''}. Updated apps restart.
         </p>
       ),
       confirmLabel: 'Run maintenance',
@@ -191,10 +188,10 @@ function MaintenanceCard({ data }: { data: AutomationStatus }): React.ReactNode 
           <label htmlFor="maintenance-time">Start at (server time)</label>
           <input id="maintenance-time" onChange={(e) => setTime(e.target.value)} type="time" value={time} />
         </div>
-        <label className={styles['check']}>
-          <input checked={saltbox} onChange={(e) => setSaltbox(e.target.checked)} type="checkbox" /> Run{' '}
-          <code>sb update</code> first when Saltbox has new commits
-        </label>
+        <p className="muted small">
+          Saltbox itself is not updated here: <code>sb update</code> shows announcements and can ask about migrations,
+          so you start it yourself, from Home or System.
+        </p>
       </div>
       <fieldset className={styles['events']}>
         <legend>Never update automatically</legend>
@@ -244,7 +241,7 @@ function MaintenanceCard({ data }: { data: AutomationStatus }): React.ReactNode 
           disabled={!dirty || save.isPending}
           onClick={() =>
             save.mutate(
-              { maintenance: { enabled, exclude, saltbox, time } },
+              { maintenance: { enabled, exclude, time } },
               {
                 onError: (error) => toast({ body: error.message, title: 'Could not save', tone: 'danger' }),
                 onSuccess: () => toast({ title: 'Maintenance settings saved', tone: 'ok' }),

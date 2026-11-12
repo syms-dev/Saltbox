@@ -34,6 +34,7 @@ export const API_ROUTES = {
   containerAction: (name: string, action: string) => `/containers/${encodeURIComponent(name)}/${action}` as const,
   containerLogs: (name: string, tail: number) => `/containers/${encodeURIComponent(name)}/logs?tail=${tail}` as const,
   job: (id: string) => `/jobs/${id}` as const,
+  jobAnswer: (id: string) => `/jobs/${id}/answer` as const,
   jobCancel: (id: string) => `/jobs/${id}/cancel` as const,
   jobLog: (id: string) => `/jobs/${id}/log` as const,
   jobStream: (id: string) => `/jobs/${id}/stream` as const,

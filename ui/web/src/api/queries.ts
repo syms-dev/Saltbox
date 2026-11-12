@@ -138,6 +138,15 @@ export function useCancelJob(): UseMutationResult<{ cancelled: boolean }, Error,
   });
 }
 
+/** Answer the yes/no question a running job is waiting on. */
+export function useAnswerJob(): UseMutationResult<{ answered: boolean }, Error, { answer: boolean; id: string }> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ answer, id }) => apiPost<{ answered: boolean }>(API_ROUTES.jobAnswer(id), { answer }),
+    onSettled: () => void client.invalidateQueries({ queryKey: [QUERY_KEYS.JOBS] }),
+  });
+}
+
 type SaveConfigInput = { name: string; text: string };
 type SaveConfigResult = { issues: Issue[]; name: string };
 

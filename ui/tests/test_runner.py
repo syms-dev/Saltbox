@@ -32,7 +32,12 @@ def test_install_command_building(scratch_layout: Layout):
     ]
     with pytest.raises(ValueError):
         runner.install_command([" "])
-    assert runner.update_command() == ["/usr/local/bin/sb", "update"]
+    assert runner.update_command() == [
+        "/usr/local/bin/sb",
+        "update",
+        "--verbose",
+        "--keep-branch",
+    ]
 
 
 def test_run_streams_and_records(scratch_layout: Layout, fake_sb: Path):

@@ -333,7 +333,7 @@ def test_saltbox_checkouts_are_reported_and_updated_with_sb_update(client) -> No
     checks = []
     services.updates.repos = lambda: (checks.append(1), [])[1]
     job = http.post("/api/saltbox/update").json()
-    assert job["kind"] == "update" and job["command"][-1] == "update"
+    assert job["kind"] == "update" and job["command"][1] == "update"
     assert wait_job(http, job["id"])["status"] == "succeeded"
     services.updates.wait(5)
     assert checks  # sb update triggered a fresh check

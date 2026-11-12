@@ -49,7 +49,7 @@ EVENTS = {
 
 DEFAULTS: dict[str, Any] = {
     "alerts": {"enabled": False, "url": "", "events": dict.fromkeys(EVENTS, True)},
-    "maintenance": {"enabled": False, "time": "04:00", "saltbox": False, "exclude": []},
+    "maintenance": {"enabled": False, "time": "04:00", "exclude": []},
 }
 
 Runner = Callable[[list[str]], tuple[int, str]]
@@ -405,15 +405,6 @@ class AutomationService:
         self._save_last_run(record)  # claim tonight before anything slow
         svc.updates.refresh(wait=True)
         cached = svc.updates.cached()
-
-        if maintenance["saltbox"] and any(
-            r.get("status") == "update" for r in cached.get("repos", [])
-        ):
-            record["steps"].append(
-                self._run_job(lambda: svc.jobs.start("update"), "sb update", wait_seconds)
-            )
-            svc.updates.refresh(wait=True)
-            cached = svc.updates.cached()
 
         excluded = set(maintenance.get("exclude") or [])
         pending = {

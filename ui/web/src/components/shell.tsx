@@ -63,14 +63,23 @@ function RunningJob({ job }: { job: Job }): React.ReactNode {
     const timer = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(timer);
   }, []);
+  const waiting = job.question != null;
   return (
     <Link className={styles['jobBanner']} to={`/activity/${job.id}`}>
       <LoaderCircle aria-hidden="true" className="spin" size={16} />
       <span className={styles['jobText']}>
-        Running <code>{jobTitle(job)}</code>
+        {waiting ? (
+          <>
+            <code>{jobTitle(job)}</code> is waiting for your answer
+          </>
+        ) : (
+          <>
+            Running <code>{jobTitle(job)}</code>
+          </>
+        )}
       </span>
       <span className={styles['jobTime']}>{formatDuration(job.started_at, null)}</span>
-      <span className={styles['jobLink']}>View log</span>
+      <span className={styles['jobLink']}>{waiting ? 'Answer' : 'View log'}</span>
     </Link>
   );
 }

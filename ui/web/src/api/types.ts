@@ -8,13 +8,31 @@ export type Issue = {
 
 export type JobStatus = 'failed' | 'interrupted' | 'pending' | 'running' | 'succeeded';
 
+/** An announcement `sb update` showed: Markdown text, and the migration tag it asks for, if any. */
+export type Announcement = {
+  date: string;
+  message: string;
+  migration: string | null;
+  repo: string;
+  title: string;
+};
+
+/** What a running job is waiting to be told: whether to run the migrations `sb update` listed. */
+export type JobQuestion = {
+  kind: 'migrations';
+  migrations: { date: string; repo: string; tag: string }[];
+  text: string;
+};
+
 export type Job = {
+  announcements?: Announcement[];
   command: string[];
   command_line: string;
   finished_at: string | null;
   id: string;
   kind: string;
   log_path: string | null;
+  question?: JobQuestion | null;
   returncode: number | null;
   started_at: string | null;
   status: JobStatus;
@@ -35,7 +53,6 @@ export type JobRequest = {
   no_cache?: boolean;
   skip_tags?: string[];
   tags?: string[];
-  verbose?: boolean;
   verbosity?: number;
 };
 
@@ -340,7 +357,7 @@ export type MaintenanceRun = {
 
 export type AutomationSettings = {
   alerts: { enabled: boolean; events: Record<AlertEvent, boolean>; url: string };
-  maintenance: { enabled: boolean; exclude: string[]; last_run?: MaintenanceRun; saltbox: boolean; time: string };
+  maintenance: { enabled: boolean; exclude: string[]; last_run?: MaintenanceRun; time: string };
 };
 
 export type AlertEntry = { at: number; body: string; event: AlertEvent; result?: string; sent: boolean; title: string };

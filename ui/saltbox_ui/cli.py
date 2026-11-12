@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ from .config import ConfigService, Inventory
 from .config.service import CONFIG_FILES
 from .layout import Layout
 from .runner import JobRunning, SbRunner
+from .sbupdate import UpdateTerminal
 from .state import (
     cached_tags,
     disk_usage,
@@ -118,6 +120,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--dry-run", action="store_true", help="print the command only")
     p = run.add_parser("update")
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument(
+        "--migrations",
+        choices=["ask", "yes", "no"],
+        default="ask",
+        help="answer when sb asks to run migration tags; ask needs a terminal, else it is no",
+    )
     run.add_parser("jobs")
     p = run.add_parser("log")
     p.add_argument("job_id")
@@ -335,8 +343,12 @@ def _dispatch(args: argparse.Namespace, layout: Layout) -> int:
             if args.dry_run:
                 emit({"command": command})
                 return 0
+            terminal = UpdateTerminal.for_layout(layout, ask=_migration_answer(args.migrations))
             job = runner.run(
-                command, kind="update", on_line=lambda line: print(line, file=sys.stderr)
+                command,
+                kind="update",
+                on_line=lambda line: print(line, file=sys.stderr),
+                terminal=terminal,
             )
             emit(job.as_dict())
             return 0 if job.status == "succeeded" else 1
@@ -451,6 +463,31 @@ def _daemon(args: argparse.Namespace, layout: Layout) -> int:
         emit(steps)
         return 0
     return 1
+
+
+def _migration_answer(choice: str) -> Callable[[dict[str, Any]], bool]:
+    """How ``sbx run update`` answers sb's "Run all migration tags?": yes, no, or ask here."""
+
+    def answer(question: dict[str, Any]) -> bool:
+        tags = ", ".join(f"{m['repo']}: {m['tag']}" for m in question.get("migrations") or [])
+        if choice != "ask":
+            return choice == "yes"
+        if not sys.stdin.isatty():
+            print(
+                f"sb asked to run migration tags ({tags}); not approved without a terminal. "
+                "Pass --migrations yes to run them.",
+                file=sys.stderr,
+            )
+            return False
+        while True:
+            print(f"Run all migration tags ({tags})? (y/n): ", end="", file=sys.stderr, flush=True)
+            reply = sys.stdin.readline()
+            if not reply or reply.strip().lower() in ("n", "no"):
+                return False
+            if reply.strip().lower() in ("y", "yes"):
+                return True
+
+    return answer
 
 
 def _build_web(layout: Layout) -> int:

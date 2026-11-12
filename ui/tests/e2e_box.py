@@ -6,6 +6,8 @@ real job runner, the built web app) on it. Only the outside world is faked:
 
 - ``sb``: prints a short Ansible-like log; a tag containing ``e2e-fail``
   fails the way a real playbook does, and ``e2e-slow`` runs for a minute.
+  ``sb update`` is ``fake_sb_update.py``: it needs a terminal, shows an
+  announcement in a full-screen viewer and asks whether to run a migration.
 - ``docker``: ``ps``, ``inspect`` and ``image inspect`` answer from a fixed
   set of containers (healthy, unhealthy, stopped, one inside Gluetun).
 - the image registry: Sonarr and Gluetun have newer images, the rest are
@@ -173,6 +175,7 @@ with open({log!r}, "a") as log:
 """
 
 FAKE_SB = """#!/bin/sh
+if [ "$1" = update ]; then exec @PYTHON@ @FAKE_UPDATE@ "$@"; fi
 echo "Executing Ansible playbook with command: ansible-playbook saltbox.yml --tags $2"
 echo
 echo "PLAY [localhost] ***"
@@ -343,7 +346,10 @@ def build_box(root: Path) -> Layout:
     docker = bin_dir / "docker"
     docker.write_text(FAKE_DOCKER.format(python=sys.executable, inspect=str(inspect)))
     sb = bin_dir / "sb"
-    sb.write_text(FAKE_SB)
+    fake_update = Path(__file__).with_name("fake_sb_update.py")
+    sb.write_text(
+        FAKE_SB.replace("@PYTHON@", sys.executable).replace("@FAKE_UPDATE@", str(fake_update))
+    )
     tailscale = bin_dir / "tailscale"
     tailscale.write_text(
         FAKE_TAILSCALE.format(python=sys.executable, serve=str(root / "tailscale-serve"))

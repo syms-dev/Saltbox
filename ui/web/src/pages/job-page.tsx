@@ -1,8 +1,9 @@
-import { ArrowLeft, CircleAlert, CircleCheck, CircleStop, Copy, RotateCw } from 'lucide-react';
+import { ArrowLeft, CircleAlert, CircleCheck, CircleHelp, CircleStop, Copy, Megaphone, RotateCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { useCancelJob, useJob, useJobs, useStartJob } from '../api/queries';
+import { useAnswerJob, useCancelJob, useJob, useJobs, useStartJob } from '../api/queries';
+import type { Announcement, JobQuestion } from '../api/types';
 import { useConfirm, useToast } from '../components/feedback';
 import { LogView } from '../components/log-view';
 import { ErrorMessage, Loading } from '../components/query-state';
@@ -26,6 +27,92 @@ export function recap(log: string): Record<string, number> | null {
     }
   }
   return totals;
+}
+
+/** The yes/no question `sb update` asks at its terminal, asked here instead. */
+export function MigrationQuestion({ id, question }: { id: string; question: JobQuestion }): React.ReactNode {
+  const answer = useAnswerJob();
+  const toast = useToast();
+
+  function reply(yes: boolean): void {
+    answer.mutate(
+      { answer: yes, id },
+      { onError: (error) => toast({ body: error.message, title: 'Could not send the answer', tone: 'danger' }) },
+    );
+  }
+
+  return (
+    <section aria-labelledby="question-title" className={`note warn ${styles['outcome']}`} role="alert">
+      <CircleHelp aria-hidden="true" className={styles['icon']} size={20} />
+      <div className={`stack-sm ${styles['question']}`}>
+        <strong id="question-title">Saltbox is waiting for your answer: run the migrations for this update?</strong>
+        {question.migrations.length > 0 ? (
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Repository</th>
+                <th scope="col">Tag</th>
+                <th scope="col">Announced</th>
+              </tr>
+            </thead>
+            <tbody>
+              {question.migrations.map((migration) => (
+                <tr key={`${migration.repo}/${migration.tag}`}>
+                  <td>{migration.repo}</td>
+                  <td>
+                    <code>{migration.tag}</code>
+                  </td>
+                  <td>{migration.date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <pre className={styles['message']}>{question.text}</pre>
+        )}
+        <p className="small">
+          These are Saltbox playbook tags that move an existing install over to what this update changed; the
+          announcements below say why. <code>sb update</code> asks once: if you skip them, it will not offer them again
+          and you would run the tags yourself with <code>sb install</code>. The update waits here until you answer or
+          cancel it.
+        </p>
+        <div className="row">
+          <button className="primary" disabled={answer.isPending} onClick={() => reply(true)} type="button">
+            Run the migrations
+          </button>
+          <button disabled={answer.isPending} onClick={() => reply(false)} type="button">
+            Skip them
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** What `sb update` shows in its full-screen viewer: the announcements this update brought. */
+export function Announcements({ items }: { items: Announcement[] }): React.ReactNode {
+  return (
+    <section aria-labelledby="announcements-title" className="card stack-sm">
+      <h2 className={styles['flush']} id="announcements-title">
+        <Megaphone aria-hidden="true" size={18} /> Announcements from this update
+      </h2>
+      {items.map((item) => (
+        <article className={styles['announcement']} key={`${item.repo}/${item.date}/${item.title}`}>
+          <h3 className={styles['flush']}>{item.title}</h3>
+          <p className="small muted">
+            {item.repo} · {item.date}
+            {item.migration === null ? null : (
+              <>
+                {' '}
+                · migration tag <code>{item.migration}</code>
+              </>
+            )}
+          </p>
+          <p className={styles['announcementText']}>{item.message}</p>
+        </article>
+      ))}
+    </section>
+  );
 }
 
 export function JobPage(): React.ReactNode {
@@ -54,6 +141,9 @@ function JobView({ id }: { id: string }): React.ReactNode {
   const record = stream.done ?? job.data;
   const active = record.status === 'running' || record.status === 'pending';
   const health = jobHealth(record);
+  // The question and the announcements arrive on the polled record while the job runs.
+  const question = active ? (job.data.question ?? null) : null;
+  const announcements = record.announcements ?? job.data.announcements ?? [];
 
   async function stop(): Promise<void> {
     const ok = await confirm({
@@ -108,6 +198,7 @@ function JobView({ id }: { id: string }): React.ReactNode {
       </header>
       {cancel.isError ? <ErrorMessage error={cancel.error} /> : null}
 
+      {question === null ? null : <MigrationQuestion id={id} question={question} />}
       {record.status === 'failed' ? (
         <section className={`note danger ${styles['outcome']}`} role="alert">
           <CircleAlert aria-hidden="true" size={20} />
@@ -135,6 +226,8 @@ function JobView({ id }: { id: string }): React.ReactNode {
           </div>
         </section>
       ) : null}
+
+      {announcements.length > 0 ? <Announcements items={announcements} /> : null}
 
       <section className="card stack-sm">
         <div className="row">

@@ -55,7 +55,6 @@ def test_settings_defaults_validation_and_privacy(setup) -> None:
     assert settings["maintenance"] == {
         "enabled": False,
         "time": "04:00",
-        "saltbox": False,
         "exclude": [],
     }
     with pytest.raises(ValueError, match="04:00"):

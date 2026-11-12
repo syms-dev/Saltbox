@@ -261,13 +261,32 @@ test.describe('activity', () => {
     await expect(page.getByRole('status').getByText(/sb install e2e-slow interrupted/)).toBeVisible();
   });
 
-  test('Run sb update on the System page starts sb update', async ({ page }) => {
+  test('sb update shows its announcements and waits to be told about migrations', async ({ page }) => {
     await page.goto('/system');
     await expect(page.getByText(/saltbox: master at \w{7} → \w{7}/)).toBeVisible({ timeout: 20_000 });
     await page.getByRole('button', { name: 'Run sb update' }).click();
-    expect(await confirm(page, 'Update Saltbox?', 'Run sb update')).toContain('sb update');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('sb update');
+    expect(await confirm(page, 'Update Saltbox?', 'Run sb update')).toContain('waits for you');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('sb update --verbose --keep-branch');
+
+    // sb stops at "Run all migration tags? (y/n)". The page asks instead, and nothing is typed for you.
+    const question = page.getByRole('alert').filter({ hasText: 'waiting for your answer' });
+    await expect(question).toBeVisible({ timeout: 20_000 });
+    await expect(question.getByRole('row', { name: 'Saltbox e2e-migration 2031-01-01' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /sb update .* is waiting for your answer/ })).toBeVisible();
+    const announcements = page.getByRole('region', { name: 'Announcements from this update' });
+    await expect(announcements).toContainText('Test migration');
+    await expect(announcements).toContainText('Something moved, and existing installs need a migration.');
+    const log = page.getByRole('log', { name: 'Job log' });
+    await expect(log).toContainText('1  Saltbox   e2e-migration   2031-01-01');
+    await expect(log).not.toContainText('Validating Saltbox configuration');
+
+    await question.getByRole('button', { name: 'Run the migrations' }).click();
     expect(await jobOutcome(page)).toBe('succeeded');
+    await expect(question).toBeHidden();
+    await expect(log).toContainText('Run all migration tags? (y/n): y');
+    await expect(log).toContainText("Running migration 'e2e-migration' for Saltbox repository");
+    await expect(log).toContainText('== Saltbox announcement, 2031-01-01: Test migration ==');
+    await expect(announcements).toContainText('Test migration'); // kept with the finished job
   });
 });
 

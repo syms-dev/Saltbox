@@ -779,7 +779,10 @@ class JobRequest(BaseModel):
     extra_vars: list[str] = Field(default_factory=list)
     verbosity: int = 0
     no_cache: bool = False
-    verbose: bool = False
+
+
+class JobAnswer(BaseModel):
+    answer: bool
 
 
 @router.get("/jobs")
@@ -799,7 +802,6 @@ def start_job(request: Request, body: JobRequest) -> dict[str, Any]:
             extra_vars=body.extra_vars,
             verbosity=body.verbosity,
             no_cache=body.no_cache,
-            verbose=body.verbose,
         )
     except JobRunning as error:
         raise HTTPException(409, str(error)) from error
@@ -837,6 +839,17 @@ def cancel_job(request: Request, job_id: str) -> dict[str, Any]:
     if svc.runner.job(job_id) is None:
         raise HTTPException(404, "no such job")
     return {"cancelled": svc.jobs.cancel(job_id)}
+
+
+@router.post("/jobs/{job_id}/answer")
+def answer_job(request: Request, job_id: str, body: JobAnswer) -> dict[str, Any]:
+    """Answer the yes/no question a running job is waiting on (sb update's migrations)."""
+    svc = services(request)
+    if svc.runner.job(job_id) is None:
+        raise HTTPException(404, "no such job")
+    if not svc.jobs.answer(job_id, body.answer):
+        raise HTTPException(409, "this job is not waiting for an answer")
+    return {"answered": True}
 
 
 @router.websocket("/jobs/{job_id}/stream")
