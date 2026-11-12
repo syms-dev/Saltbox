@@ -404,22 +404,10 @@ class AutomationService:
         record: dict[str, Any] = {"date": today, "started_at": time.time(), "steps": []}
         self._save_last_run(record)  # claim tonight before anything slow
         svc.updates.refresh(wait=True)
-        cached = svc.updates.cached()
 
         excluded = set(maintenance.get("exclude") or [])
-        pending = {
-            name
-            for status in cached.get("images", {}).values()
-            if status.get("status") == "update"
-            for name in status.get("containers", [])
-        }
-        apps = [
-            app
-            for app in svc.catalog.apps()
-            if app.role not in excluded
-            and pending
-            & set(svc.inventory.instances(app.role, app.default_instances or [app.role]))
-        ]
+        groups, _ = routes.pending_updates(svc, routes._containers_or_none())
+        apps = [group["app"] for group in groups if group["app"].role not in excluded]
         if apps:
             titles = ", ".join(app.title for app in apps)
 

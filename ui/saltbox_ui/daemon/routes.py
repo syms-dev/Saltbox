@@ -56,6 +56,7 @@ from ..state.system import (
 )
 from ..yamlio import coerce_scalar, find_duplicate_keys, load_text, write_atomic
 
+DEPENDS_ON_LABEL = "com.github.saltbox.depends_on"
 router = APIRouter()
 
 STREAM_POLL_SECONDS = 0.25
@@ -118,7 +119,7 @@ def overview(request: Request) -> dict[str, Any]:
             ),
         },
         "containers": _container_summary(containers),
-        "updates": _updates_summary(svc),
+        "updates": _updates_summary(svc, containers),
         "services": read_motd_services(layout),
         "jobs": {
             **_jobs_status(svc),
@@ -136,25 +137,27 @@ def apps(request: Request, all: bool = False) -> list[dict[str, Any]]:
     svc = services(request)
     containers = _containers_or_none()
     by_name = {c["name"]: c for c in containers or []}
+    owners = _owners(svc, containers)
     updates = svc.updates.status_by_container()
     svc.updates.ensure_fresh()
     result = []
-    for app in svc.catalog.apps(include_hidden=all):
-        if not all and not is_listed_app(app):
-            continue
+    for app in svc.catalog.apps(include_hidden=True):
         instances = svc.inventory.instances(app.role, app.default_instances or [app.role])
+        names = _containers_of(app, instances, owners)
+        # Besides the apps people pick, the list carries what runs anyway: Traefik,
+        # Authelia, a database installed by hand. Those are marked ``core``.
+        listed = _is_listed(app)
+        if not all and not listed and not names:
+            continue
         data = app.as_dict()
         data["instances"] = instances
+        data["core"] = not listed
         # Most apps keep their config in <appdata>/<instance>; some (Autoheal, Watchtower)
         # keep none, so a container under the instance's name counts too.
         data["installed"] = any(
             (svc.layout.appdata / name).is_dir() or name in by_name for name in instances
         )
-        data["containers"] = [
-            _container_view(by_name[name], updates.get(name))
-            for name in instances
-            if name in by_name
-        ]
+        data["containers"] = [_container_view(by_name[name], updates.get(name)) for name in names]
         data["urls"] = [url for c in data["containers"] for url in c["urls"]]
         data["update_available"] = any(c["update"] == "update" for c in data["containers"])
         result.append(data)
@@ -169,12 +172,12 @@ def app_detail(request: Request, repo: str, role: str, reveal: bool = False) -> 
         raise HTTPException(404, f"unknown app {repo}/{role}")
     defaults = svc.catalog.defaults(role, repo)
     instances = svc.inventory.instances(role, app.default_instances or [role])
-    containers = {c["name"]: c for c in _containers_or_none() or []}
+    found = _containers_or_none()
+    containers = {c["name"]: c for c in found or []}
     updates = svc.updates.status_by_container()
     views = [
         _container_view(containers[name], updates.get(name))
-        for name in instances
-        if name in containers
+        for name in _containers_of(app, instances, _owners(svc, found))
     ]
     overrides = svc.inventory.overrides_for(role, instances)
     return {
@@ -382,16 +385,7 @@ def update_app(request: Request, repo: str, role: str) -> dict[str, Any]:
 @router.post("/updates/apply", status_code=202)
 def update_all(request: Request) -> dict[str, Any]:
     svc = services(request)
-    pending = {
-        name
-        for name, status in svc.updates.status_by_container().items()
-        if status.get("status") == "update"
-    }
-    apps = [
-        app
-        for app in svc.catalog.apps()
-        if pending & set(svc.inventory.instances(app.role, app.default_instances or [app.role]))
-    ]
+    apps = [group["app"] for group in pending_updates(svc, _containers_or_none())[0]]
     if not apps:
         raise HTTPException(409, "nothing to update")
     return _start_update(svc, apps)
@@ -442,7 +436,53 @@ def _app_for_container(svc, name: str):
     return None
 
 
-def _updates_summary(svc) -> dict[str, Any]:
+def _is_listed(app) -> bool:
+    """An app someone picks, as opposed to core (Traefik) and tools, databases, Authelia."""
+    return app.section == "apps" and is_listed_app(app)
+
+
+def _owners(svc, containers: list[dict[str, Any]] | None) -> dict[str, Any]:
+    """The app each container belongs to, by container name.
+
+    A container belongs to the role it is an instance of (``sonarr``,
+    ``traefik``). One that is nobody's instance belongs to the app whose
+    container names it in Saltbox's ``depends_on`` label: ``authelia-redis`` is
+    created by the Authelia role, and re-running that role is what updates it.
+    """
+    by_name = {c["name"]: c for c in containers or []}
+    owners: dict[str, Any] = {}
+    for app in svc.catalog.apps(include_hidden=True):
+        for name in svc.inventory.instances(app.role, app.default_instances or [app.role]):
+            if name in by_name:
+                owners.setdefault(name, app)
+    for name, app in list(owners.items()):
+        labels = by_name[name].get("labels") or {}
+        for needed in str(labels.get(DEPENDS_ON_LABEL, "")).split(","):
+            if needed.strip() in by_name:
+                owners.setdefault(needed.strip(), app)
+    return owners
+
+
+def _containers_of(app, instances: list[str], owners: dict[str, Any]) -> list[str]:
+    """Names of the running containers of ``app``: its instances, then what they brought."""
+    own = [name for name in instances if name in owners]
+    extra = sorted(
+        name
+        for name, owner in owners.items()
+        if name not in instances and (owner.repo, owner.role) == (app.repo, app.role)
+    )
+    return own + extra
+
+
+def pending_updates(
+    svc, containers: list[dict[str, Any]] | None
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Containers with a newer image, grouped by the app that updates them.
+
+    Returns the groups (``app`` and its ``containers``, by app title) and the
+    containers no Saltbox role is known for. Home, the apps list, "Update all"
+    and nightly maintenance all count from here, so they agree.
+    """
     cached = svc.updates.cached()
     pending = sorted(
         {
@@ -452,10 +492,40 @@ def _updates_summary(svc) -> dict[str, Any]:
             for name in status.get("containers", [])
         }
     )
+    owners = _owners(svc, containers)
+    groups: dict[tuple[str, str], dict[str, Any]] = {}
+    unknown = []
+    for name in pending:
+        # Without a container list (docker not answering) the name alone still says whose it is.
+        owner = owners.get(name) or _app_for_container(svc, name)
+        if owner is None:
+            unknown.append(name)
+            continue
+        group = groups.setdefault((owner.repo, owner.role), {"app": owner, "containers": []})
+        group["containers"].append(name)
+    return sorted(groups.values(), key=lambda g: g["app"].title.lower()), unknown
+
+
+def _updates_summary(svc, containers: list[dict[str, Any]] | None) -> dict[str, Any]:
+    cached = svc.updates.cached()
+    groups, unknown = pending_updates(svc, containers)
     return {
         "checked_at": cached.get("checked_at"),
         "running": cached["running"],
-        "pending": pending,
+        "pending": sorted([name for g in groups for name in g["containers"]] + unknown),
+        # What to show and update: one entry per app, however many of its containers.
+        "apps": [
+            {
+                "repo": g["app"].repo,
+                "role": g["app"].role,
+                "title": g["app"].title,
+                "containers": g["containers"],
+                "core": not _is_listed(g["app"]),
+            }
+            for g in groups
+        ],
+        # New images on containers Saltbox did not create, or that are gone from the catalog.
+        "unknown": unknown,
         "saltbox": [
             repo["name"] for repo in cached.get("repos", []) if repo.get("status") == "update"
         ],

@@ -1,4 +1,4 @@
-import type { App, Issue, Overview } from '../api/types';
+import type { App, AppRef, Issue, Overview } from '../api/types';
 import { jobTitle } from '../components/shell';
 import { formatBytes } from '../format';
 
@@ -9,8 +9,8 @@ export type AttentionAction =
   | { kind: 'link'; label: string; to: string }
   | { kind: 'logs'; container: string; label: string; to: string }
   | { container: string; kind: 'restart' | 'start'; label: string }
-  | { app: App; kind: 'update'; label: string }
-  | { apps: App[]; kind: 'updateAll'; label: string }
+  | { app: AppRef; kind: 'update'; label: string }
+  | { apps: AppRef[]; kind: 'updateAll'; label: string }
   | { kind: 'sbUpdate'; label: string }
   | { jobId: string; kind: 'retry'; label: string };
 
@@ -124,21 +124,22 @@ export function attentionItems(data: Overview, apps: App[] = []): Attention[] {
       });
     }
   }
-  const pending = data.updates?.pending ?? [];
-  if (pending.length > 0) {
-    const pendingApps = apps.filter((app) => app.installed && app.update_available);
-    const names = pendingApps.length > 0 ? pendingApps.map((a) => a.title) : pending;
+  // The daemon says which app each container with a new image belongs to (Traefik, or
+  // Authelia for its Redis), so this list does not wait for, or disagree with, the apps list.
+  const pending = data.updates?.apps ?? [];
+  const [only] = pending;
+  if (only !== undefined) {
     items.push({
       actions:
-        pendingApps.length === 1 && pendingApps[0] !== undefined
-          ? [{ app: pendingApps[0], kind: 'update', label: 'Update' }]
+        pending.length === 1
+          ? [{ app: only, kind: 'update', label: 'Update' }]
           : [
-              { apps: pendingApps, kind: 'updateAll', label: 'Update all' },
+              { apps: pending, kind: 'updateAll', label: 'Update all' },
               { kind: 'link', label: 'Review', to: '/apps?show=updates' },
             ],
-      detail: names.join(', '),
+      detail: pending.map((app) => app.title).join(', '),
       id: 'updates',
-      title: `${names.length} app update${names.length === 1 ? '' : 's'} available`,
+      title: `${pending.length} app update${pending.length === 1 ? '' : 's'} available`,
       tone: 'info',
     });
   }

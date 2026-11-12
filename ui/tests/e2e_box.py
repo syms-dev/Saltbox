@@ -10,8 +10,8 @@ real job runner, the built web app) on it. Only the outside world is faked:
   announcement in a full-screen viewer and asks whether to run a migration.
 - ``docker``: ``ps``, ``inspect`` and ``image inspect`` answer from a fixed
   set of containers (healthy, unhealthy, stopped, one inside Gluetun).
-- the image registry: Sonarr and Gluetun have newer images, the rest are
-  current.
+- the image registry: Sonarr, Gluetun, Traefik and Authelia's Redis have newer
+  images, the rest are current.
 - the Saltbox checkout is a git repository one commit behind its upstream.
 
 The Playwright suite in ``ui/web/e2e`` starts this as its web server.
@@ -41,7 +41,7 @@ from .saltbox_checkout import saltbox_checkout
 REPO_ROOT = saltbox_checkout()
 WEB_DIST = Path(__file__).resolve().parents[1] / "web" / "dist"
 DOMAIN = "e2e.example"
-UPDATED_IMAGES = {"hotio/sonarr", "qmcgaw/gluetun"}
+UPDATED_IMAGES = {"hotio/sonarr", "qmcgaw/gluetun", "library/traefik", "library/redis"}
 
 
 def _container(
@@ -52,8 +52,11 @@ def _container(
     health: str | None = "healthy",
     network: str = "saltbox",
     web: bool = True,
+    depends_on: str = "",
 ) -> dict[str, Any]:
     labels = {"com.github.saltbox.saltbox_managed": "true"}
+    if depends_on:
+        labels["com.github.saltbox.depends_on"] = depends_on
     if web:
         host = f"Host(`{name}.{DOMAIN}`)"
         labels[f"traefik.http.routers.{name}.rule"] = host
@@ -85,8 +88,13 @@ CONTAINERS = [
     # Autoheal keeps no config folder; it counts as installed by its container alone.
     _container("autoheal", "willfarrell/autoheal:latest", health=None, web=False),
     _container("recyclarr", "ghcr.io/recyclarr/recyclarr:8", health=None, web=False),
+    # Saltbox's own core, not apps anyone picked. Traefik has a newer image, and so
+    # has the Redis that the Authelia role creates beside Authelia.
+    _container("traefik", "traefik:v3", health=None, web=False),
+    _container("authelia", "authelia/authelia:4", depends_on="authelia-redis"),
+    _container("authelia-redis", "redis:alpine", health=None, web=False),
 ]
-NO_APPDATA = {"autoheal"}
+NO_APPDATA = {"autoheal", "authelia-redis"}
 SECRET_KEY = "e2e-wireguard-private-key="
 
 FAKE_DOCKER = """#!{python}

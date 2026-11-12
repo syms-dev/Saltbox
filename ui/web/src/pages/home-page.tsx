@@ -359,7 +359,8 @@ export function HomePage(): React.ReactNode {
           </h1>
           <p className="muted">
             {data.containers.available
-              ? `${running} of ${data.containers.total} containers running · ${installed.length} apps installed`
+              ? `${running} of ${data.containers.total} containers running` +
+                (apps.data === undefined ? '' : ` · ${installed.length} apps installed`)
               : 'Container status unavailable'}
           </p>
         </div>

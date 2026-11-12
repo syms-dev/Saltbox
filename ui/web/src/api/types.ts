@@ -101,7 +101,22 @@ export type ContainerState = {
   urls: string[];
 };
 
-export type UpdatesSummary = { checked_at: number | null; pending: string[]; running: boolean; saltbox?: string[] };
+/** Enough of an app to name it and update it. */
+export type AppRef = Pick<App, 'repo' | 'role' | 'title'> & { core?: boolean };
+
+/** An app with a newer image for one or more of its containers. */
+export type PendingUpdate = AppRef & { containers: string[]; core: boolean };
+
+export type UpdatesSummary = {
+  /** One entry per app to update; the daemon decides which app each container belongs to. */
+  apps?: PendingUpdate[];
+  checked_at: number | null;
+  pending: string[];
+  running: boolean;
+  saltbox?: string[];
+  /** Containers with a newer image that no Saltbox role is known for. */
+  unknown?: string[];
+};
 
 /** A Saltbox checkout (saltbox, sandbox, saltbox_mod) compared with the branch it tracks. */
 export type RepoStatus = {
@@ -127,6 +142,8 @@ export type App = {
   app_links: AppLink[];
   categories: string[];
   containers: ContainerState[];
+  /** Runs as part of Saltbox itself (Traefik, Authelia) rather than being an app someone picked. */
+  core?: boolean;
   default_instances: string[];
   update_available: boolean;
   urls: string[];

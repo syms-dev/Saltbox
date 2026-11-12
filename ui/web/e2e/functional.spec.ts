@@ -33,12 +33,49 @@ test.describe('home', () => {
     await expect(attention).toContainText('Prowlarr is unhealthy');
     await expect(attention).toContainText('Dozzle is not running');
     // The first visit starts the update check; the page refreshes when it lands.
-    await expect(attention).toContainText('2 app updates available', { timeout: 20_000 });
+    await expect(attention).toContainText('4 app updates available', { timeout: 20_000 });
     await expect(attention).toContainText('Saltbox update available');
     const sonarr = page.getByRole('link', { name: 'Open Sonarr (sonarr.e2e.example)' });
     await expect(sonarr).toHaveAttribute('href', 'https://sonarr.e2e.example');
     await expect(sonarr).toHaveAttribute('target', '_blank');
-    await expect(page.getByRole('region', { name: 'Updates' })).toContainText('2 apps: Gluetun, Sonarr');
+    await expect(page.getByRole('region', { name: 'Updates' })).toContainText(
+      '4 apps: Authelia, Gluetun, Sonarr, Traefik Proxy',
+    );
+  });
+
+  test('counts updates the same before and after the apps list arrives, and as the Apps page does', async ({
+    page,
+  }) => {
+    // New images for Traefik and for the Redis the Authelia role runs are updates too. Home once
+    // showed them by container name, then dropped them when the apps list loaded.
+    let release = (): void => undefined;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await page.route('**/api/apps', async (route) => {
+      await held;
+      await route.continue();
+    });
+    await page.goto('/');
+    const attention = page.getByRole('region', { name: 'Needs attention' });
+    const updates = attention.getByRole('listitem').filter({ hasText: 'app updates available' });
+    await expect(updates).toContainText('4 app updates available', { timeout: 20_000 });
+    await expect(updates).toContainText('Authelia, Gluetun, Sonarr, Traefik Proxy');
+    await expect(updates).not.toContainText('authelia-redis');
+    const hero = page.locator('header').filter({ hasText: 'containers running' });
+    await expect(hero).not.toContainText('apps installed'); // not "0 apps installed" while it loads
+    release();
+    await expect(hero).toContainText('10 apps installed');
+    await expect(updates).toContainText('4 app updates available');
+    await expect(updates).toContainText('Authelia, Gluetun, Sonarr, Traefik Proxy');
+
+    await updates.getByRole('link', { name: 'Review' }).click();
+    const list = page.getByRole('list', { name: 'Installed apps' });
+    await expect(list.getByRole('listitem')).toHaveCount(4);
+    const traefik = list.getByRole('listitem').filter({ hasText: 'Traefik Proxy' });
+    await expect(traefik).toContainText('Core');
+    await traefik.getByRole('button', { name: 'Update' }).click();
+    const warning = dialog(page, 'Update Traefik Proxy?');
+    await expect(warning).toContainText('Expect this page to drop for a moment');
+    await warning.getByRole('button', { name: 'Cancel' }).click();
   });
 
   test('shows the VPN, downloads, what is playing and what is coming up', async ({ page }) => {
@@ -143,7 +180,7 @@ test.describe('apps', () => {
     await expect(sonarr.getByRole('button', { name: 'Update' })).toBeVisible({ timeout: 20_000 });
     await expect(list.getByRole('listitem').filter({ hasText: 'Radarr' })).toContainText('Up to date');
     await page.getByRole('button', { name: /^Updates/ }).click();
-    await expect(list.getByRole('listitem')).toHaveCount(2);
+    await expect(list.getByRole('listitem')).toHaveCount(4);
     await page.getByRole('button', { name: /^All/ }).click();
     await page.getByLabel('Filter installed apps').fill('plex');
     await expect(list.getByRole('listitem')).toHaveCount(1);
@@ -443,7 +480,7 @@ test.describe('automation', () => {
       });
     }).toPass({ timeout: 30_000 });
     const last = page.getByRole('region', { name: 'Nightly maintenance' });
-    await expect(last.getByRole('link', { name: /update Sonarr/ })).toBeVisible();
+    await expect(last.getByRole('link', { name: /update Authelia, Sonarr, Traefik Proxy/ })).toBeVisible();
     await expect(last).not.toContainText('update Gluetun');
   });
 });

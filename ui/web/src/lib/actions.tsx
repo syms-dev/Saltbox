@@ -1,11 +1,21 @@
 import { useNavigate } from 'react-router-dom';
 
 import { useContainerAction, useStartJob, useUpdateAll, useUpdateApp, useUpdateSaltbox } from '../api/queries';
-import type { App, ContainerAction, Job } from '../api/types';
+import type { App, AppRef, ContainerAction, Job } from '../api/types';
 import { useConfirm, useToast } from '../components/feedback';
 
 export function appTag(app: Pick<App, 'install_tag' | 'role' | 'sb_tag'>): string {
   return app.sb_tag ?? app.install_tag ?? app.role;
+}
+
+/** Said before recreating something every web app here depends on, this one included. */
+function CoreWarning(): React.ReactNode {
+  return (
+    <p>
+      This includes part of Saltbox’s core (the proxy or sign-in in front of every web app, this one too). Expect this
+      page to drop for a moment and to sign in again; the job carries on, and its log is under Activity.
+    </p>
+  );
 }
 
 /**
@@ -14,8 +24,8 @@ export function appTag(app: Pick<App, 'install_tag' | 'role' | 'sb_tag'>): strin
  */
 export function useJobActions(): {
   install: (app: App, reinstall?: boolean) => Promise<void>;
-  updateAll: (apps: App[]) => Promise<void>;
-  updateApp: (app: App) => Promise<void>;
+  updateAll: (apps: AppRef[]) => Promise<void>;
+  updateApp: (app: AppRef) => Promise<void>;
   updateSaltbox: () => Promise<void>;
 } {
   const confirm = useConfirm();
@@ -67,6 +77,7 @@ export function useJobActions(): {
           <>
             <p>New images are ready for {apps.map((a) => a.title).join(', ')}.</p>
             <p>Each app is recreated on its new image and is unavailable for a minute or two.</p>
+            {apps.some((a) => a.core === true) ? <CoreWarning /> : null}
           </>
         ),
         confirmLabel: `Update ${apps.length} app${apps.length === 1 ? '' : 's'}`,
@@ -85,6 +96,7 @@ export function useJobActions(): {
             {app.role === 'gluetun' ? (
               <p>Apps that run inside Gluetun’s network (such as qBittorrent) are recreated too.</p>
             ) : null}
+            {app.core === true ? <CoreWarning /> : null}
           </>
         ),
         confirmLabel: `Update ${app.title}`,

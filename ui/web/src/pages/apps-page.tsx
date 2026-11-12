@@ -95,6 +95,7 @@ function InstalledRow({ app }: { app: App }): React.ReactNode {
           <span className={styles['rowTitle']}>
             {app.title}
             {app.repo === 'sandbox' ? <span className={styles['tag']}>Sandbox</span> : null}
+            {app.core === true ? <span className={styles['tag']}>Core</span> : null}
           </span>
           <span className={`muted small ${styles['rowSub']}`}>{url === undefined ? app.role : hostOf(url)}</span>
         </span>

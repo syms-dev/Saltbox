@@ -384,3 +384,130 @@ def test_container_action_failure_is_reported(client, monkeypatch) -> None:
     monkeypatch.setattr(containers_module, "_run_long", lambda args: (1, "is not running"))
     response = http.post("/api/containers/sonarr/stop")
     assert response.status_code == 502 and "is not running" in response.json()["detail"]
+
+
+# -- containers that are not the main container of a listed app ------------------------------
+INFRASTRUCTURE = [
+    {
+        "name": "traefik",
+        "status": "running",
+        "health": None,
+        "managed": True,
+        "image_ref": "traefik:v3",
+        "network_mode": "saltbox",
+        "urls": [],
+        "labels": {},
+    },
+    {
+        "name": "authelia",
+        "status": "running",
+        "health": "healthy",
+        "managed": True,
+        "image_ref": "authelia/authelia:latest",
+        "network_mode": "saltbox",
+        "urls": ["https://login.example.com"],
+        # Saltbox records what a container needs started first; the Authelia role
+        # creates its own Redis under this name.
+        "labels": {"com.github.saltbox.depends_on": "authelia-redis,lldap"},
+    },
+    {
+        "name": "authelia-redis",
+        "status": "running",
+        "health": None,
+        "managed": True,
+        "image_ref": "redis:alpine",
+        "network_mode": "saltbox",
+        "urls": [],
+        "labels": {},
+    },
+    {
+        "name": "sonarr",
+        "status": "running",
+        "health": None,
+        "managed": True,
+        "image_ref": "ghcr.io/hotio/sonarr:release",
+        "network_mode": "saltbox",
+        "urls": [],
+        "labels": {"com.github.saltbox.depends_on": ""},
+    },
+    {
+        "name": "watchdog",  # started by hand, not by a Saltbox role
+        "status": "running",
+        "health": None,
+        "managed": False,
+        "image_ref": "example/watchdog:latest",
+        "network_mode": "bridge",
+        "urls": [],
+        "labels": {},
+    },
+]
+
+
+@pytest.fixture
+def infrastructure(scratch_layout: Layout, fake_sb: Path, monkeypatch: pytest.MonkeyPatch):
+    """A box where the only new images are for Traefik, Authelia's Redis and a stray container."""
+    (scratch_layout.appdata / "sonarr").mkdir(parents=True)
+    monkeypatch.setattr(
+        daemon_routes, "_containers_or_none", lambda: [dict(c) for c in INFRASTRUCTURE]
+    )
+    services = Services(scratch_layout)
+    services.updates = UpdateService(
+        scratch_layout,
+        containers=lambda: INFRASTRUCTURE,
+        checker=lambda containers: {
+            "traefik:v3": ImageStatus("traefik:v3", "update", containers=["traefik"]),
+            "redis:alpine": ImageStatus("redis:alpine", "update", containers=["authelia-redis"]),
+            "example/watchdog:latest": ImageStatus(
+                "example/watchdog:latest", "update", containers=["watchdog"]
+            ),
+            "authelia/authelia:latest": ImageStatus(
+                "authelia/authelia:latest", "current", containers=["authelia"]
+            ),
+        },
+        repos=lambda: [],
+    )
+    services.updates.refresh(wait=True)
+    return TestClient(create_app(services=services)), services
+
+
+def test_updates_for_core_and_companion_containers_are_counted_the_same_everywhere(
+    infrastructure,
+) -> None:
+    http, _ = infrastructure
+    updates = http.get("/api/overview").json()["updates"]
+    assert updates["pending"] == ["authelia-redis", "traefik", "watchdog"]
+    assert [(a["role"], a["title"], a["containers"], a["core"]) for a in updates["apps"]] == [
+        ("authelia", "Authelia", ["authelia-redis"], True),
+        ("traefik", "Traefik Proxy", ["traefik"], True),
+    ]
+    assert updates["unknown"] == ["watchdog"]
+
+    apps = {a["role"]: a for a in http.get("/api/apps").json()}
+    # Running infrastructure is in the list, marked as core, with what its role brought along.
+    assert apps["traefik"]["core"] is True and apps["traefik"]["installed"] is True
+    assert [c["name"] for c in apps["authelia"]["containers"]] == ["authelia", "authelia-redis"]
+    assert apps["sonarr"]["core"] is False
+    assert sorted(role for role, app in apps.items() if app["update_available"]) == [
+        "authelia",
+        "traefik",
+    ]
+    # Roles that are not apps and run nothing stay out: no databases, no tools.
+    assert "redis" not in apps and "postgres" not in apps and "docker" not in apps
+    detail = http.get("/api/apps/saltbox/authelia").json()
+    assert detail["update_available"] is True
+    assert [c["update"] for c in detail["containers"]] == ["current", "update"]
+
+
+def test_update_all_reaches_core_and_companion_containers(infrastructure) -> None:
+    http, _ = infrastructure
+    job = http.post("/api/updates/apply").json()
+    assert job["tags"] == ["authelia", "traefik"]
+    wait_job(http, job["id"])
+
+
+def test_nightly_maintenance_uses_the_same_list_and_honours_exclusions(infrastructure) -> None:
+    _, services = infrastructure
+    services.automation.save({"maintenance": {"enabled": True, "exclude": ["traefik"]}})
+    record = services.automation.run_maintenance(wait_seconds=30)
+    assert [step["what"] for step in record["steps"]] == ["update Authelia"]
+    assert record["status"] == "succeeded"

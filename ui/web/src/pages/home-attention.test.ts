@@ -66,7 +66,13 @@ describe('attentionItems', () => {
           reboot_required: true,
           units: [],
         },
-        updates: { checked_at: 1, pending: ['sonarr'], running: false, saltbox: ['saltbox'] },
+        updates: {
+          apps: [{ containers: ['sonarr'], core: false, repo: 'saltbox', role: 'sonarr', title: 'Sonarr' }],
+          checked_at: 1,
+          pending: ['sonarr'],
+          running: false,
+          saltbox: ['saltbox'],
+        },
       }),
       [sonarr],
     );
@@ -82,6 +88,28 @@ describe('attentionItems', () => {
     expect(items.find((i) => i.id === 'updates')?.actions[0]?.kind).toBe('update');
     expect(items.find((i) => i.id === 'saltbox')?.actions[0]?.kind).toBe('sbUpdate');
     expect(items.find((i) => i.id === 'disk:/')?.tone).toBe('danger');
+  });
+
+  it('counts updates by app, as the daemon groups them, whether or not the apps list has loaded', () => {
+    const updates = {
+      apps: [
+        { containers: ['authelia-redis'], core: true, repo: 'saltbox' as const, role: 'authelia', title: 'Authelia' },
+        { containers: ['autoheal'], core: false, repo: 'saltbox' as const, role: 'autoheal', title: 'Autoheal' },
+        { containers: ['traefik'], core: true, repo: 'saltbox' as const, role: 'traefik', title: 'Traefik Proxy' },
+      ],
+      checked_at: 1,
+      pending: ['authelia-redis', 'autoheal', 'traefik', 'watchdog'],
+      running: false,
+      unknown: ['watchdog'],
+    };
+    for (const apps of [[], [sonarr]]) {
+      const item = attentionItems(overview({ updates }), apps).find((i) => i.id === 'updates');
+      expect(item?.title).toBe('3 app updates available');
+      expect(item?.detail).toBe('Authelia, Autoheal, Traefik Proxy');
+      expect(item?.actions.map((a) => a.kind)).toEqual(['updateAll', 'link']);
+    }
+    const none = attentionItems(overview({ updates: { ...updates, apps: [] } }));
+    expect(none.find((i) => i.id === 'updates')).toBeUndefined();
   });
 
   it('folds errors in several config files into one item', () => {

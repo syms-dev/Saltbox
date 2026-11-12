@@ -33,7 +33,9 @@ after a reboot or a dropped SSH session.
   qBittorrent and SABnzbd, what is playing on Plex and what Sonarr and Radarr
   expect this week; a launcher for your apps; updates, storage and activity.
 - **Apps**: installed apps with health, update and restart buttons, and a
-  Discover tab to install anything in the Saltbox and Sandbox catalogs. Each app
+  Discover tab to install anything in the Saltbox and Sandbox catalogs. What
+  runs as part of Saltbox itself (Traefik, Authelia) is listed too, marked
+  Core, so its updates are not missed. Each app
   has a page with its containers (restart, stop, start, CPU and memory), live
   logs, inventory overrides and role defaults, docs and links.
 - **Activity**: every job with a live log. A failed job says which task failed
@@ -47,7 +49,8 @@ after a reboot or a dropped SSH session.
   Saltbox already installs; `apprise:` in accounts.yml is the default address)
   when an app turns unhealthy or stops, a job fails, a disk passes 90%, updates
   arrive or the VPN has a problem; and nightly maintenance that updates apps
-  with new images, except the ones you exclude, and sends one summary. It does
+  with new images (Traefik and Authelia included), except the ones you
+  exclude, and sends one summary. It does
   not update Saltbox itself: `sb update` is made to be run by a person.
 - **Connect apps**: quality profiles through Recyclarr (TRaSH Guides profiles,
   written to `/opt/recyclarr` with keys read from the apps), then the
@@ -67,9 +70,9 @@ Version 0.1.0. Treat it as a beta.
 
 | Check | Result |
 | --- | --- |
-| Python tests (pytest) | 285 tests; pass on Python 3.12 and 3.14 |
-| Web unit tests (Vitest) | 45 tests pass |
-| End-to-end tests (Playwright, Chromium) | 58 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
+| Python tests (pytest) | 288 tests; pass on Python 3.12 and 3.14 |
+| Web unit tests (Vitest) | 46 tests pass |
+| End-to-end tests (Playwright, Chromium) | 59 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
 | Package | CI builds the wheel, installs it in a clean environment and loads the web app from it |
 | Real servers | **One**: Ubuntu 26.04, Python 3.14, local drives pooled with mergerfs, Plex, qBittorrent behind Gluetun (ProtonVPN) |
 
@@ -90,16 +93,19 @@ found by using it:
 - Autoheal was missing from the app list because it keeps no folder in `/opt`;
 - `sb update` refuses to run without a terminal, shows announcements in a
   full-screen viewer that waits for a key, and asks whether to run migrations.
-  The stand-in for `sb` did none of that.
+  The stand-in for `sb` did none of that;
+- new images for Traefik and for the Redis that Authelia runs were counted on
+  Home until the apps list loaded, then dropped, because no listed app owned
+  those containers.
 
-Each is fixed and now has a test (the `sb update` fix has not been back on the
-server yet, see below). Expect more of the same on setups unlike that one.
-**Not yet run on any real server:**
+Each is fixed and now has a test. Expect more of the same on setups unlike
+that one. **Not yet run on any real server:**
 
-- `sb update` from the web app since it was given a pseudo-terminal. It was
-  written from sb's source code (`cmd/update.go`, `saltbox/announcements.go`)
-  and is tested against a stand-in that behaves the same way at the terminal;
-  sb itself has not been run through it;
+- an `sb update` that brings announcements or asks about migrations. A plain
+  `sb update` has run from the web app on the real server; the announcement
+  and migration handling was written from sb's source code (`cmd/update.go`,
+  `saltbox/announcements.go`) and is tested against a stand-in that behaves the
+  same way at the terminal;
 - installing this package from a release wheel (the real server runs it from a
   source checkout);
 - the admin check behind a real Traefik and Authelia (tested with the headers
