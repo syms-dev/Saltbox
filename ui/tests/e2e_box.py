@@ -218,10 +218,26 @@ def _json(data: Any) -> Response:
     return Response(200, json.dumps(data).encode())
 
 
+# qBittorrent as it ships: no seeding limit, so finished torrents never stop.
+QBIT_PREFERENCES: dict[str, Any] = {
+    "max_ratio_enabled": False,
+    "max_ratio": -1,
+    "max_seeding_time_enabled": False,
+    "max_seeding_time": -1,
+    "max_ratio_act": 0,
+}
+FINISHED_TORRENTS = [
+    {"state": "uploading", "size": 4 * 1024**3, "category": "sonarr", "seeding_time": 86400 * 3},
+    {"state": "stalledUP", "size": 10 * 1024**3, "category": "radarr", "seeding_time": 86400 * 40},
+    {"state": "stalledUP", "size": 2 * 1024**3, "category": "sonarr", "seeding_time": 86400},
+    {"state": "stoppedUP", "size": 6 * 1024**3, "category": "", "seeding_time": 86400 * 9},
+]
+
+
 def apps_transport(method: str, url: str, headers: dict[str, str], body: Any) -> Response:
     """Just enough of qBittorrent, Plex, Sonarr and Radarr for the media cards."""
     import datetime as dt
-    from urllib.parse import urlsplit
+    from urllib.parse import parse_qsl, urlsplit
 
     parts = urlsplit(url)
     host, path = parts.hostname or "", parts.path
@@ -231,9 +247,17 @@ def apps_transport(method: str, url: str, headers: dict[str, str], body: Any) ->
     if path == "/api/v2/transfer/info":
         return _json({"dl_info_speed": 12_582_912, "up_info_speed": 524_288})
     if path == "/api/v2/torrents/info":
+        if "filter=completed" in parts.query:
+            return _json(FINISHED_TORRENTS)
         return _json(
             [{"name": "Some.Show.S03E04.1080p.WEB", "progress": 0.62, "eta": 300, "dlspeed": 8e6}]
         )
+    if path == "/api/v2/app/preferences":
+        return _json(QBIT_PREFERENCES)
+    if path == "/api/v2/app/setPreferences":
+        form = dict(parse_qsl((body or b"").decode()))
+        QBIT_PREFERENCES.update(json.loads(form["json"]))
+        return Response(200, b"")
     if path == "/status/sessions":
         return _json(
             {

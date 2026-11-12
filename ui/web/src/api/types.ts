@@ -256,6 +256,31 @@ export type HostStats = {
   uptime: number | null;
 };
 
+/** qBittorrent's global seeding limits; `null` means that limit is off. */
+export type SeedingLimits = {
+  action: 'remove' | 'remove_files' | 'stop' | 'super_seed';
+  days: number | null;
+  inactive_days: number | null;
+  ratio: number | null;
+};
+
+export type SeedingGroup = { count: number; size: number };
+
+/** Finished torrents in qBittorrent: still seeding, or stopped and left there. */
+export type SeedingStatus = {
+  categories?: { name: string; seeding: number; stopped: number }[];
+  error: string;
+  installed: boolean;
+  limits?: SeedingLimits;
+  longest_seeding_days?: number;
+  seeding?: SeedingGroup;
+  stopped?: SeedingGroup;
+  /** Apps in the catalogs that manage finished torrents by finer rules. */
+  tools: (AppRef & { installed: boolean })[];
+  /** No limit at all: nothing ever stops, so nothing is ever removed. */
+  unlimited?: boolean;
+};
+
 export type ContainerStats = {
   cpu_percent: number;
   memory: number;

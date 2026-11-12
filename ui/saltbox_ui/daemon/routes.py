@@ -653,6 +653,81 @@ def media(request: Request) -> dict[str, Any]:
     return data
 
 
+# -- seeding --------------------------------------------------------------------------
+SEEDING_TTL_SECONDS = 60.0
+# Apps in the catalogs that manage finished torrents by finer rules than one global limit.
+SEEDING_TOOLS = ("tqm", "qbit_manage", "cleanuparr")
+
+
+class SeedingLimits(BaseModel):
+    ratio: float | None = None
+    days: float | None = None
+
+
+def _seeding_status(request: Request, *, fresh: bool = False) -> dict[str, Any]:
+    from .. import seeding
+
+    svc = services(request)
+    cached = svc.__dict__.get("_seeding")
+    if not fresh and cached is not None and time.monotonic() - cached[0] < SEEDING_TTL_SECONDS:
+        return cached[1]
+    setup = _app_setup(request)
+    found = setup.discover()
+    qbit = found.first("qbittorrent")
+    tools = []
+    for role in SEEDING_TOOLS:
+        app = svc.catalog.app(role)
+        if app is not None:
+            instances = svc.inventory.instances(app.role, app.default_instances or [app.role])
+            installed = any((svc.layout.appdata / name).is_dir() for name in instances)
+            tools.append(
+                {"repo": app.repo, "role": app.role, "title": app.title, "installed": installed}
+            )
+    data: dict[str, Any] = {"installed": qbit is not None, "error": "", "tools": tools}
+    if qbit is not None:
+        try:
+            data.update(
+                seeding.status(qbit, found.user, found.password, getattr(setup, "transport", None))
+            )
+        except Exception as error:  # qBittorrent stopped, or it refused the login
+            data["error"] = _redactor(svc)(str(error))
+    svc.__dict__["_seeding"] = (time.monotonic(), data)
+    return data
+
+
+@router.get("/seeding")
+def seeding_status(request: Request) -> dict[str, Any]:
+    """qBittorrent's seeding limits and how many finished torrents seed or sit stopped."""
+    return _seeding_status(request)
+
+
+@router.put("/seeding")
+def seeding_save(request: Request, body: SeedingLimits) -> dict[str, Any]:
+    """Set qBittorrent's global seeding limits; a torrent stops at whichever comes first."""
+    from .. import seeding
+    from ..appsetup.http import SetupError
+
+    setup = _app_setup(request)
+    found = setup.discover()
+    qbit = found.first("qbittorrent")
+    if qbit is None:
+        raise HTTPException(409, "qBittorrent is not installed")
+    try:
+        seeding.set_limits(
+            qbit,
+            found.user,
+            found.password,
+            getattr(setup, "transport", None),
+            ratio=body.ratio,
+            days=body.days,
+        )
+    except seeding.SeedingError as error:
+        raise HTTPException(422, str(error)) from error
+    except SetupError as error:
+        raise HTTPException(502, _redactor(services(request))(str(error))) from error
+    return _seeding_status(request, fresh=True)
+
+
 # -- recyclarr ------------------------------------------------------------------------
 class RecyclarrSelection(BaseModel):
     sonarr: list[str] = Field(default_factory=list)

@@ -337,9 +337,17 @@ test.describe('system and setup', () => {
 
   test('shows resource use, Tailscale and backups, and backs up on request', async ({ page }) => {
     await page.goto('/system');
-    const busiest = page.getByRole('table', { name: 'Busiest containers' });
-    await expect(busiest.getByRole('row').nth(1)).toContainText('plex');
-    await expect(busiest.getByRole('row').nth(1)).toContainText('31.5%');
+    // Busiest first to begin with; any column sorts, and the rest of the containers are a click away.
+    const use = page.getByRole('table', { name: 'Container resource use' });
+    await expect(use.getByRole('row').nth(1)).toContainText('plex');
+    await expect(use.getByRole('row').nth(1)).toContainText('31.5%');
+    await expect(use.getByRole('row')).toHaveCount(9);
+    await use.getByRole('button', { name: 'Container' }).click();
+    await expect(use.getByRole('row').nth(1)).toContainText('authelia');
+    await use.getByRole('button', { name: 'Memory' }).click();
+    await expect(use.getByRole('row').nth(1)).toContainText('plex');
+    await page.getByRole('button', { name: /^Show all \d+ containers$/ }).click();
+    expect(await use.getByRole('row').count()).toBeGreaterThan(9);
     const tailscale = page.getByRole('region', { name: 'Tailscale' });
     await expect(tailscale).toContainText('Connected');
     await expect(tailscale).toContainText('ssh seed@saltbox');
@@ -386,6 +394,38 @@ test.describe('system and setup', () => {
     await expect(
       page.getByRole('region', { name: 'Quality profiles' }).getByRole('checkbox', { name: /UHD Bluray/ }),
     ).toBeChecked();
+  });
+
+  test('shows finished torrents that keep seeding and sets the limits that stop them', async ({ page }) => {
+    await page.goto('/');
+    const downloads = page.getByRole('region', { name: 'Media' }).getByRole('region', { name: 'Downloads' });
+    const line = downloads.getByRole('link', { name: /seeding/ });
+    await expect(line).toHaveText('3 seeding (16.0 GiB) · no limit set');
+    await line.click();
+    await expect(page).toHaveURL(/\/connect$/);
+    const seeding = page.getByRole('region', { name: 'Seeding' });
+    await expect(seeding).toContainText('3 torrents (16.0 GiB), the longest for 40 days');
+    await expect(seeding).toContainText('Stopped, still in qBittorrent1 torrent (6.0 GiB)');
+    await expect(seeding).toContainText('No seeding limit is set');
+    const save = seeding.getByRole('button', { name: 'Save limits' });
+    await expect(save).toBeDisabled();
+    await seeding.getByRole('checkbox', { name: /share ratio/ }).check();
+    await seeding.getByRole('textbox', { name: 'Share ratio' }).fill('2');
+    await seeding.getByRole('checkbox', { name: /after seeding/ }).check();
+    await seeding.getByRole('textbox', { name: 'Days of seeding' }).fill('14');
+    await save.click();
+    await expect(page.getByRole('status').getByText('Seeding limits saved')).toBeVisible();
+    await expect(seeding).not.toContainText('No seeding limit is set');
+
+    await page.reload();
+    await expect(
+      page.getByRole('region', { name: 'Seeding' }).getByRole('textbox', { name: 'Share ratio' }),
+    ).toHaveValue('2');
+    const saved = (await (await page.request.get('/api/seeding')).json()) as { limits: unknown; unlimited: boolean };
+    expect(saved.limits).toEqual({ action: 'stop', days: 14, inactive_days: null, ratio: 2 });
+    expect(saved.unlimited).toBe(false);
+    // Leave the box as it was found.
+    await page.request.put('/api/seeding', { data: { days: null, ratio: null } });
   });
 
   test('Connect apps lists every check per app without failing as a whole', async ({ page }) => {

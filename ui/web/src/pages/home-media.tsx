@@ -1,8 +1,11 @@
 import { ArrowDown, ArrowUp, CalendarDays, CircleCheck, Film, Play, Shield, ShieldAlert, Tv } from 'lucide-react';
 
+import { Link } from 'react-router-dom';
+
+import { useSeeding } from '../api/queries';
 import type { MediaSnapshot, UpcomingItem } from '../api/types';
 import { StatusDot } from '../components/status-dot';
-import { formatDay, formatSpeed } from '../format';
+import { formatBytes, formatDay, formatSpeed } from '../format';
 import type { Attention } from './home-attention';
 import styles from './home-media.module.css';
 
@@ -84,6 +87,20 @@ function VpnCard({ vpn }: { vpn: NonNullable<MediaSnapshot['vpn']> }): React.Rea
   );
 }
 
+/** How much is seeding after it finished, with the way to the limits that stop it. */
+function SeedingLine(): React.ReactNode {
+  const seeding = useSeeding();
+  const status = seeding.data;
+  if (status?.seeding === undefined) return null;
+  const { count, size } = status.seeding;
+  return (
+    <Link className={`small ${styles['seeding']}`} to="/connect">
+      {count} seeding{count === 0 ? '' : ` (${formatBytes(size)})`}
+      {status.unlimited === true ? ' · no limit set' : ''}
+    </Link>
+  );
+}
+
 function DownloadsCard({ media }: { media: MediaSnapshot }): React.ReactNode {
   const qbit = media.qbittorrent;
   const sab = media.sabnzbd;
@@ -124,6 +141,7 @@ function DownloadsCard({ media }: { media: MediaSnapshot }): React.ReactNode {
                 ))}
               </ul>
             )}
+            {qbit.available ? <SeedingLine /> : null}
           </div>
         )}
         {sab === undefined ? null : (

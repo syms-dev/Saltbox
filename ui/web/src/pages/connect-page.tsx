@@ -7,6 +7,7 @@ import { useConfirm, useToast } from '../components/feedback';
 import { ErrorMessage, Loading } from '../components/query-state';
 import styles from './connect-page.module.css';
 import { RecyclarrCard } from './recyclarr-card';
+import { SeedingCard } from './seeding-card';
 
 const HIDDEN = '\u2039hidden\u203a';
 
@@ -93,6 +94,7 @@ export function ConnectPage(): React.ReactNode {
         download clients and indexers, and Plex sees your library. Safe to run again at any time.
       </p>
       <RecyclarrCard />
+      <SeedingCard />
       <h2 className={styles['flush']}>Connections</h2>
       <div className="chips">
         {(['done', 'todo', 'error', 'manual', 'skip'] as const).map((status) => (

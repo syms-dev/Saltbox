@@ -28,6 +28,7 @@ import type {
   ContainerState,
   Overview,
   RecyclarrStatus,
+  SeedingStatus,
   Resources,
   SetupResponse,
   TailscaleStatus,
@@ -354,6 +355,27 @@ export function useRecyclarr(): UseQueryResult<RecyclarrStatus> {
   return useQuery({
     queryFn: ({ signal }) => apiFetch<RecyclarrStatus>(API_ROUTES.RECYCLARR, { signal }),
     queryKey: ['recyclarr'],
+  });
+}
+
+const SEEDING_REFRESH_MS = 60_000;
+
+/** Seeding limits and finished torrents in qBittorrent. */
+export function useSeeding(): UseQueryResult<SeedingStatus> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<SeedingStatus>(API_ROUTES.SEEDING, { signal }),
+    queryKey: ['seeding'],
+    refetchInterval: SEEDING_REFRESH_MS,
+  });
+}
+
+type SeedingChoice = { days: number | null; ratio: number | null };
+
+export function useSaveSeeding(): UseMutationResult<SeedingStatus, Error, SeedingChoice> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (choice: SeedingChoice) => apiPut<SeedingStatus>(API_ROUTES.SEEDING, choice),
+    onSuccess: (status) => client.setQueryData(['seeding'], status),
   });
 }
 

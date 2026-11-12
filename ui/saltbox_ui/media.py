@@ -15,7 +15,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from .appsetup.discover import Discovery, Service
-from .appsetup.http import Client, SetupError, Transport
+from .appsetup.http import Client, Response, SetupError, Transport
 from .appsetup.tasks import SabClient, session_cookie
 from .appsetup.vpnport import docker_cat, forwarded_port
 
@@ -80,25 +80,38 @@ def vpn_status(
 
 
 # -- downloads -----------------------------------------------------------------
+def qbit_request(
+    service: Service,
+    user: str,
+    password: str,
+    transport: Transport | None,
+    method: str,
+    path: str,
+    **options: Any,
+) -> Response:
+    """One call to qBittorrent's API as the accounts.yml user, logging in when needed."""
+    client = Client(service.host_url, transport=transport, name=service.name)
+    headers = {"Cookie": _qbit_cookie(client, service, user, password), "Referer": service.host_url}
+    response = client.request(method, path, headers=headers, ok=(200, 403), **options)
+    if response.status == 403:  # the session expired: log in again once
+        _QBIT_COOKIES.pop(service.host_url, None)
+        headers["Cookie"] = _qbit_cookie(client, service, user, password)
+        response = client.request(method, path, headers=headers, **options)
+    return response
+
+
 def qbittorrent(
     service: Service, user: str, password: str, transport: Transport | None
 ) -> dict[str, Any]:
-    client = Client(service.host_url, transport=transport, name=service.name)
-    cookie = _qbit_cookie(client, service, user, password)
-    headers = {"Cookie": cookie, "Referer": service.host_url}
-    info = client.request("GET", "/api/v2/transfer/info", headers=headers, ok=(200, 403))
-    if info.status == 403:  # the session expired: log in again once
-        _QBIT_COOKIES.pop(service.host_url, None)
-        headers["Cookie"] = _qbit_cookie(client, service, user, password)
-        info = client.request("GET", "/api/v2/transfer/info", headers=headers)
-    transfer = info.json() or {}
+    def call(path: str, **options: Any) -> Any:
+        return qbit_request(service, user, password, transport, "GET", path, **options).json()
+
+    transfer = call("/api/v2/transfer/info") or {}
     torrents = (
-        client.request(
-            "GET",
+        call(
             "/api/v2/torrents/info",
             params={"filter": "downloading", "sort": "progress", "reverse": "true"},
-            headers=headers,
-        ).json()
+        )
         or []
     )
     return {

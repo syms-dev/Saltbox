@@ -1,4 +1,5 @@
-import { Archive, Cpu, LoaderCircle, Network, Terminal } from 'lucide-react';
+import { Archive, ArrowDown, ArrowUp, Cpu, LoaderCircle, Network, Terminal } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import {
@@ -11,6 +12,7 @@ import {
   useTailscale,
   useTailscaleServe,
 } from '../api/queries';
+import type { ContainerStats } from '../api/types';
 import { useConfirm, useToast } from '../components/feedback';
 import { Meter } from '../components/meter';
 import { jobTitle } from '../components/shell';
@@ -20,6 +22,50 @@ import styles from './system-page.module.css';
 
 const TOP_CONTAINERS = 8;
 
+export type ResourceSort = { descending: boolean; key: 'cpu' | 'memory' | 'name' };
+
+const SORT_LABELS: Record<ResourceSort['key'], string> = { cpu: 'CPU', memory: 'Memory', name: 'Container' };
+
+/** Containers in the order asked for; ties fall back to the name so rows do not jump about. */
+export function sortContainers(containers: ContainerStats[], sort: ResourceSort): ContainerStats[] {
+  const direction = sort.descending ? -1 : 1;
+  const byName = (a: ContainerStats, b: ContainerStats): number => a.name.localeCompare(b.name);
+  return [...containers].sort((a, b) => {
+    if (sort.key === 'name') return direction * byName(a, b);
+    const difference = sort.key === 'cpu' ? a.cpu_percent - b.cpu_percent : a.memory - b.memory;
+    return direction * difference || byName(a, b);
+  });
+}
+
+/** A column heading that sorts by its column; pressing it again reverses the order. */
+function SortHeading({
+  column,
+  onSort,
+  sort,
+}: {
+  column: ResourceSort['key'];
+  onSort: (next: ResourceSort) => void;
+  sort: ResourceSort;
+}): React.ReactNode {
+  const active = sort.key === column;
+  // Names read best A to Z; for CPU and memory the biggest is what people look for.
+  const next = { descending: active ? !sort.descending : column !== 'name', key: column };
+  return (
+    <th aria-sort={active ? (sort.descending ? 'descending' : 'ascending') : 'none'} scope="col">
+      <button className={styles['sort']} onClick={() => onSort(next)} type="button">
+        {SORT_LABELS[column]}
+        {active ? (
+          sort.descending ? (
+            <ArrowDown aria-hidden="true" size={13} />
+          ) : (
+            <ArrowUp aria-hidden="true" size={13} />
+          )
+        ) : null}
+      </button>
+    </th>
+  );
+}
+
 export function ResourcesCard(): React.ReactNode {
   const resources = useResources();
   const apps = useApps();
@@ -27,9 +73,12 @@ export function ResourcesCard(): React.ReactNode {
     const app = apps.data?.find((a) => a.containers.some((c) => c.name === container));
     return app === undefined ? undefined : `/apps/${app.repo}/${app.role}`;
   };
+  const [sort, setSort] = useState<ResourceSort>({ descending: true, key: 'cpu' });
+  const [showAll, setShowAll] = useState(false);
   const host = resources.data?.host;
-  const busiest = (resources.data?.containers ?? []).slice(0, TOP_CONTAINERS);
-  const maxMemory = Math.max(1, ...busiest.map((c) => c.memory));
+  const containers = sortContainers(resources.data?.containers ?? [], sort);
+  const shown = showAll ? containers : containers.slice(0, TOP_CONTAINERS);
+  const maxMemory = Math.max(1, ...containers.map((c) => c.memory));
   return (
     <section aria-labelledby="resources-title" className="card">
       <h2 className={styles['iconTitle']} id="resources-title">
@@ -68,17 +117,17 @@ export function ResourcesCard(): React.ReactNode {
         </div>
       )}
       {resources.data?.error ? <p className="note warn small">{resources.data.error}</p> : null}
-      {busiest.length === 0 ? null : (
-        <table aria-label="Busiest containers" className={styles['busiest']}>
+      {shown.length === 0 ? null : (
+        <table aria-label="Container resource use" className={styles['busiest']}>
           <thead>
             <tr>
-              <th>Container</th>
-              <th>CPU</th>
-              <th>Memory</th>
+              <SortHeading column="name" onSort={setSort} sort={sort} />
+              <SortHeading column="cpu" onSort={setSort} sort={sort} />
+              <SortHeading column="memory" onSort={setSort} sort={sort} />
             </tr>
           </thead>
           <tbody>
-            {busiest.map((c) => {
+            {shown.map((c) => {
               const link = appFor(c.name);
               return (
                 <tr key={c.name}>
@@ -98,6 +147,11 @@ export function ResourcesCard(): React.ReactNode {
           </tbody>
         </table>
       )}
+      {containers.length > TOP_CONTAINERS ? (
+        <button className="small ghost" onClick={() => setShowAll(!showAll)} type="button">
+          {showAll ? `Show the first ${TOP_CONTAINERS}` : `Show all ${containers.length} containers`}
+        </button>
+      ) : null}
     </section>
   );
 }

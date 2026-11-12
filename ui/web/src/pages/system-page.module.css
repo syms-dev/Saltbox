@@ -173,3 +173,23 @@
   border-top: 1px solid var(--color-border);
   padding-top: var(--space-3);
 }
+
+/* A column heading that sorts: looks like the heading it replaces, behaves like a button. */
+.sort {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  gap: var(--space-1);
+  letter-spacing: inherit;
+  min-height: 0;
+  padding: 0;
+  text-transform: inherit;
+}
+
+.sort:hover {
+  color: var(--color-fg);
+}

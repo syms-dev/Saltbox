@@ -30,8 +30,8 @@ after a reboot or a dropped SSH session.
   restart an unhealthy app, start a stopped one, apply updates, open a config
   file with errors, retry a failed job, start the VPN. Then media at a glance:
   the VPN (public IP, forwarded port, what is routed through it), downloads in
-  qBittorrent and SABnzbd, what is playing on Plex and what Sonarr and Radarr
-  expect this week; a launcher for your apps; updates, storage and activity.
+  qBittorrent and SABnzbd (and how much keeps seeding after it finished), what
+  is playing on Plex and what Sonarr and Radarr expect this week; a launcher for your apps; updates, storage and activity.
 - **Apps**: installed apps with health, update and restart buttons, and a
   Discover tab to install anything in the Saltbox and Sandbox catalogs. What
   runs as part of Saltbox itself (Traefik, Authelia) is listed too, marked
@@ -40,7 +40,8 @@ after a reboot or a dropped SSH session.
   logs, inventory overrides and role defaults, docs and links.
 - **Activity**: every job with a live log. A failed job says which task failed
   and why, and can be run again.
-- **System**: CPU, memory and the busiest containers; each drive and pool once;
+- **System**: CPU and memory, with every container sortable by name, CPU or
+  memory; each drive and pool once;
   mounts and Saltbox services; Tailscale (and opening this app over it);
   backups (`sb install backup` on demand); Saltbox's own version and `sb update`,
   which shows the update's announcements with the job and waits for your yes or
@@ -56,6 +57,9 @@ after a reboot or a dropped SSH session.
   written to `/opt/recyclarr` with keys read from the apps), then the
   post-install wiring the Saltbox app docs describe: download clients, root
   folders, Prowlarr sync, FlareSolverr, Autoscan, Plex libraries and settings.
+  A Seeding card shows the finished torrents still seeding in qBittorrent and
+  sets the ratio and time limits that stop them, which is what lets Sonarr and
+  Radarr remove them.
   Steps that must be done by hand in Bazarr and Seerr are checked from those
   apps' settings files.
 - **Config**: the YAML files `sb` reads, with the same validation as
@@ -70,9 +74,9 @@ Version 0.1.0. Treat it as a beta.
 
 | Check | Result |
 | --- | --- |
-| Python tests (pytest) | 288 tests; pass on Python 3.12 and 3.14 |
-| Web unit tests (Vitest) | 46 tests pass |
-| End-to-end tests (Playwright, Chromium) | 59 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
+| Python tests (pytest) | 299 tests; pass on Python 3.12 and 3.14 |
+| Web unit tests (Vitest) | 53 tests pass |
+| End-to-end tests (Playwright, Chromium) | 60 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
 | Package | CI builds the wheel, installs it in a clean environment and loads the web app from it |
 | Real servers | **One**: Ubuntu 26.04, Python 3.14, local drives pooled with mergerfs, Plex, qBittorrent behind Gluetun (ProtonVPN) |
 
@@ -106,6 +110,8 @@ that one. **Not yet run on any real server:**
   and migration handling was written from sb's source code (`cmd/update.go`,
   `saltbox/announcements.go`) and is tested against a stand-in that behaves the
   same way at the terminal;
+- the seeding limits (written from qBittorrent's API documentation and
+  Sonarr's source, and tested against a stand-in for qBittorrent);
 - installing this package from a release wheel (the real server runs it from a
   source checkout);
 - the admin check behind a real Traefik and Authelia (tested with the headers

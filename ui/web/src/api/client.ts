@@ -18,6 +18,7 @@ export const API_ROUTES = {
   OVERVIEW: '/overview',
   RECYCLARR: '/recyclarr',
   RECYCLARR_SYNC: '/recyclarr/sync',
+  SEEDING: '/seeding',
   RESOURCES: '/resources',
   SALTBOX_UPDATE: '/saltbox/update',
   SETUP: '/setup',

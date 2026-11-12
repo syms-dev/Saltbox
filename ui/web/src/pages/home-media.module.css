@@ -127,3 +127,7 @@
   color: var(--color-ok);
   flex: none;
 }
+
+.seeding {
+  width: fit-content;
+}
