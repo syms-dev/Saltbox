@@ -46,6 +46,8 @@ from ..state import (
     systemd_units,
 )
 from ..state.containers import CONTAINER_ACTIONS, container_action, container_logs
+from ..state.host import reboot as reboot_host
+from ..state.host import reboot_packages
 from ..state.system import (
     backup_summary,
     container_stats,
@@ -107,7 +109,8 @@ def overview(request: Request) -> dict[str, Any]:
     return {
         "host": {
             "disks": disk_usage(),
-            "reboot_required": reboot_required(),
+            "reboot_required": reboot_required(svc.reboot_flag),
+            "reboot_packages": reboot_packages(svc.reboot_flag),
             "mounts": mounts(),
             "units": systemd_units(),
         },
@@ -186,6 +189,7 @@ def app_detail(request: Request, repo: str, role: str, reveal: bool = False) -> 
         "urls": [url for view in views for url in view["urls"]],
         "update_available": any(view["update"] == "update" for view in views),
         "installed": bool(views) or any((svc.layout.appdata / n).is_dir() for n in instances),
+        "core": not _is_listed(app),
         "instances": instances,
         "fields": [f.as_dict() for f in defaults.visible()] if defaults else [],
         "overrides": (overrides if reveal else mask_tree(overrides)),
@@ -350,12 +354,24 @@ def motd(request: Request, secrets: bool = False) -> list[dict[str, Any]]:
 
 @router.get("/state/host")
 def host(request: Request) -> dict[str, Any]:
+    svc = services(request)
     return {
         "disks": disk_usage(),
         "mounts": mounts(),
         "units": systemd_units(),
-        "reboot_required": reboot_required(),
+        "reboot_required": reboot_required(svc.reboot_flag),
+        "reboot_packages": reboot_packages(svc.reboot_flag),
     }
+
+
+@router.post("/host/reboot", status_code=202)
+def host_reboot(request: Request) -> dict[str, Any]:
+    """Restart the server. Refused while a job runs: a reboot would cut it off half way."""
+    svc = services(request)
+    if svc.jobs.busy or svc.runner.is_locked() is not None:
+        raise HTTPException(409, "a job is running; wait for it to finish or cancel it first")
+    (svc.reboot or reboot_host)()
+    return {"rebooting": True}
 
 
 # -- updates -------------------------------------------------------------------
@@ -380,6 +396,78 @@ def update_app(request: Request, repo: str, role: str) -> dict[str, Any]:
     if app is None:
         raise HTTPException(404, f"unknown app {repo}/{role}")
     return _start_update(svc, [app])
+
+
+class UninstallRequest(BaseModel):
+    delete_data: bool = False
+
+
+def _uninstall_plan(svc, app) -> dict[str, Any]:
+    """What uninstalling ``app`` would remove, and what stands in the way."""
+    from .. import uninstall
+
+    containers = _containers_or_none() or []
+    instances = svc.inventory.instances(app.role, app.default_instances or [app.role])
+    names = _containers_of(app, instances, _owners(svc, containers))
+    blockers = []
+    if not _is_listed(app):
+        blockers.append(f"{app.title} is part of Saltbox itself or something other apps rely on")
+    if svc.jobs.busy or svc.runner.is_locked() is not None:
+        blockers.append("a job is running")
+    blockers += uninstall.dependents(set(names), containers)
+    folders = [
+        str(path)
+        for name in instances
+        if (path := uninstall.data_folder(svc.layout.appdata, name)) is not None
+    ]
+    return {
+        "containers": names,
+        "folders": folders,
+        "instances": instances,
+        "blockers": blockers,
+    }
+
+
+@router.get("/apps/{repo}/{role}/uninstall")
+def uninstall_preview(request: Request, repo: str, role: str) -> dict[str, Any]:
+    svc = services(request)
+    app = svc.catalog.app(role, repo)
+    if app is None:
+        raise HTTPException(404, f"unknown app {repo}/{role}")
+    return _uninstall_plan(svc, app)
+
+
+@router.post("/apps/{repo}/{role}/uninstall")
+def uninstall_app(request: Request, repo: str, role: str, body: UninstallRequest) -> dict[str, Any]:
+    """Remove the app's containers; delete its settings folders only when asked to."""
+    from .. import uninstall
+
+    svc = services(request)
+    app = svc.catalog.app(role, repo)
+    if app is None:
+        raise HTTPException(404, f"unknown app {repo}/{role}")
+    plan = _uninstall_plan(svc, app)
+    if plan["blockers"]:
+        raise HTTPException(409, "; ".join(plan["blockers"]))
+    if not plan["containers"] and not plan["folders"]:
+        raise HTTPException(409, f"{app.title} is not installed")
+    removed, deleted = [], []
+    try:
+        for name in plan["containers"]:
+            uninstall.remove_container(name)
+            removed.append(name)
+        if body.delete_data:
+            for name in plan["instances"]:
+                if uninstall.data_folder(svc.layout.appdata, name) is not None:
+                    deleted.append(str(uninstall.delete_folder(svc.layout.appdata, name)))
+    except uninstall.UninstallError as error:
+        done = f" (already removed: {', '.join(removed + deleted)})" if removed or deleted else ""
+        raise HTTPException(502, f"{error}{done}") from error
+    for cache in ("_media", "_seeding"):
+        svc.__dict__.pop(cache, None)
+    svc.updates.refresh()
+    kept = [folder for folder in plan["folders"] if folder not in deleted]
+    return {"removed": removed, "deleted": deleted, "kept": kept}
 
 
 @router.post("/updates/apply", status_code=202)
@@ -650,6 +738,51 @@ def media(request: Request) -> dict[str, Any]:
         if isinstance(section, dict) and section.get("error"):
             section["error"] = redact(str(section["error"]))
     svc.__dict__["_media"] = (time.monotonic(), data)
+    return data
+
+
+# -- problems in the logs ---------------------------------------------------------------
+PROBLEMS_TTL_SECONDS = 600.0
+
+
+@router.get("/problems")
+def problems(request: Request, refresh: bool = False) -> dict[str, Any]:
+    """Errors that keep recurring in the apps' logs, with an explanation for the known ones.
+
+    Reading a day of every container's log takes a few seconds, so the result
+    is kept for ten minutes; ``refresh`` reads again.
+    """
+    from .. import logcheck
+
+    svc = services(request)
+    cached = svc.__dict__.get("_problems")
+    if not refresh and cached is not None and time.monotonic() - cached[0] < PROBLEMS_TTL_SECONDS:
+        return cached[1]
+    containers = _containers_or_none()
+    names = [c["name"] for c in containers or [] if c.get("managed")]
+    found = logcheck.scan(names, getattr(svc, "log_runner", None))
+    owners = _owners(svc, containers)
+    redact = _redactor(svc)
+    result = []
+    for name in sorted(found):
+        owner = owners.get(name)
+        result.append(
+            {
+                "name": name,
+                "app": None
+                if owner is None
+                else {"repo": owner.repo, "role": owner.role, "title": owner.title},
+                "groups": [{**group, "message": redact(group["message"])} for group in found[name]],
+            }
+        )
+    data = {
+        "available": containers is not None,
+        "checked_at": time.time(),
+        "window": logcheck.SINCE,
+        "scanned": len(names),
+        "containers": result,
+    }
+    svc.__dict__["_problems"] = (time.monotonic(), data)
     return data
 
 

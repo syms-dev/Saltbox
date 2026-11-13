@@ -2,12 +2,13 @@ import {
   ArrowLeft,
   ArrowUpCircle,
   BookOpen,
+  CircleStop,
   Copy,
   ExternalLink,
   PackagePlus,
   Play,
   RotateCw,
-  CircleStop,
+  Trash2,
   Wrench,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -44,6 +45,7 @@ function asApp(detail: AppDetail, installed: boolean): App {
   return {
     ...detail.app,
     containers: detail.containers,
+    core: detail.core ?? false,
     installed,
     instances: detail.instances,
     update_available: detail.update_available,
@@ -608,9 +610,16 @@ export function AppPage(): React.ReactNode {
             </button>
           )}
           {installed ? (
-            <button disabled={busy} onClick={() => void jobActions.install(app, true)} type="button">
-              <Wrench aria-hidden="true" size={16} /> Reinstall
-            </button>
+            <>
+              <button disabled={busy} onClick={() => void jobActions.install(app, true)} type="button">
+                <Wrench aria-hidden="true" size={16} /> Reinstall
+              </button>
+              {app.core === true ? null : (
+                <button className="danger" disabled={busy} onClick={() => void jobActions.uninstall(app)} type="button">
+                  <Trash2 aria-hidden="true" size={16} /> Uninstall
+                </button>
+              )}
+            </>
           ) : (
             <button className="primary" disabled={busy} onClick={() => void jobActions.install(app)} type="button">
               <PackagePlus aria-hidden="true" size={16} /> Install

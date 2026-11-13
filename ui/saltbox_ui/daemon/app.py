@@ -49,6 +49,11 @@ class Services:
     tailscale_socket: str | None = None
     admin_check: bool = True
     app_setup_factory: Callable[[Layout], Any] | None = None
+    # Restarting the server, and the file Ubuntu leaves when it needs one (tests replace both).
+    reboot: Callable[[], None] | None = None
+    reboot_flag: Path = Path("/var/run/reboot-required")
+    # Runs ``docker logs`` for the problem finder (tests replace it).
+    log_runner: Callable[[list[str]], tuple[int, str]] | None = None
     updates: UpdateService = field(init=False)
     automation: AutomationService = field(init=False)
 

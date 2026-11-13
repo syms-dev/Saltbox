@@ -13,6 +13,8 @@ real job runner, the built web app) on it. Only the outside world is faked:
 - the image registry: Sonarr, Gluetun, Traefik and Authelia's Redis have newer
   images, the rest are current.
 - the Saltbox checkout is a git repository one commit behind its upstream.
+- Ubuntu wants a restart after a kernel update; restarting only leaves a note.
+- the last day of logs has one known error (Prowlarr) and one that repeats (Sonarr).
 
 The Playwright suite in ``ui/web/e2e`` starts this as its web server.
 """
@@ -93,6 +95,8 @@ CONTAINERS = [
     _container("traefik", "traefik:v3", health=None, web=False),
     _container("authelia", "authelia/authelia:4", depends_on="authelia-redis"),
     _container("authelia-redis", "redis:alpine", health=None, web=False),
+    # Installed and not used: the one the uninstall test removes.
+    _container("lidarr", "ghcr.io/hotio/lidarr:release"),
 ]
 NO_APPDATA = {"autoheal", "authelia-redis"}
 SECRET_KEY = "e2e-wireguard-private-key="
@@ -123,6 +127,22 @@ elif args[:1] in (["start"], ["stop"], ["restart"]):
                 c["State"]["Health"]["Status"] = "healthy"
     json.dump(containers, open({inspect!r}, "w"))
     print(name)
+elif args[:2] == ["rm", "--force"]:
+    json.dump([c for c in containers if c["Name"] != "/" + args[-1]], open({inspect!r}, "w"))
+    print(args[-1])
+elif args[:1] == ["logs"] and "--since" in args:
+    # The last day of a log, for the problem finder: one error Prowlarr is known for,
+    # one that Sonarr keeps repeating, and nothing wrong anywhere else.
+    stamp = "2026-11-13T07:06:22.000000000Z "
+    if args[-1] == "prowlarr":
+        blocked = "Unable to access example.invalid, blocked by CloudFlare Protection."
+        print(stamp + "[Warn] Torznab: " + blocked)
+    elif args[-1] == "sonarr":
+        for n in range(4):
+            failed = "[Error] ImportService: Import failed for /downloads/Some.Show.S01E0"
+            print(stamp + failed + str(n))
+    else:
+        print(stamp + "[Info] Nothing to report")
 elif args[:1] == ["stats"]:
     for i, c in enumerate(c for c in containers if c["State"]["Status"] == "running"):
         cpu = 31.5 if c["Name"] == "/plex" else 0.4 * (i + 1)
@@ -411,6 +431,12 @@ def main(argv: list[str] | None = None) -> int:
             web_dir=Path(args.web),
             tailscale_socket=str(Path(tmp) / "tailscale.sock"),
         )
+        # Ubuntu has updated the kernel and wants a restart; "restarting" leaves a note instead.
+        flag = Path(tmp) / "reboot-required"
+        flag.write_text("*** System restart required ***\n")
+        flag.with_name("reboot-required.pkgs").write_text("linux-image-6.8.0-55-generic\nlibc6\n")
+        services.reboot_flag = flag
+        services.reboot = lambda: (Path(tmp) / "rebooted").write_text("yes\n")
         services.app_setup_factory = lambda layout: AppSetup(
             layout,
             transport=apps_transport,

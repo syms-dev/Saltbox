@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -111,5 +112,27 @@ def systemd_units(pattern: str = "saltbox_managed_*") -> list[dict[str, str]]:
     ]
 
 
-def reboot_required() -> bool:
-    return Path("/var/run/reboot-required").exists()
+REBOOT_FLAG = Path("/var/run/reboot-required")
+
+
+def reboot_required(flag: Path = REBOOT_FLAG) -> bool:
+    """Ubuntu leaves this file when an installed update only takes effect after a restart."""
+    return flag.exists()
+
+
+def reboot_packages(flag: Path = REBOOT_FLAG) -> list[str]:
+    """The packages whose update asked for the restart, which Ubuntu lists beside the flag."""
+    try:
+        names = flag.with_name(flag.name + ".pkgs").read_text(encoding="utf-8").split()
+    except OSError:
+        return []
+    return sorted(set(names))
+
+
+def reboot(delay: float = 3.0) -> None:
+    """Restart the server in a moment, so the request that asked can still be answered."""
+    timer = threading.Timer(
+        delay, lambda: subprocess.run(["systemctl", "reboot"], check=False, timeout=60)
+    )
+    timer.daemon = True
+    timer.start()

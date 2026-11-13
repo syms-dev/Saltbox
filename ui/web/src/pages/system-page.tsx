@@ -8,6 +8,7 @@ import { ErrorMessage, Loading } from '../components/query-state';
 import { SaltboxUpdates } from '../components/saltbox-updates';
 import { StatusDot } from '../components/status-dot';
 import { formatBytes } from '../format';
+import { ProblemsCard } from './problems-card';
 import { BackupsCard, ResourcesCard, TailscaleCard } from './system-sections';
 import styles from './system-page.module.css';
 
@@ -36,6 +37,7 @@ export function SystemPage(): React.ReactNode {
       {reboot ? <p className="note warn">Ubuntu installed updates that need a restart of the server.</p> : null}
 
       <ResourcesCard />
+      <ProblemsCard />
 
       <section aria-labelledby="storage-title" className="card">
         <h2 id="storage-title">Storage</h2>

@@ -1,11 +1,69 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useContainerAction, useStartJob, useUpdateAll, useUpdateApp, useUpdateSaltbox } from '../api/queries';
-import type { App, AppRef, ContainerAction, Job } from '../api/types';
+import { API_ROUTES, apiFetch } from '../api/client';
+
+import {
+  useContainerAction,
+  useReboot,
+  useStartJob,
+  useUninstallApp,
+  useUpdateAll,
+  useUpdateApp,
+  useUpdateSaltbox,
+} from '../api/queries';
+import type { App, AppRef, ContainerAction, Job, UninstallPlan } from '../api/types';
 import { useConfirm, useToast } from '../components/feedback';
 
 export function appTag(app: Pick<App, 'install_tag' | 'role' | 'sb_tag'>): string {
   return app.sb_tag ?? app.install_tag ?? app.role;
+}
+
+/** What uninstalling removes, with the one choice that cannot be undone left unticked. */
+function UninstallBody({
+  onChoice,
+  plan,
+  title,
+}: {
+  onChoice: (deleteData: boolean) => void;
+  plan: UninstallPlan;
+  title: string;
+}): React.ReactNode {
+  const [deleteData, setDeleteData] = useState(false);
+  return (
+    <>
+      <p>
+        {plan.containers.length > 0 ? (
+          <>
+            Stops and removes {plan.containers.length === 1 ? 'the container' : 'the containers'}{' '}
+            <code>{plan.containers.join(', ')}</code>, so {title} no longer uses memory or CPU.
+          </>
+        ) : (
+          <>{title} has no container left; only its settings folder remains.</>
+        )}{' '}
+        Your media files are not touched.
+      </p>
+      {plan.folders.length === 0 ? null : (
+        <label>
+          <input
+            checked={deleteData}
+            onChange={(event) => {
+              onChoice(event.target.checked);
+              setDeleteData(event.target.checked);
+            }}
+            type="checkbox"
+          />{' '}
+          Also delete its settings and database in <code>{plan.folders.join(', ')}</code>. This cannot be undone.
+        </label>
+      )}
+      <p className="small">
+        {deleteData || plan.folders.length === 0
+          ? 'Installing it again later starts from scratch.'
+          : 'With the settings kept, installing it again later brings it back as it was.'}{' '}
+        Its DNS record and any settings for it in the inventory stay; they do no harm.
+      </p>
+    </>
+  );
 }
 
 /** Said before recreating something every web app here depends on, this one included. */
@@ -24,6 +82,8 @@ function CoreWarning(): React.ReactNode {
  */
 export function useJobActions(): {
   install: (app: App, reinstall?: boolean) => Promise<void>;
+  reboot: () => Promise<void>;
+  uninstall: (app: AppRef) => Promise<void>;
   updateAll: (apps: AppRef[]) => Promise<void>;
   updateApp: (app: AppRef) => Promise<void>;
   updateSaltbox: () => Promise<void>;
@@ -35,6 +95,8 @@ export function useJobActions(): {
   const one = useUpdateApp();
   const all = useUpdateAll();
   const saltbox = useUpdateSaltbox();
+  const restart = useReboot();
+  const remove = useUninstallApp();
 
   function started(title: string): (job: Job) => void {
     return (job) => {
@@ -69,6 +131,72 @@ export function useJobActions(): {
       start.mutate(
         { kind: 'install', tags: [tag] },
         { onError: failed, onSuccess: started(`${reinstall ? 'Reinstalling' : 'Installing'} ${app.title}`) },
+      );
+    },
+    reboot: async () => {
+      const ok = await confirm({
+        body: (
+          <>
+            <p>
+              Everything on the server stops for a few minutes: every app, any stream or download in progress, and this
+              page.
+            </p>
+            <p>The apps start again by themselves once the server is back.</p>
+          </>
+        ),
+        confirmLabel: 'Restart the server',
+        title: 'Restart the server now?',
+        tone: 'danger',
+      });
+      if (!ok) return;
+      restart.mutate(undefined, {
+        onError: (error) => toast({ body: error.message, title: 'Could not restart the server', tone: 'danger' }),
+        onSuccess: () =>
+          toast({
+            body: 'This page comes back by itself in a few minutes.',
+            title: 'The server is restarting',
+            tone: 'info',
+          }),
+      });
+    },
+    uninstall: async (app) => {
+      let plan: UninstallPlan;
+      try {
+        plan = await apiFetch<UninstallPlan>(API_ROUTES.appUninstall(app.repo, app.role));
+      } catch (error) {
+        failed(error instanceof Error ? error : new Error(String(error)));
+        return;
+      }
+      if (plan.blockers.length > 0) {
+        toast({ body: plan.blockers.join('; '), title: `${app.title} cannot be uninstalled yet`, tone: 'danger' });
+        return;
+      }
+      let deleteData = false;
+      const ok = await confirm({
+        body: <UninstallBody onChoice={(value) => (deleteData = value)} plan={plan} title={app.title} />,
+        confirmLabel: `Uninstall ${app.title}`,
+        title: `Uninstall ${app.title}?`,
+        tone: 'danger',
+      });
+      if (!ok) return;
+      remove.mutate(
+        { deleteData, repo: app.repo, role: app.role },
+        {
+          onError: (error) => toast({ body: error.message, title: `Could not uninstall ${app.title}`, tone: 'danger' }),
+          onSuccess: (result) => {
+            toast({
+              body:
+                result.kept.length > 0
+                  ? `Its settings are still in ${result.kept.join(', ')}.`
+                  : result.deleted.length > 0
+                    ? `Deleted ${result.deleted.join(', ')}.`
+                    : undefined,
+              title: `${app.title} uninstalled`,
+              tone: 'ok',
+            });
+            void navigate('/apps');
+          },
+        },
       );
     },
     updateAll: async (apps) => {

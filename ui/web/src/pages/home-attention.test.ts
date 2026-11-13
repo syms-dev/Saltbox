@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Overview } from '../api/types';
 import { makeApp } from '../test-utils';
-import { attentionItems } from './home-attention';
+import { attentionItems, rebootDetail } from './home-attention';
 
 const GIB = 1024 ** 3;
 
@@ -110,6 +110,18 @@ describe('attentionItems', () => {
     }
     const none = attentionItems(overview({ updates: { ...updates, apps: [] } }));
     expect(none.find((i) => i.id === 'updates')).toBeUndefined();
+  });
+
+  it('says which updates want the reboot and offers to restart', () => {
+    expect(rebootDetail([])).toBe('Ubuntu installed updates that only take effect after a restart of the server.');
+    expect(rebootDetail(['libc6', 'linux-image-6.8.0-55-generic'])).toBe(
+      'Ubuntu updated libc6, linux-image-6.8.0-55-generic; that only takes effect after a restart.',
+    );
+    expect(rebootDetail(['a', 'b', 'c', 'd', 'e', 'f'])).toContain('a, b, c, d and 2 more');
+    const host = { disks: [], mounts: [], reboot_packages: ['libc6'], reboot_required: true, units: [] };
+    const item = attentionItems(overview({ host })).find((i) => i.id === 'reboot');
+    expect(item?.detail).toContain('libc6');
+    expect(item?.actions).toEqual([{ kind: 'reboot', label: 'Restart the server' }]);
   });
 
   it('folds errors in several config files into one item', () => {

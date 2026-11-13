@@ -143,3 +143,14 @@ def test_disk_usage_reports_each_filesystem_once(tmp_path) -> None:
     assert len(disks) == 1
     assert disks[0]["paths"] == [str(first), str(second)]
     assert 0 <= disks[0]["percent"] <= 100
+
+
+def test_reboot_flag_and_the_packages_that_asked(tmp_path) -> None:
+    from saltbox_ui.state.host import reboot_packages, reboot_required
+
+    flag = tmp_path / "reboot-required"
+    assert reboot_required(flag) is False and reboot_packages(flag) == []
+    flag.write_text("*** System restart required ***\n")
+    assert reboot_required(flag) is True and reboot_packages(flag) == []
+    (tmp_path / "reboot-required.pkgs").write_text("linux-image-6.8.0-55-generic\nlibc6\nlibc6\n")
+    assert reboot_packages(flag) == ["libc6", "linux-image-6.8.0-55-generic"]

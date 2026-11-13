@@ -278,3 +278,16 @@
     display: none;
   }
 }
+
+/* Two short lines; a long branch name is cut with an ellipsis and shown in full on hover. */
+.version {
+  display: grid;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.version > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -44,10 +44,30 @@ function tabClass({ isActive }: { isActive: boolean }): string {
   return isActive ? `${styles['tab']} ${styles['active']}` : (styles['tab'] ?? '');
 }
 
-export function versionLine(meta: Meta): string {
+const DEFAULT_BRANCHES = ['master', 'main'];
+
+/**
+ * What is running, for the foot of the sidebar: this app's version, then the Saltbox checkout
+ * as a short commit, with its branch only when that is not the one everybody is on.
+ */
+export function versionLines(meta: Meta): { saltbox: string | null; ui: string } {
   const { branch, commit } = meta.saltbox;
-  if (branch === null && commit === null) return `ui ${meta.version}`;
-  return `ui ${meta.version} · ${branch ?? 'detached'}@${commit ?? '?'}`;
+  const ui = `Saltbox UI ${meta.version}`;
+  if (branch === null && commit === null) return { saltbox: null, ui };
+  const parts = [`Saltbox ${commit === null ? 'at an unknown commit' : commit.slice(0, 7)}`];
+  if (branch === null) parts.push('no branch');
+  else if (!DEFAULT_BRANCHES.includes(branch)) parts.push(branch);
+  return { saltbox: parts.join(' · '), ui };
+}
+
+function Version({ meta }: { meta: Meta }): React.ReactNode {
+  const { saltbox, ui } = versionLines(meta);
+  return (
+    <span className={`muted ${styles['version']}`}>
+      <span>{ui}</span>
+      {saltbox === null ? null : <span title={saltbox}>{saltbox}</span>}
+    </span>
+  );
 }
 
 /** "sb install sonarr" from a job, without the path to sb. */
@@ -180,7 +200,7 @@ export function Shell(): React.ReactNode {
               <TriangleAlert size={14} /> Daemon unreachable
             </span>
           ) : (
-            <span className="muted">{meta.data ? versionLine(meta.data) : ''}</span>
+            meta.data && <Version meta={meta.data} />
           )}
         </div>
       </aside>

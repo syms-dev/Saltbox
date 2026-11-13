@@ -29,7 +29,9 @@ import type {
   Overview,
   RecyclarrStatus,
   SeedingStatus,
+  LogProblems,
   Resources,
+  UninstallResult,
   SetupResponse,
   TailscaleStatus,
   UpdatesResponse,
@@ -356,6 +358,46 @@ export function useRecyclarr(): UseQueryResult<RecyclarrStatus> {
     queryFn: ({ signal }) => apiFetch<RecyclarrStatus>(API_ROUTES.RECYCLARR, { signal }),
     queryKey: ['recyclarr'],
   });
+}
+
+const PROBLEMS_STALE_MS = 10 * 60_000;
+
+/** Errors that keep recurring in the apps' logs. Reading them takes a few seconds, so it is kept. */
+export function useProblems(): UseQueryResult<LogProblems> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<LogProblems>(API_ROUTES.PROBLEMS, { signal }),
+    queryKey: ['problems'],
+    staleTime: PROBLEMS_STALE_MS,
+  });
+}
+
+/** Read the logs again now. */
+export function useRefreshProblems(): UseMutationResult<LogProblems, Error, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<LogProblems>(`${API_ROUTES.PROBLEMS}?refresh=true`),
+    onSuccess: (data) => client.setQueryData(['problems'], data),
+  });
+}
+
+type UninstallInput = { deleteData: boolean; repo: string; role: string };
+
+/** Remove an app's containers and, when asked, its settings folders. */
+export function useUninstallApp(): UseMutationResult<UninstallResult, Error, UninstallInput> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ deleteData, repo, role }: UninstallInput) =>
+      apiPost<UninstallResult>(API_ROUTES.appUninstall(repo, role), { delete_data: deleteData }),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: [QUERY_KEYS.APPS] });
+      void client.invalidateQueries({ queryKey: [QUERY_KEYS.OVERVIEW] });
+    },
+  });
+}
+
+/** Restart the server itself. */
+export function useReboot(): UseMutationResult<{ rebooting: boolean }, Error, void> {
+  return useMutation({ mutationFn: () => apiPost<{ rebooting: boolean }>(API_ROUTES.REBOOT) });
 }
 
 const SEEDING_REFRESH_MS = 60_000;

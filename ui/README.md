@@ -3,10 +3,15 @@
 An unofficial installer and web dashboard for [Saltbox](https://github.com/saltyorg/Saltbox).
 
 It sits on top of an unmodified Saltbox install. It reads Saltbox's own
-playbook, schemas and role defaults, and every change goes through Saltbox's
-`sb` command, so Saltbox's own checks and locking still apply. It never calls
-Ansible itself and it does not change any Saltbox file except the config files
-you edit through it.
+playbook, schemas and role defaults, and installs, updates and backups go
+through Saltbox's `sb` command, so Saltbox's own checks and locking still
+apply. It never calls Ansible itself and it does not change any Saltbox file
+except the config files you edit through it.
+
+A few things `sb` has no command for are done directly, each only when you
+ask: starting, stopping, restarting and removing containers with Docker;
+deleting an uninstalled app's folder; restarting the server; and settings made
+through the apps' own APIs (Connect apps, seeding limits).
 
 **This is not part of Saltbox and the Saltbox team does not support it.** If
 something here breaks, open an issue in this repository, not in Saltbox's
@@ -28,20 +33,24 @@ after a reboot or a dropped SSH session.
 
 - **Home** leads with what needs you, each item with the button that fixes it:
   restart an unhealthy app, start a stopped one, apply updates, open a config
-  file with errors, retry a failed job, start the VPN. Then media at a glance:
+  file with errors, retry a failed job, start the VPN, restart the server
+  when Ubuntu's updates need it (it says which). Then media at a glance:
   the VPN (public IP, forwarded port, what is routed through it), downloads in
   qBittorrent and SABnzbd (and how much keeps seeding after it finished), what
   is playing on Plex and what Sonarr and Radarr expect this week; a launcher for your apps; updates, storage and activity.
 - **Apps**: installed apps with health, update and restart buttons, and a
   Discover tab to install anything in the Saltbox and Sandbox catalogs. What
   runs as part of Saltbox itself (Traefik, Authelia) is listed too, marked
-  Core, so its updates are not missed. Each app
+  Core, so its updates are not missed. An app you no longer use can be
+  uninstalled: its containers are removed, and its settings folder too if you
+  say so. Each app
   has a page with its containers (restart, stop, start, CPU and memory), live
   logs, inventory overrides and role defaults, docs and links.
 - **Activity**: every job with a live log. A failed job says which task failed
   and why, and can be run again.
 - **System**: CPU and memory, with every container sortable by name, CPU or
-  memory; each drive and pool once;
+  memory; errors that keep recurring in the apps' logs, with what the known
+  ones mean and how to fix them; each drive and pool once;
   mounts and Saltbox services; Tailscale (and opening this app over it);
   backups (`sb install backup` on demand); Saltbox's own version and `sb update`,
   which shows the update's announcements with the job and waits for your yes or
@@ -74,9 +83,9 @@ Version 0.1.0. Treat it as a beta.
 
 | Check | Result |
 | --- | --- |
-| Python tests (pytest) | 299 tests; pass on Python 3.12 and 3.14 |
-| Web unit tests (Vitest) | 53 tests pass |
-| End-to-end tests (Playwright, Chromium) | 60 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
+| Python tests (pytest) | 310 tests; pass on Python 3.12 and 3.14 |
+| Web unit tests (Vitest) | 57 tests pass |
+| End-to-end tests (Playwright, Chromium) | 63 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
 | Package | CI builds the wheel, installs it in a clean environment and loads the web app from it |
 | Real servers | **One**: Ubuntu 26.04, Python 3.14, local drives pooled with mergerfs, Plex, qBittorrent behind Gluetun (ProtonVPN) |
 
@@ -110,6 +119,10 @@ that one. **Not yet run on any real server:**
   and migration handling was written from sb's source code (`cmd/update.go`,
   `saltbox/announcements.go`) and is tested against a stand-in that behaves the
   same way at the terminal;
+- uninstalling an app, and restarting the server from the web app;
+- the log problem finder. Its two app-specific explanations (Autoscan's anchor
+  file, Bazarr and disc images) come from log lines on the real server and are
+  tested against those lines, but it has not run there;
 - the seeding limits (written from qBittorrent's API documentation and
   Sonarr's source, and tested against a stand-in for qBittorrent);
 - installing this package from a release wheel (the real server runs it from a

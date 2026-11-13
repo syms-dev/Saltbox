@@ -514,3 +514,31 @@ def test_packaged_web_app_is_found(scratch_layout: Layout, monkeypatch, tmp_path
     (package / "web_dist" / "index.html").write_text("<html></html>")
     monkeypatch.setattr(daemon_app, "__file__", str(package / "daemon" / "app.py"))
     assert daemon_app.default_web_dir(scratch_layout) == package / "web_dist"
+
+
+def test_reboot_from_the_web_app(
+    scratch_layout: Layout, slow_sb: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The overview says which updates want the restart; the restart waits for running jobs."""
+    from saltbox_ui.daemon import routes as daemon_routes
+
+    monkeypatch.setattr(daemon_routes, "_containers_or_none", lambda: [])
+    monkeypatch.setenv("FAKE_SB_LINES", "100")
+    flag = tmp_path / "reboot-required"
+    flag.write_text("*** System restart required ***\n")
+    (tmp_path / "reboot-required.pkgs").write_text("linux-image-6.8.0-55-generic\nlibc6\n")
+    rebooted: list[bool] = []
+    services = Services(scratch_layout, reboot=lambda: rebooted.append(True), reboot_flag=flag)
+    client = TestClient(create_app(services=services))
+    host = client.get("/api/overview").json()["host"]
+    assert host["reboot_required"] is True
+    assert host["reboot_packages"] == ["libc6", "linux-image-6.8.0-55-generic"]
+
+    job = client.post("/api/jobs", json={"kind": "install", "tags": ["core"]}).json()
+    refused = client.post("/api/host/reboot")
+    assert refused.status_code == 409 and "job is running" in refused.json()["detail"]
+    assert rebooted == []
+    client.post(f"/api/jobs/{job['id']}/cancel")
+    services.jobs.wait(10)
+    assert client.post("/api/host/reboot").json() == {"rebooting": True}
+    assert rebooted == [True]

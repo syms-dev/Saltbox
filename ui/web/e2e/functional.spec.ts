@@ -43,6 +43,49 @@ test.describe('home', () => {
     );
   });
 
+  test('says which updates want a reboot and restarts the server on request', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText('Saltbox UI 0.1.0')).toBeVisible();
+    const reboot = page
+      .getByRole('region', { name: 'Needs attention' })
+      .getByRole('listitem')
+      .filter({ hasText: 'A reboot is pending' });
+    await expect(reboot).toContainText('Ubuntu updated libc6, linux-image-6.8.0-55-generic');
+    await reboot.getByRole('button', { name: 'Restart the server' }).click();
+    const question = dialog(page, 'Restart the server now?');
+    await expect(question).toContainText('Everything on the server stops for a few minutes');
+    await question.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByText('The server is restarting')).toHaveCount(0);
+    await reboot.getByRole('button', { name: 'Restart the server' }).click();
+    await confirm(page, 'Restart the server now?', 'Restart the server');
+    await expect(page.getByRole('status').getByText('The server is restarting')).toBeVisible();
+  });
+
+  test('explains a known error from the logs and lists the ones that keep repeating', async ({ page }) => {
+    await page.goto('/');
+    const known = page
+      .getByRole('region', { name: 'Needs attention' })
+      .getByRole('listitem')
+      .filter({ hasText: "An indexer is behind Cloudflare's bot check" });
+    await expect(known).toContainText('Prowlarr logged it once in the last day.', { timeout: 20_000 });
+    await known.getByRole('link', { name: 'How to fix it' }).click();
+    await expect(page).toHaveURL(/\/system#problems$/);
+    const problems = page.getByRole('region', { name: 'Problems in app logs' });
+    await expect(problems).toBeInViewport();
+    await expect(problems).toContainText('Prowlarr · logged once');
+    await expect(problems).toContainText('In Prowlarr, add that tag to the indexer.');
+    await expect(problems).toContainText('Unable to access example.invalid, blocked by CloudFlare Protection.');
+    await expect(problems.getByRole('link', { name: 'Open Prowlarr’s log' })).toHaveAttribute(
+      'href',
+      '/apps/saltbox/prowlarr?tab=logs',
+    );
+    await problems.getByText('1 other error that keeps repeating').click();
+    await expect(problems).toContainText('Sonarr · 4 times');
+    await expect(problems).toContainText('[Error] ImportService: Import failed for /downloads/Some.Show.S01E03');
+    await problems.getByRole('button', { name: 'Check again' }).click();
+    await expect(problems).toContainText('Prowlarr · logged once');
+  });
+
   test('counts updates the same before and after the apps list arrives, and as the Apps page does', async ({
     page,
   }) => {
@@ -63,7 +106,7 @@ test.describe('home', () => {
     const hero = page.locator('header').filter({ hasText: 'containers running' });
     await expect(hero).not.toContainText('apps installed'); // not "0 apps installed" while it loads
     release();
-    await expect(hero).toContainText('10 apps installed');
+    await expect(hero).toContainText('11 apps installed');
     await expect(updates).toContainText('4 app updates available');
     await expect(updates).toContainText('Authelia, Gluetun, Sonarr, Traefik Proxy');
 
@@ -552,5 +595,38 @@ test.describe('config', () => {
     await expect(page.getByText(/Save failed/)).toBeVisible();
     await page.goto('/config/inventory');
     await expect(page.getByLabel('File contents')).toHaveValue('---\nsonarr_role_e2e: "yes"\n');
+  });
+});
+
+test.describe('uninstall', () => {
+  test('refuses what other things need, and removes an app with its settings when asked', async ({ page }) => {
+    await page.goto('/apps/saltbox/traefik');
+    await expect(page.getByRole('button', { name: 'Reinstall' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Uninstall' })).toHaveCount(0);
+
+    await page.goto('/apps/saltbox/gluetun');
+    await page.getByRole('button', { name: 'Uninstall' }).click();
+    const refused = page.getByRole('status').filter({ hasText: 'Gluetun cannot be uninstalled yet' });
+    await expect(refused).toContainText("qbittorrent runs inside gluetun's network");
+
+    await page.goto('/apps/saltbox/lidarr');
+    await page.getByRole('button', { name: 'Uninstall' }).click();
+    const question = dialog(page, 'Uninstall Lidarr?');
+    await expect(question).toContainText('Stops and removes the container lidarr');
+    await expect(question).toContainText('installing it again later brings it back as it was');
+    await question.getByRole('checkbox', { name: /Also delete its settings and database/ }).check();
+    await expect(question).toContainText('Installing it again later starts from scratch.');
+    await question.getByRole('button', { name: 'Uninstall Lidarr' }).click();
+    await expect(page.getByRole('status').getByText('Lidarr uninstalled')).toBeVisible();
+    await expect(page).toHaveURL(/\/apps$/);
+    const list = page.getByRole('list', { name: 'Installed apps' });
+    await expect(list.getByRole('listitem').filter({ hasText: 'Sonarr' })).toBeVisible();
+    await expect(list.getByRole('listitem').filter({ hasText: 'Lidarr' })).toHaveCount(0);
+    const plan = (await (await page.request.get('/api/apps/saltbox/lidarr/uninstall')).json()) as {
+      containers: string[];
+      folders: string[];
+    };
+    expect(plan.containers).toEqual([]);
+    expect(plan.folders).toEqual([]);
   });
 });

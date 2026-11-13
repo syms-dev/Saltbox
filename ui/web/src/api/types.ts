@@ -83,7 +83,7 @@ export type Overview = {
   config_issues: Record<string, Issue[]>;
   containers: ContainerSummary;
   updates: UpdatesSummary;
-  host: { disks: Disk[]; mounts: Mount[]; reboot_required: boolean; units: Unit[] };
+  host: { disks: Disk[]; mounts: Mount[]; reboot_packages?: string[]; reboot_required: boolean; units: Unit[] };
   install: { configs_present: boolean; installed: boolean; roles_with_facts: string[] };
   jobs: JobsStatus & { recent: Job[] };
   services: Service[];
@@ -100,6 +100,32 @@ export type ContainerState = {
   update_detail: string;
   urls: string[];
 };
+
+/** A known error message: what it means and what to do about it. */
+export type LogRule = {
+  fix: string[];
+  id: string;
+  meaning: string;
+  /** `problem`: something is not working. `notice`: harmless, but explains the noise. */
+  severity: 'notice' | 'problem';
+  title: string;
+};
+
+/** One error that recurs in a container's log; `message` is its latest occurrence. */
+export type LogGroup = { count: number; last_seen: string; message: string; rule: LogRule | null };
+
+export type LogProblems = {
+  available: boolean;
+  checked_at: number;
+  containers: { app: AppRef | null; groups: LogGroup[]; name: string }[];
+  scanned: number;
+  window: string;
+};
+
+/** What uninstalling an app would remove, and what stands in the way. */
+export type UninstallPlan = { blockers: string[]; containers: string[]; folders: string[]; instances: string[] };
+
+export type UninstallResult = { deleted: string[]; kept: string[]; removed: string[] };
 
 /** Enough of an app to name it and update it. */
 export type AppRef = Pick<App, 'repo' | 'role' | 'title'> & { core?: boolean };
@@ -184,6 +210,7 @@ export type Field = {
 export type AppDetail = {
   app: Omit<App, 'containers' | 'installed' | 'instances' | 'update_available' | 'urls'>;
   containers: ContainerState[];
+  core?: boolean;
   installed: boolean;
   update_available: boolean;
   urls: string[];

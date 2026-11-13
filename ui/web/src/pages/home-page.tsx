@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { useApps, useJobs, useMedia, useOverview, useStartJob, useUpdates } from '../api/queries';
+import { useApps, useJobs, useMedia, useOverview, useProblems, useStartJob, useUpdates } from '../api/queries';
 import type { App, Job } from '../api/types';
 import { AppAvatar } from '../components/app-avatar';
 import { useToast } from '../components/feedback';
@@ -26,6 +26,7 @@ import { appHealth, hostOf } from '../lib/status';
 import { type Attention, type AttentionAction, attentionItems } from './home-attention';
 import { MediaRow, mediaAttention } from './home-media';
 import styles from './home-page.module.css';
+import { problemAttention } from './problems-card';
 
 export { attentionItems } from './home-attention';
 
@@ -70,6 +71,12 @@ function ActionButton({ action }: { action: AttentionAction }): React.ReactNode 
     case 'updateAll':
       return (
         <button className="small primary" onClick={() => void jobs.updateAll(action.apps)} type="button">
+          {action.label}
+        </button>
+      );
+    case 'reboot':
+      return (
+        <button className="small" onClick={() => void jobs.reboot()} type="button">
           {action.label}
         </button>
       );
@@ -337,12 +344,13 @@ export function HomePage(): React.ReactNode {
   const overview = useOverview();
   const apps = useApps();
   const media = useMedia();
+  const problems = useProblems();
   if (overview.isPending) return <Loading what="your server" />;
   if (overview.isError) return <ErrorMessage error={overview.error} prefix="Home" />;
   const data = overview.data;
   const all = apps.data ?? [];
   const installed = all.filter((app) => app.installed);
-  const attention = [...mediaAttention(media.data), ...attentionItems(data, all)];
+  const attention = [...mediaAttention(media.data), ...attentionItems(data, all), ...problemAttention(problems.data)];
   const urgent = attention.filter((item) => item.tone !== 'info').length;
   const running = data.containers.running;
   return (

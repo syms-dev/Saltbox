@@ -12,6 +12,7 @@ export type AttentionAction =
   | { app: AppRef; kind: 'update'; label: string }
   | { apps: AppRef[]; kind: 'updateAll'; label: string }
   | { kind: 'sbUpdate'; label: string }
+  | { kind: 'reboot'; label: string }
   | { jobId: string; kind: 'retry'; label: string };
 
 export type Attention = {
@@ -21,6 +22,16 @@ export type Attention = {
   title: string;
   tone: 'danger' | 'info' | 'warn';
 };
+
+const REBOOT_PACKAGES_SHOWN = 4;
+
+/** Which updates are waiting for the restart, as Ubuntu lists them. */
+export function rebootDetail(packages: string[]): string {
+  if (packages.length === 0) return 'Ubuntu installed updates that only take effect after a restart of the server.';
+  const shown = packages.slice(0, REBOOT_PACKAGES_SHOWN).join(', ');
+  const more = packages.length - REBOOT_PACKAGES_SHOWN;
+  return `Ubuntu updated ${shown}${more > 0 ? ` and ${more} more` : ''}; that only takes effect after a restart.`;
+}
 
 function appFor(apps: App[], container: string): App | undefined {
   return apps.find((app) => app.installed && app.containers.some((c) => c.name === container));
@@ -155,8 +166,8 @@ export function attentionItems(data: Overview, apps: App[] = []): Attention[] {
   }
   if (data.host.reboot_required) {
     items.push({
-      actions: [],
-      detail: 'Ubuntu installed updates that need a restart of the server.',
+      actions: [{ kind: 'reboot', label: 'Restart the server' }],
+      detail: rebootDetail(data.host.reboot_packages ?? []),
       id: 'reboot',
       title: 'A reboot is pending',
       tone: 'warn',
