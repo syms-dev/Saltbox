@@ -59,8 +59,19 @@ function Version({ meta }: { meta: Meta }): React.ReactNode {
 }
 
 /** "sb install sonarr" from a job, without the path to sb. */
-export function jobTitle(job: Pick<Job, 'command_line'>): string {
+export function jobTitle(job: Pick<Job, 'command_line'> & { kind?: string }): string {
+  // The app updating itself runs an internal command; say what it is instead.
+  if (job.kind === 'selfupdate') return 'Update Saltbox UI';
   return job.command_line.replace(/^\S*\/(?=sb\b)/, '');
+}
+
+let loadedBuild: string | undefined;
+
+/** Whether the daemon now serves a different web app than the one this page is running. */
+export function isOutdated(build: string | null | undefined): boolean {
+  if (build === null || build === undefined) return false;
+  loadedBuild ??= build;
+  return build !== loadedBuild;
 }
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
@@ -205,6 +216,14 @@ export function Shell(): React.ReactNode {
       <main className={styles['main']}>
         {current === null ? null : <RunningJob job={current} />}
         <ConnectionBanner />
+        {isOutdated(meta.data?.build) ? (
+          <p className="note" role="status">
+            Saltbox UI was updated while this page was open.{' '}
+            <button className="small" onClick={() => window.location.reload()} type="button">
+              Reload
+            </button>
+          </p>
+        ) : null}
         {connection.offlineSince === null && overview.data !== undefined ? (
           <StartupBanner
             running={overview.data.containers.running}

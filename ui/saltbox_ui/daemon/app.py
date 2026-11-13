@@ -19,7 +19,7 @@ from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.websockets import WebSocketClose
 
-from .. import __version__
+from .. import __version__, selfupdate
 from ..catalog import Catalog
 from ..config import ConfigService, Inventory
 from ..layout import Layout
@@ -33,6 +33,10 @@ from .updates import UpdateService
 log = logging.getLogger("saltbox_ui.daemon")
 
 TOKEN_FILENAME = "api-token"
+
+
+# When this process started: a page that sees it change knows the daemon restarted.
+STARTED_AT = time.time()
 
 
 @dataclass
@@ -55,6 +59,13 @@ class Services:
     reboot_flag: Path = Path("/var/run/reboot-required")
     # Seconds since the server booted (tests replace it).
     uptime: Callable[[], int | None] | None = None
+    # Updating this app: how it is installed and what is newer, the job's command, and
+    # restarting the daemon afterwards (tests replace all three).
+    self_status: Callable[[], dict[str, Any]] | None = None
+    self_command: list[str] | None = None
+    restart: Callable[[], None] | None = None
+    # The Claude Code command and how to run it, for explanations (tests replace it).
+    claude: tuple[str, Callable[[list[str], str | None, float], tuple[int, str, str]]] | None = None
     # The merged and the local media folders, for fixes the problem finder offers.
     storage_roots: tuple[Path, Path] = (Path("/mnt/unionfs"), Path("/mnt/local"))
     # Runs ``docker logs`` for the problem finder (tests replace it).
@@ -76,6 +87,20 @@ class Services:
         )
         self.automation = AutomationService(self)
         self.dismissals = Dismissals(self.layout.state_dir / "dismissed.json")
+        # What this process loaded, to tell after an update whether a restart is due.
+        source = selfupdate.source_dir()
+        self.loaded_commit = selfupdate.head_commit(source) if source is not None else None
+        self.jobs.on_finish.append(self._after_self_update)
+
+    def _after_self_update(self, job: Any) -> None:
+        """Once the app has updated itself, restart to run the new code."""
+        if job.kind != "selfupdate" or job.status != "succeeded":
+            return
+        self.__dict__.pop("_self", None)
+        if self.restart is not None:
+            self.restart()
+        elif selfupdate.needs_restart(self.loaded_commit):
+            selfupdate.restart_daemon()
         self.jobs.on_finish.append(lambda job: self.automation.on_job_finished(job))
 
 

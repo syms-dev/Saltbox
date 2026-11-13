@@ -74,6 +74,10 @@ class JobManager:
             command.append("--preview")
         return self._launch(command, "recyclarr", ["preview"] if preview else ["sync"])
 
+    def start_command(self, command: list[str], kind: str) -> Job:
+        """A fixed command of the daemon's own (updating itself), as a job with a live log."""
+        return self._launch(command, kind, [])
+
     def _launch(
         self,
         command: list[str],

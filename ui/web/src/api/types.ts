@@ -158,11 +158,37 @@ export type LogRule = {
 };
 
 /** One error that recurs in a container's log; `message` is its latest occurrence. */
+/** This app's own version, how it was installed, and whether a newer one can be had. */
+export type SelfStatus = {
+  can_update: boolean;
+  checked_at: number;
+  detail: string;
+  latest: { url: string; version: string } | null;
+  mode: 'source' | 'wheel';
+  source: { branch: string; commit: string; path: string; remote_commit: string } | null;
+  update_available: boolean;
+  version: string;
+};
+
+/** What Claude made of an error. It is an explanation to read, not something that was done. */
+export type Explanation = {
+  asked_at: number;
+  cause: string;
+  confidence: 'high' | 'low' | 'medium';
+  lines_sent: number;
+  steps: string[];
+  summary: string;
+};
+
+/** Whether Claude Code is installed and signed in on the server, for the Saltbox user. */
+export type ExplainStatus = { installed: boolean; method: string; signed_in: boolean; user: string };
+
 export type LogGroup = {
   /** A fix the daemon can make itself, when one is safe on this server. */
   action?: { detail: string; id: string; label: string } | null;
   count: number;
   dismissed?: boolean;
+  explanation?: Explanation | null;
   key: string;
   last_seen: string;
   message: string;
@@ -308,6 +334,8 @@ export type Inventory = {
 };
 
 export type Meta = {
+  /** Identifies the web app the daemon is serving; a page built from another one should reload. */
+  build?: string | null;
   domain?: string | null;
   layout: Record<string, string>;
   saltbox: { branch: string | null; commit: string | null; remote: string | null };

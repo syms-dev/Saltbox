@@ -13,6 +13,7 @@ export type AttentionAction =
   | { apps: AppRef[]; kind: 'updateAll'; label: string }
   | { kind: 'sbUpdate'; label: string }
   | { kind: 'reboot'; label: string }
+  | { kind: 'selfUpdate'; label: string }
   | { jobId: string; kind: 'retry'; label: string };
 
 export type Attention = {

@@ -77,9 +77,30 @@ def meta(request: Request) -> dict[str, Any]:
         "layout": svc.layout.as_dict(),
         "saltbox": _git_describe(svc.layout.repo),
         "web": bool(svc.web_dir and (svc.web_dir / "index.html").exists()),
+        # A page compares these with what it first saw: the daemon restarted, or the web
+        # app it is running is no longer the one being served.
+        "started_at": _started_at(),
+        "build": _web_build(svc),
         "domain": _domain(svc),
         "user": _account(svc, "user.name"),
     }
+
+
+def _started_at() -> float:
+    from .app import STARTED_AT
+
+    return STARTED_AT
+
+
+def _web_build(svc) -> str | None:
+    """Identifies the built web app: its index.html names the hashed script and style."""
+    import hashlib
+
+    try:
+        index = (svc.web_dir / "index.html").read_bytes()
+    except (OSError, TypeError, AttributeError):
+        return None
+    return hashlib.sha256(index).hexdigest()[:12]
 
 
 def _account(svc, dotted: str) -> str | None:
@@ -858,14 +879,22 @@ def _problems(svc, refresh: bool = False) -> dict[str, Any]:
     else:
         data = _problems_scan(svc)
         svc.__dict__["_problems"] = (time.monotonic(), data)
-    # Dismissals can change between two reads of the same cached scan.
+    # Dismissals and explanations can change between two reads of the same cached scan.
     dismissed = svc.dismissals.all()
+    explained = svc.__dict__.get("_explanations") or {}
     return {
         **data,
         "containers": [
             {
                 **container,
-                "groups": [{**g, "dismissed": g["key"] in dismissed} for g in container["groups"]],
+                "groups": [
+                    {
+                        **g,
+                        "dismissed": g["key"] in dismissed,
+                        "explanation": explained.get(g["key"]),
+                    }
+                    for g in container["groups"]
+                ],
             }
             for container in data["containers"]
         ],
@@ -911,6 +940,153 @@ def problems_fix(request: Request, body: ProblemFix) -> dict[str, Any]:
     except (ValueError, OSError) as error:
         raise HTTPException(422, str(error)) from error
     return {"fixed": action["id"], "created": created, "problems": _problems(svc, refresh=True)}
+
+
+# -- updating this app -------------------------------------------------------------------
+SELF_TTL_SECONDS = 1800.0
+
+
+def _self_status(svc, refresh: bool = False) -> dict[str, Any]:
+    from .. import selfupdate
+
+    cached = svc.__dict__.get("_self")
+    if not refresh and cached is not None and time.monotonic() - cached[0] < SELF_TTL_SECONDS:
+        return cached[1]
+    data = (svc.self_status or selfupdate.status)()
+    svc.__dict__["_self"] = (time.monotonic(), data)
+    return data
+
+
+@router.get("/self")
+def self_status(request: Request, refresh: bool = False) -> dict[str, Any]:
+    """This app's version, how it is installed, and whether a newer one is there."""
+    return _self_status(services(request), refresh)
+
+
+@router.post("/self/update", status_code=202)
+def self_update(request: Request) -> dict[str, Any]:
+    """Update this app (pull and rebuild, or install the newest wheel), then restart it."""
+    import sys
+
+    svc = services(request)
+    status = _self_status(svc, refresh=True)
+    if not status["can_update"]:
+        raise HTTPException(409, status["detail"] or "this install cannot update itself")
+    if not status["update_available"]:
+        raise HTTPException(409, "already up to date")
+    command = svc.self_command or [sys.executable, "-m", "saltbox_ui.selfupdate"]
+    try:
+        job = svc.jobs.start_command(command, "selfupdate")
+    except JobRunning as error:
+        raise HTTPException(409, str(error)) from error
+    return _job_view(svc, job)
+
+
+# -- explanations by Claude --------------------------------------------------------------
+EXPLAIN_STATUS_TTL_SECONDS = 60.0
+EXPLAIN_LOG_LINES = 800
+
+
+def _saltbox_user(svc) -> str:
+    """The user Saltbox runs as: ``user.name`` in accounts.yml, else who owns the checkout."""
+    try:
+        name = str(((svc.config.load_plain("accounts") or {}).get("user") or {}).get("name") or "")
+    except Exception:
+        name = ""
+    if name:
+        return name
+    try:
+        import pwd
+
+        return pwd.getpwuid(svc.layout.repo.stat().st_uid).pw_name
+    except (OSError, KeyError):
+        return "root"
+
+
+def _claude(svc) -> tuple[str, str | None, Any]:
+    """The Saltbox user, their ``claude`` command and a way to run it as them."""
+    import pwd
+
+    from .. import explain
+
+    user = _saltbox_user(svc)
+    if svc.claude is not None:
+        return user, svc.claude[0], svc.claude[1]
+    try:
+        home = Path(pwd.getpwnam(user).pw_dir)
+    except KeyError:
+        return user, None, None
+    cli = explain.find_cli(home)
+    return user, cli, explain.runner_as(user) if cli else None
+
+
+def _explain_status(svc, fresh: bool = False) -> dict[str, Any]:
+    from .. import explain
+
+    cached = svc.__dict__.get("_explain_status")
+    if not fresh and cached and time.monotonic() - cached[0] < EXPLAIN_STATUS_TTL_SECONDS:
+        return cached[1]
+    user, cli, run = _claude(svc)
+    data = explain.status(user, cli=cli, run=run)
+    svc.__dict__["_explain_status"] = (time.monotonic(), data)
+    return data
+
+
+@router.get("/explain")
+def explain_status(request: Request, refresh: bool = False) -> dict[str, Any]:
+    """Whether Claude Code is installed and signed in for the Saltbox user."""
+    return _explain_status(services(request), refresh)
+
+
+class ExplainRequest(BaseModel):
+    key: str
+    again: bool = False
+
+
+@router.post("/problems/explain")
+def problems_explain(request: Request, body: ExplainRequest) -> dict[str, Any]:
+    """Ask Claude what one recurring error means. It is told the error and the log around
+    it (secrets masked); it can run nothing, and its answer is only shown."""
+    from .. import explain, logcheck
+
+    svc = services(request)
+    explained = svc.__dict__.setdefault("_explanations", {})
+    if body.key in explained and not body.again:
+        return explained[body.key]
+    found = next(
+        (
+            (container, group)
+            for container in _problems(svc)["containers"]
+            for group in container["groups"]
+            if group["key"] == body.key
+        ),
+        None,
+    )
+    if found is None:
+        raise HTTPException(404, "that issue is not in the last scan; check again first")
+    container, group = found
+    user, cli, run = _claude(svc)
+    if cli is None or run is None:
+        raise HTTPException(409, f"Claude Code is not installed for {user} on this server")
+    name = container["name"]
+    try:
+        lines = container_logs(name, EXPLAIN_LOG_LINES, getattr(svc, "log_runner", None))
+    except RuntimeError:
+        lines = []
+    redact = _redactor(svc)
+    around = explain.context(
+        [redact(logcheck.split_time(line)[1]) for line in lines],
+        lambda line: logcheck.line_key(name, line) == body.key,
+    )
+    app = (container.get("app") or {}).get("title") or name
+    prompt = explain.build_prompt(app, name, group["message"], group["count"], around)
+    try:
+        answer = explain.explain(prompt, cli=cli, run=run)
+    except explain.ExplainError as error:
+        svc.__dict__.pop("_explain_status", None)  # most likely the sign-in: look again
+        raise HTTPException(502, redact(str(error))) from error
+    explained[body.key] = {**answer, "asked_at": time.time(), "lines_sent": len(around)}
+    return explained[body.key]
 
 
 # -- seeding --------------------------------------------------------------------------

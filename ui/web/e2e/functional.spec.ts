@@ -154,6 +154,17 @@ test.describe('home', () => {
     await expect(unexplained).toContainText('Unexplained');
     await expect(unexplained).toContainText('Sonarr · logged 4 times');
     await expect(unexplained).toContainText('[Error] ImportService: Import failed for /downloads/Some.Show.S01E03');
+    // Claude is asked only after the page says what will be sent, and its answer is marked as its own.
+    await unexplained.getByRole('button', { name: 'Ask Claude' }).click();
+    const sending = dialog(page, 'Ask Claude about this Sonarr error?');
+    await expect(sending).toContainText('about 25 lines of Sonarr’s log around it to Anthropic');
+    await expect(sending).toContainText('signed in as seed');
+    await sending.getByRole('button', { name: 'Ask Claude' }).click();
+    await expect(unexplained).toContainText('Claude’s explanation · reasonably sure');
+    await expect(unexplained).toContainText('Sonarr cannot import a finished download.');
+    await expect(unexplained).toContainText('It ran nothing on the server and it can be wrong');
+    await expect(unexplained.getByRole('button', { name: 'Ask Claude again' })).toBeVisible();
+
     await unexplained.getByRole('button', { name: 'Dismiss' }).click();
     await expect(problems.getByRole('article')).toHaveCount(2);
     await problems.getByText('1 dismissed issue').click();
@@ -715,5 +726,35 @@ test.describe('uninstall', () => {
     };
     expect(plan.containers).toEqual([]);
     expect(plan.folders).toEqual([]);
+  });
+});
+
+test.describe('updating Saltbox UI itself', () => {
+  test('offers the update on Home, runs it as a job with a log, and then has nothing newer', async ({ page }) => {
+    await page.goto('/');
+    const offer = page
+      .getByRole('region', { name: 'Needs attention' })
+      .getByRole('listitem')
+      .filter({ hasText: 'Saltbox UI update available' });
+    await expect(offer).toContainText('New commits are available (2222222).');
+
+    await page.goto('/system');
+    const card = page.getByRole('region', { name: 'Saltbox UI version' });
+    await expect(card).toContainText('0.1.0, running from a source checkout at 1111111');
+    await card.getByRole('button', { name: 'Update Saltbox UI' }).click();
+    expect(await confirm(page, 'Update Saltbox UI?', 'Update Saltbox UI')).toContain('reloads by itself');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Update Saltbox UI');
+    expect(await jobOutcome(page)).toBe('succeeded');
+    await expect(page.getByRole('log', { name: 'Job log' })).toContainText(
+      'Updated from 1111111 to 2222222. The daemon restarts now.',
+    );
+
+    await page.goto('/system');
+    const after = page.getByRole('region', { name: 'Saltbox UI version' });
+    await expect(after).toContainText('Up to date.');
+    await expect(after.getByRole('button', { name: 'Update Saltbox UI' })).toBeDisabled();
+    await page.goto('/');
+    await expect(page.getByRole('region', { name: 'Needs attention' })).toBeVisible();
+    await expect(page.getByText('Saltbox UI update available')).toHaveCount(0);
   });
 });

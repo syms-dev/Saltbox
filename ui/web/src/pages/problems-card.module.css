@@ -135,3 +135,23 @@
   flex: 1;
   min-width: 0;
 }
+
+/* Claude's reading of an issue: set apart, so it is not taken for what this app knows. */
+.explanation {
+  background: var(--color-info-soft);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.explanation .label {
+  align-items: center;
+  color: var(--color-info);
+  display: flex;
+  gap: var(--space-1);
+}
+
+.dismissed p {
+  margin: var(--space-2) 0 0;
+}

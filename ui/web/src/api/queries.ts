@@ -29,7 +29,10 @@ import type {
   Overview,
   RecyclarrStatus,
   SeedingStatus,
+  SelfStatus,
   DriveHealth,
+  ExplainStatus,
+  Explanation,
   LogProblems,
   Resources,
   UninstallResult,
@@ -384,6 +387,56 @@ export function useFixProblem(): UseMutationResult<FixResult, Error, string> {
   return useMutation({
     mutationFn: (key: string) => apiPost<FixResult>(API_ROUTES.PROBLEMS_FIX, { key }),
     onSuccess: (result) => client.setQueryData(['problems'], result.problems),
+  });
+}
+
+const SELF_STALE_MS = 30 * 60_000;
+
+/** This app's version and whether a newer one is available. */
+export function useSelf(): UseQueryResult<SelfStatus> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<SelfStatus>(API_ROUTES.SELF, { signal }),
+    queryKey: ['self'],
+    staleTime: SELF_STALE_MS,
+  });
+}
+
+/** Look for a newer version now. */
+export function useCheckSelf(): UseMutationResult<SelfStatus, Error, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<SelfStatus>(`${API_ROUTES.SELF}?refresh=true`),
+    onSuccess: (data) => client.setQueryData(['self'], data),
+  });
+}
+
+/** Update this app; the daemon restarts once the job has finished. */
+export function useUpdateSelf(): UseMutationResult<Job, Error, void> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPost<Job>(API_ROUTES.SELF_UPDATE),
+    onSuccess: () => void client.invalidateQueries({ queryKey: [QUERY_KEYS.JOBS] }),
+  });
+}
+
+/** Whether explanations by Claude are available on this server. */
+export function useExplainStatus(): UseQueryResult<ExplainStatus> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<ExplainStatus>(API_ROUTES.EXPLAIN, { signal }),
+    queryKey: ['explain'],
+    staleTime: 60_000,
+  });
+}
+
+/** Ask Claude what one recurring error means; the answer is kept with the issue. */
+export function useExplain(): UseMutationResult<Explanation, Error, { again: boolean; key: string }> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { again: boolean; key: string }) => apiPost<Explanation>(API_ROUTES.PROBLEMS_EXPLAIN, input),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: ['problems'] });
+      void client.invalidateQueries({ queryKey: ['explain'] });
+    },
   });
 }
 

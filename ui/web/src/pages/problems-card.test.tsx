@@ -184,6 +184,59 @@ describe('ProblemsCard', () => {
     expect(card).not.toHaveTextContent('dismissed issue');
   });
 
+  it('asks Claude only after saying what is sent, and shows the answer as Claude’s', async () => {
+    const explanation = {
+      asked_at: Date.now() / 1000,
+      cause: 'The import path does not exist inside the container.',
+      confidence: 'medium' as const,
+      lines_sent: 25,
+      steps: ['Check the remote path mapping in `Settings > Download Clients`.'],
+      summary: 'It cannot move a finished download into the library.',
+    };
+    let asked = false;
+    const api = stubApi({
+      'POST /problems/explain': () => {
+        asked = true;
+        return explanation;
+      },
+      '/explain': { installed: true, method: 'claude.ai', signed_in: true, user: 'seed' },
+      '/problems': () => problems({ unknown: { explanation: asked ? explanation : null } }),
+    });
+    renderAt(<ProblemsCard />);
+    const unknown = await screen.findByRole('article', { name: 'mystery keeps logging the same error' });
+    fireEvent.click(await within(unknown).findByRole('button', { name: 'Ask Claude' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Ask Claude about this mystery error?' });
+    expect(dialog).toHaveTextContent('sends the error and about 25 lines of mystery’s log around it to Anthropic');
+    expect(dialog).toHaveTextContent('signed in as seed');
+    expect(dialog).toHaveTextContent('nothing it says is run');
+    expect(asked).toBe(false); // nothing leaves the server before the person agrees
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Ask Claude' }));
+    await waitFor(() =>
+      expect(api).toHaveBeenCalledWith(
+        '/api/problems/explain',
+        expect.objectContaining({ body: JSON.stringify({ again: false, key: 'log:mystery:0a1b2c3d4e5f' }) }),
+      ),
+    );
+    await waitFor(() => expect(unknown).toHaveTextContent('Claude’s explanation · reasonably sure'));
+    expect(unknown).toHaveTextContent('It cannot move a finished download into the library.');
+    expect(within(unknown).getByText('Settings > Download Clients').tagName).toBe('CODE');
+    expect(unknown).toHaveTextContent('It ran nothing on the server and it can be wrong');
+    expect(within(unknown).getByRole('button', { name: 'Ask Claude again' })).toBeInTheDocument();
+  });
+
+  it('offers no Ask Claude button until Claude Code is signed in, and says how to get one', async () => {
+    stubApi({
+      '/explain': { installed: true, method: 'none', signed_in: false, user: 'seed' },
+      '/problems': problems(),
+    });
+    renderAt(<ProblemsCard />);
+    const card = await screen.findByRole('region', { name: 'Problems in app logs' });
+    await waitFor(() => expect(card).toHaveTextContent('Have Claude explain an issue'));
+    expect(card).toHaveTextContent('signed in for seed (it is installed, but not signed in)');
+    expect(card).toHaveTextContent('claude auth login');
+    expect(within(card).queryByRole('button', { name: 'Ask Claude' })).toBeNull();
+  });
+
   it('reads the logs again on request', async () => {
     let reads = 0;
     const api = stubApi({ '/problems': () => (reads++ === 0 ? problems() : { ...problems(), containers: [] }) });

@@ -14,7 +14,12 @@ import {
 import { FeedbackProvider } from './feedback';
 
 function response(status: number, type: ResponseType = 'basic'): Response {
-  return { ok: status >= 200 && status < 300, status, type } as Response;
+  return {
+    json: () => Promise.resolve({ started_at: 1700000000.5 }),
+    ok: status >= 200 && status < 300,
+    status,
+    type,
+  } as Response;
 }
 
 afterEach(() => {
@@ -41,7 +46,10 @@ describe('probe', () => {
       }),
     );
     const seen: Reach[] = [];
-    for (let i = 0; i < 7; i++) seen.push(await probe());
+    const first = await probe();
+    expect(first).toEqual({ instance: '1700000000.5', reach: 'online' }); // which run of the daemon answered
+    seen.push(first.reach);
+    for (let i = 0; i < 6; i++) seen.push((await probe()).reach);
     expect(seen).toEqual(['online', 'online', 'offline', 'offline', 'signin', 'signin', 'offline']);
     expect(fetch).toHaveBeenCalledWith('/api/meta', expect.objectContaining({ cache: 'no-store', redirect: 'manual' }));
   });
@@ -54,8 +62,9 @@ describe('probe', () => {
 
 describe('ConnectionProvider', () => {
   let reach: Reach;
+  let instance: string | undefined;
   let refreshed: ReturnType<typeof vi.fn<() => void>>;
-  let expectOutage: (kind: 'proxy' | 'reboot') => void;
+  let expectOutage: (kind: 'proxy' | 'reboot' | 'update') => void;
 
   function Announce(): React.ReactNode {
     const connection = useConnection();
@@ -73,7 +82,7 @@ describe('ConnectionProvider', () => {
     render(
       <QueryClientProvider client={client}>
         <FeedbackProvider>
-          <ConnectionProvider check={() => Promise.resolve(reach)}>
+          <ConnectionProvider check={() => Promise.resolve({ instance, reach })}>
             <Announce />
             <ConnectionBanner />
           </ConnectionProvider>
@@ -91,6 +100,7 @@ describe('ConnectionProvider', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     reach = 'online';
+    instance = undefined;
   });
 
   it('waits out an outage, counts the time, and refreshes everything when the server is back', async () => {
@@ -145,6 +155,55 @@ describe('ConnectionProvider', () => {
     expect(reload).toHaveBeenCalledTimes(1);
     await wait(9_000);
     expect(reload).toHaveBeenCalledTimes(1); // once, not on every poll
+  });
+});
+
+describe('after the app updates itself', () => {
+  it('reloads the page once the daemon has restarted, however briefly it was away', async () => {
+    vi.useFakeTimers();
+    const reload = vi.fn();
+    vi.stubGlobal('location', { href: window.location.href, reload });
+    let instance = 'first';
+    let announce: (kind: 'update') => void = () => undefined;
+    function Announce(): React.ReactNode {
+      announce = useConnection().expectOutage;
+      return null;
+    }
+    const client = new QueryClient();
+    const refreshed = vi.fn<() => void>();
+    vi.spyOn(client, 'invalidateQueries').mockImplementation(() => {
+      refreshed();
+      return Promise.resolve();
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <FeedbackProvider>
+          <ConnectionProvider check={() => Promise.resolve({ instance, reach: 'online' as const })}>
+            <Announce />
+          </ConnectionProvider>
+        </FeedbackProvider>
+      </QueryClientProvider>,
+    );
+    const wait = async (ms: number): Promise<void> => {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    };
+    await wait(3_000);
+
+    // A restart nobody announced: the data is refreshed, the page stays.
+    instance = 'second';
+    await wait(10_000);
+    expect(refreshed).toHaveBeenCalledTimes(1);
+    expect(reload).not.toHaveBeenCalled();
+
+    // The update restarted the daemon between two polls: it never looked offline.
+    act(() => announce('update'));
+    await wait(3_000);
+    expect(reload).not.toHaveBeenCalled();
+    instance = 'third';
+    await wait(3_000);
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });
 

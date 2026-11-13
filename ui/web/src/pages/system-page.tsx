@@ -6,6 +6,7 @@ import { useOverview } from '../api/queries';
 import { Meter } from '../components/meter';
 import { ErrorMessage, Loading } from '../components/query-state';
 import { SaltboxUpdates } from '../components/saltbox-updates';
+import { SelfUpdateCard } from '../components/self-update';
 import { StatusDot } from '../components/status-dot';
 import { formatBytes } from '../format';
 import { DrivesCard } from './drives-card';
@@ -121,6 +122,7 @@ export function SystemPage(): React.ReactNode {
       </div>
 
       <SaltboxUpdates />
+      <SelfUpdateCard />
     </div>
   );
 }

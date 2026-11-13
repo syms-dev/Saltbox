@@ -16,6 +16,8 @@ real job runner, the built web app) on it. Only the outside world is faked:
 - Ubuntu wants a restart after a kernel update; restarting only leaves a note.
 - Scrutiny reports three drives, one of them failing, and says which attribute.
 - media is on local disks only, and Autoscan waits for an anchor file that is missing.
+- a newer Saltbox UI is on offer until it has been "updated".
+- Claude Code is "installed and signed in", and gives one fixed explanation.
 - the last day of logs has one known error (Prowlarr) and one that repeats (Sonarr).
 
 The Playwright suite in ``ui/web/e2e`` starts this as its web server.
@@ -30,6 +32,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -492,6 +495,20 @@ def build_box(root: Path) -> Layout:
     return Layout(repo=repo, appdata=appdata, sb_binary=sb, state_dir=root / "state")
 
 
+def fake_claude(args: list[str], stdin: str | None, timeout: float) -> tuple[int, str, str]:
+    """Claude Code, signed in: says so, and answers any question about a log the same way."""
+    if args[1:] == ["auth", "status"]:
+        return 0, json.dumps({"loggedIn": True, "authMethod": "claude.ai"}), ""
+    answer = {
+        "summary": "Sonarr cannot import a finished download.",
+        "cause": "The folder it was told to import from does not exist inside its container.",
+        "steps": ["Check the path under `Settings > Download Clients` in Sonarr."],
+        "confidence": "medium",
+    }
+    assert stdin and "<log>" in stdin and "--tools" in args
+    return 0, json.dumps({"type": "result", "result": json.dumps(answer), "is_error": False}), ""
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--port", type=int, default=8790)
@@ -517,6 +534,32 @@ def main(argv: list[str] | None = None) -> int:
         services.reboot = lambda: (Path(tmp) / "rebooted").write_text("yes\n")
         services.uptime = lambda: 5 * 86400  # not just booted, whatever the test machine is
         services.storage_roots = (Path(tmp) / "mnt" / "unionfs", Path(tmp) / "mnt" / "local")
+        # A newer Saltbox UI is on offer; "updating" prints what it would do and
+        # "restarting" leaves a note, after which there is nothing newer.
+        updated = Path(tmp) / "self-updated"
+        services.self_status = lambda: {
+            "version": "0.1.0",
+            "mode": "source",
+            "source": {
+                "path": str(layout.repo),
+                "branch": "master",
+                "commit": "1111111",
+                "remote_commit": "2222222",
+            },
+            "latest": None,
+            "update_available": not updated.exists(),
+            "can_update": True,
+            "detail": "",
+            "checked_at": time.time(),
+        }
+        services.self_command = [
+            "sh",
+            "-c",
+            "echo '$ git pull --ff-only'; echo '$ npm run build'; "
+            "echo 'Updated from 1111111 to 2222222. The daemon restarts now.'",
+        ]
+        services.restart = lambda: updated.write_text("yes\n")
+        services.claude = ("claude", fake_claude)
         services.app_setup_factory = lambda layout: AppSetup(
             layout,
             transport=apps_transport,

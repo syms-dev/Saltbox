@@ -18,6 +18,7 @@ import {
   useMedia,
   useOverview,
   useProblems,
+  useSelf,
   useStartJob,
   useUpdates,
 } from '../api/queries';
@@ -34,6 +35,7 @@ import { usePins } from '../lib/pins';
 import { appHealth, hostOf } from '../lib/status';
 import { type Attention, type AttentionAction, attentionItems } from './home-attention';
 import { MediaRow, mediaAttention } from './home-media';
+import { selfAttention } from '../components/self-update';
 import { driveAttention } from './drives-card';
 import styles from './home-page.module.css';
 import { problemAttention } from './problems-card';
@@ -81,6 +83,12 @@ function ActionButton({ action }: { action: AttentionAction }): React.ReactNode 
     case 'updateAll':
       return (
         <button className="small primary" onClick={() => void jobs.updateAll(action.apps)} type="button">
+          {action.label}
+        </button>
+      );
+    case 'selfUpdate':
+      return (
+        <button className="small primary" onClick={() => void jobs.updateSelf()} type="button">
           {action.label}
         </button>
       );
@@ -356,6 +364,7 @@ export function HomePage(): React.ReactNode {
   const media = useMedia();
   const problems = useProblems();
   const drives = useDrives();
+  const self = useSelf();
   if (overview.isPending) return <Loading what="your server" />;
   if (overview.isError) return <ErrorMessage error={overview.error} prefix="Home" />;
   const data = overview.data;
@@ -366,6 +375,7 @@ export function HomePage(): React.ReactNode {
     ...mediaAttention(media.data),
     ...attentionItems(data, all),
     ...problemAttention(problems.data),
+    ...selfAttention(self.data),
   ];
   const urgent = attention.filter((item) => item.tone !== 'info').length;
   const running = data.containers.running;

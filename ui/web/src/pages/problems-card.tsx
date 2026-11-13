@@ -1,10 +1,17 @@
-import { ChevronRight, RefreshCw, Stethoscope, Wrench } from 'lucide-react';
+import { ChevronRight, RefreshCw, Sparkles, Stethoscope, Wrench } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-import { useDismiss, useFixProblem, useProblems, useRefreshProblems } from '../api/queries';
-import type { LogGroup, LogProblems } from '../api/types';
-import { useToast } from '../components/feedback';
+import {
+  useDismiss,
+  useExplain,
+  useExplainStatus,
+  useFixProblem,
+  useProblems,
+  useRefreshProblems,
+} from '../api/queries';
+import type { ExplainStatus, Explanation, LogGroup, LogProblems } from '../api/types';
+import { useConfirm, useToast } from '../components/feedback';
 import { formatRelative } from '../format';
 import type { Attention } from './home-attention';
 import styles from './problems-card.module.css';
@@ -66,13 +73,68 @@ function Step({ text }: { text: string }): React.ReactNode {
   );
 }
 
+const CONFIDENCE: Record<Explanation['confidence'], string> = {
+  high: 'fairly sure',
+  low: 'not sure',
+  medium: 'reasonably sure',
+};
+
+/** What Claude said about an issue: marked as its reading, with how sure it is. */
+function ExplanationBlock({ explanation }: { explanation: Explanation }): React.ReactNode {
+  return (
+    <div className={styles['explanation']}>
+      <h4 className={styles['label']}>
+        <Sparkles aria-hidden="true" size={12} /> Claude’s explanation · {CONFIDENCE[explanation.confidence]}
+      </h4>
+      <p>{explanation.summary}</p>
+      {explanation.cause === '' ? null : <p>{explanation.cause}</p>}
+      {explanation.steps.length === 0 ? null : (
+        <ol className={styles['steps']}>
+          {explanation.steps.map((step) => (
+            <Step key={step} text={step} />
+          ))}
+        </ol>
+      )}
+      <p className="small muted">
+        Written by Claude from {explanation.lines_sent} log lines, {formatRelative(explanation.asked_at)}. It ran
+        nothing on the server and it can be wrong: check before you act on it.
+      </p>
+    </div>
+  );
+}
+
 /** One issue: what it is, whose it is, what to do, and the buttons that act on it. */
-function Issue({ finding }: { finding: Finding }): React.ReactNode {
+function Issue({ explainer, finding }: { explainer: ExplainStatus | undefined; finding: Finding }): React.ReactNode {
   const { group } = finding;
   const kind = kindOf(group);
   const dismiss = useDismiss();
   const fix = useFixProblem();
+  const explain = useExplain();
+  const confirm = useConfirm();
   const toast = useToast();
+  const explanation = group.explanation ?? null;
+
+  async function ask(): Promise<void> {
+    const ok = await confirm({
+      body: (
+        <>
+          <p>
+            This sends the error and about 25 lines of {finding.app}’s log around it to Anthropic, through Claude Code
+            signed in as <code>{explainer?.user}</code> on this server. Passwords and keys this app knows about are
+            masked first; file names, addresses and whatever else the log says are sent as they are.
+          </p>
+          <p>Claude only explains. It cannot read or change anything on the server, and nothing it says is run.</p>
+        </>
+      ),
+      confirmLabel: 'Ask Claude',
+      title: `Ask Claude about this ${finding.app} error?`,
+    });
+    if (!ok) return;
+    explain.mutate(
+      { again: explanation !== null, key: group.key },
+      { onError: (error) => toast({ body: error.message, title: 'Claude could not explain it', tone: 'danger' }) },
+    );
+  }
   const title = group.rule?.title ?? `${finding.app} keeps logging the same error`;
   const subjects = group.subjects ?? [];
   const action = group.action ?? null;
@@ -121,6 +183,7 @@ function Issue({ finding }: { finding: Finding }): React.ReactNode {
         <h4 className={styles['label']}>Latest line</h4>
         <p className={styles['line']}>{group.message}</p>
       </div>
+      {explanation === null ? null : <ExplanationBlock explanation={explanation} />}
       {action === null ? null : <p className="small muted">{action.detail}</p>}
       <footer className={styles['actions']}>
         {action === null ? null : (
@@ -142,6 +205,12 @@ function Issue({ finding }: { finding: Finding }): React.ReactNode {
         <Link className="button small" to={finding.logs}>
           Open {finding.app}’s log <ChevronRight aria-hidden="true" size={14} />
         </Link>
+        {explainer?.signed_in === true ? (
+          <button className="small" disabled={explain.isPending} onClick={() => void ask()} type="button">
+            <Sparkles aria-hidden="true" className={explain.isPending ? 'spin' : ''} size={14} />{' '}
+            {explain.isPending ? 'Claude is reading…' : explanation === null ? 'Ask Claude' : 'Ask Claude again'}
+          </button>
+        ) : null}
         <span className="spacer" />
         <button
           className="small ghost"
@@ -190,12 +259,32 @@ function Dismissed({ items }: { items: Finding[] }): React.ReactNode {
   );
 }
 
+/** How to turn explanations on, shown while they are off. */
+function ExplainSetup({ status }: { status: ExplainStatus }): React.ReactNode {
+  return (
+    <details className={styles['dismissed']}>
+      <summary>Have Claude explain an issue</summary>
+      <p className="small">
+        Each issue gets an “Ask Claude” button once{' '}
+        <a href="https://code.claude.com/docs/en/setup" rel="noreferrer" target="_blank">
+          Claude Code
+        </a>{' '}
+        is installed on this server and signed in for <code>{status.user}</code>
+        {status.installed ? ' (it is installed, but not signed in)' : ''}. Sign in over SSH as that user with{' '}
+        <code>claude auth login</code>; it uses your Claude plan, or an API key if that is how you sign in. This app
+        never sees the sign-in. Claude is sent one error and the log around it when you ask, and can only answer.
+      </p>
+    </details>
+  );
+}
+
 const ORDER: Kind[] = ['problem', 'minor', 'unexplained', 'notice'];
 
 /** Errors that keep coming back in the apps' logs, one card each; the known ones say what to do. */
 export function ProblemsCard(): React.ReactNode {
   const problems = useProblems();
   const refresh = useRefreshProblems();
+  const explainer = useExplainStatus();
   const location = useLocation();
   const section = useRef<HTMLElement>(null);
   const loaded = problems.data !== undefined;
@@ -239,10 +328,13 @@ export function ProblemsCard(): React.ReactNode {
           </p>
           <div className={styles['issues']}>
             {open.map((finding) => (
-              <Issue finding={finding} key={finding.group.key} />
+              <Issue explainer={explainer.data} finding={finding} key={finding.group.key} />
             ))}
           </div>
           {dismissed.length === 0 ? null : <Dismissed items={dismissed} />}
+          {explainer.data !== undefined && !explainer.data.signed_in && open.length > 0 ? (
+            <ExplainSetup status={explainer.data} />
+          ) : null}
         </>
       )}
     </section>

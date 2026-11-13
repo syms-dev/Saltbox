@@ -55,7 +55,9 @@ after a reboot or a dropped SSH session.
   once; with Scrutiny installed, every drive's health, temperature and age,
   and which attribute a failing one fails on (it goes to the top of Home).
   Drive and log issues can be dismissed; a dismissed drive comes back if
-  another attribute starts failing;
+  another attribute starts failing. With Claude Code installed on the server,
+  any log issue can be put to Claude for an explanation (see
+  [Explanations by Claude](#explanations-by-claude));
   mounts and Saltbox services; Tailscale (and opening this app over it);
   backups (`sb install backup` on demand); Saltbox's own version and `sb update`,
   which shows the update's announcements with the job and waits for your yes or
@@ -91,9 +93,9 @@ Version 0.1.0. Treat it as a beta.
 
 | Check | Result |
 | --- | --- |
-| Python tests (pytest) | 317 tests; pass on Python 3.12 and 3.14 |
-| Web unit tests (Vitest) | 72 tests pass |
-| End-to-end tests (Playwright, Chromium) | 65 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
+| Python tests (pytest) | 334 tests; pass on Python 3.12 and 3.14 |
+| Web unit tests (Vitest) | 80 tests pass |
+| End-to-end tests (Playwright, Chromium) | 66 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
 | Package | CI builds the wheel, installs it in a clean environment and loads the web app from it |
 | Real servers | **One**: Ubuntu 26.04, Python 3.14, local drives pooled with mergerfs, Plex, qBittorrent behind Gluetun (ProtonVPN) |
 
@@ -131,6 +133,10 @@ that one. **Not yet run on any real server:**
 - reconnecting after a real reboot or a real Traefik restart (tested by making
   the daemon unreachable in a browser test, not by restarting anything);
 - the fix that creates Autoscan's anchor file;
+- explanations by Claude (the command line and its flags come from Claude
+  Code's documentation; it is tested against a stand-in, not the real CLI);
+- the Saltbox UI update button (tested against a local git repository and a
+  stand-in for npm; it has not updated a real install);
 - drive health from Scrutiny (written from Scrutiny's source and tested against
   a stand-in for its API);
 - the log problem finder. Its two app-specific explanations (Autoscan's anchor
@@ -187,9 +193,12 @@ That writes a Traefik route (`/opt/traefik/saltbox-ui.yml`), a systemd unit
 (`saltbox-ui.service`) and starts it. The app answers at
 `https://saltbox.<your domain>` once Traefik has a certificate.
 
-**Updating:** install the newer wheel with `pipx install --force` and run
-`sudo systemctl restart saltbox-ui`. Saltbox itself keeps updating with
-`sb update`, from the terminal or the System page.
+**Updating:** the System page shows when a newer Saltbox UI is available and
+has a button that installs it (the newest release wheel, or `git pull` and a
+rebuild when it runs from a source checkout) and restarts the daemon; the page
+reloads itself on the new version. By hand: install the newer wheel with
+`pipx install --force` and run `sudo systemctl restart saltbox-ui`. Saltbox
+itself keeps updating with `sb update`, from the terminal or the System page.
 
 **Removing:** `sudo sbx daemon disable` stops the service and removes its
 systemd unit, Traefik route, the VPN port-sync timer and the Tailscale address.
@@ -224,6 +233,26 @@ whole question.
   only the Tailscale account that owns the server, refusing other tailnet users
   and tagged devices. It needs MagicDNS and HTTPS certificates enabled in the
   Tailscale admin console.
+
+### Explanations by Claude
+
+Each issue found in the logs has an "Ask Claude" button once
+[Claude Code](https://code.claude.com/docs/en/setup) is installed on the server
+and signed in for the Saltbox user (`claude auth login`, over SSH). Pressing it
+shows what will be sent and asks first.
+
+- **What is sent:** the error and about 25 log lines around it, to Anthropic.
+  Passwords and keys this app knows are masked first; file names, addresses and
+  anything else in those lines are not.
+- **What Claude can do:** answer. It is run with every tool switched off, as
+  the Saltbox user rather than root, in an empty folder. Its answer is shown as
+  text and nothing in it is run.
+- **Whose account:** whatever Claude Code on the server is signed in with, a
+  Claude plan or an API key. This app does not sign you in and never sees a
+  credential. Anthropic's Agent SDK documentation says that, unless approved,
+  third-party developers may not offer claude.ai login or its rate limits for
+  their products, and to use API keys instead. If you are unsure how that
+  applies to you, sign Claude Code in with an API key.
 
 A security review of the code found and fixed: the job log WebSocket skipping
 the token check; job logs readable by any local user; and every single-sign-on

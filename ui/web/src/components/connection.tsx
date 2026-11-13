@@ -6,8 +6,10 @@ import styles from './connection.module.css';
 import { useToast } from './feedback';
 
 /** Why the server is about to stop answering: it is rebooting, or the proxy in front of it is. */
-export type Outage = 'proxy' | 'reboot';
+export type Outage = 'proxy' | 'reboot' | 'update';
 export type Reach = 'offline' | 'online' | 'signin';
+/** What a probe found: whether the daemon answered, and which run of it did. */
+export type Probe = { instance?: string | undefined; reach: Reach };
 
 const BASE = '/api';
 const POLL_ONLINE_MS = 10_000;
@@ -18,7 +20,7 @@ const RELOAD_KEY = 'saltbox-ui:reloaded-for-sign-in';
 const HINT_AFTER_SECONDS = 90;
 
 /** Ask the daemon whether it is there, without following a redirect to the sign-in page. */
-export async function probe(): Promise<Reach> {
+export async function probe(): Promise<Probe> {
   try {
     const response = await fetch(`${BASE}/meta`, {
       cache: 'no-store',
@@ -26,11 +28,15 @@ export async function probe(): Promise<Reach> {
       redirect: 'manual',
     });
     // Single sign-on answers a lapsed session with a redirect to its own page, or a 401.
-    if (response.type === 'opaqueredirect' || response.status === 401) return 'signin';
+    if (response.type === 'opaqueredirect' || response.status === 401) return { reach: 'signin' };
     // 403 is the daemon itself refusing this user: it is up, and the page says why.
-    return response.ok || response.status === 403 ? 'online' : 'offline';
+    if (response.status === 403) return { reach: 'online' };
+    if (!response.ok) return { reach: 'offline' };
+    // When the daemon started tells one run of it from the next.
+    const meta = (await response.json()) as { started_at?: number };
+    return { instance: meta.started_at === undefined ? undefined : String(meta.started_at), reach: 'online' };
   } catch {
-    return 'offline';
+    return { reach: 'offline' };
   }
 }
 
@@ -91,7 +97,7 @@ export function ConnectionProvider({
   children,
   check = probe,
 }: {
-  check?: () => Promise<Reach>;
+  check?: () => Promise<Probe | Reach>;
   children: React.ReactNode;
 }): React.ReactNode {
   const client = useQueryClient();
@@ -100,7 +106,12 @@ export function ConnectionProvider({
   const [expected, setExpected] = useState<{ at: number; kind: Outage } | null>(null);
   const [signedOut, setSignedOut] = useState(false);
   // The polling loop reads the latest state through refs, so it is started once.
-  const state = useRef({ expected, failures: 0, offlineSince });
+  const state = useRef<{
+    expected: typeof expected;
+    failures: number;
+    instance: string | undefined;
+    offlineSince: number | null;
+  }>({ expected, failures: 0, instance: undefined, offlineSince });
   const pollSoon = useRef<() => void>(() => undefined);
   useEffect(() => {
     state.current.expected = expected;
@@ -112,14 +123,23 @@ export function ConnectionProvider({
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     async function tick(): Promise<void> {
-      const reach = await check();
+      const found = await check();
       if (stopped) return;
+      const { instance, reach } = typeof found === 'string' ? { instance: undefined, reach: found } : found;
       const now = Date.now();
       const current = state.current;
       const disturbed = current.offlineSince !== null || current.expected !== null;
       if (reach === 'online') {
         current.failures = 0;
         setSignedOut(false);
+        const restarted = instance !== undefined && current.instance !== undefined && instance !== current.instance;
+        current.instance = instance ?? current.instance;
+        if (restarted && current.expected?.kind === 'update') {
+          // The app updated itself: this page is the old version, so load the new one.
+          window.location.reload();
+          return;
+        }
+        if (restarted && current.offlineSince === null) void client.invalidateQueries();
         if (current.offlineSince !== null) {
           const seconds = (now - current.offlineSince) / 1000;
           setOfflineSince(null);
@@ -168,6 +188,7 @@ export function ConnectionProvider({
 }
 
 const WAITING: Record<Outage | 'unknown', string> = {
+  update: 'Saltbox UI is restarting on its new version. This page reloads by itself.',
   proxy: 'The proxy in front of this page is restarting. It reconnects by itself.',
   reboot: 'The server is restarting. This page reconnects by itself.',
   unknown: 'Lost contact with the server. Trying again every few seconds.',

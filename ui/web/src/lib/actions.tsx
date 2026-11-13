@@ -9,6 +9,7 @@ import {
   useStartJob,
   useUninstallApp,
   useUpdateAll,
+  useUpdateSelf,
   useUpdateApp,
   useUpdateSaltbox,
 } from '../api/queries';
@@ -89,6 +90,7 @@ export function useJobActions(): {
   updateAll: (apps: AppRef[]) => Promise<void>;
   updateApp: (app: AppRef) => Promise<void>;
   updateSaltbox: () => Promise<void>;
+  updateSelf: () => Promise<void>;
 } {
   const confirm = useConfirm();
   const toast = useToast();
@@ -99,6 +101,7 @@ export function useJobActions(): {
   const saltbox = useUpdateSaltbox();
   const restart = useReboot();
   const remove = useUninstallApp();
+  const self = useUpdateSelf();
   const connection = useConnection();
 
   function started(title: string, core = false): (job: Job) => void {
@@ -244,6 +247,28 @@ export function useJobActions(): {
           { onError: failed, onSuccess: started(`Updating ${app.title}`, app.core === true) },
         );
       }
+    },
+    updateSelf: async () => {
+      const ok = await confirm({
+        body: (
+          <>
+            <p>
+              Gets the new version of Saltbox UI, then restarts its daemon. Your apps are not touched and keep running.
+            </p>
+            <p>This page waits for the restart and reloads by itself on the new version.</p>
+          </>
+        ),
+        confirmLabel: 'Update Saltbox UI',
+        title: 'Update Saltbox UI?',
+      });
+      if (!ok) return;
+      self.mutate(undefined, {
+        onError: failed,
+        onSuccess: (job) => {
+          connection.expectOutage('update');
+          started('Updating Saltbox UI')(job);
+        },
+      });
     },
     updateSaltbox: async () => {
       const ok = await confirm({

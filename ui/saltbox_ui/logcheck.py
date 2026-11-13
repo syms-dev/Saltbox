@@ -221,6 +221,19 @@ def issue_key(container: str, rule: Rule | None, signed: str) -> str:
     return f"log:{container}:{what}"
 
 
+def line_key(container: str, raw: str) -> str | None:
+    """The issue a log line belongs to (as ``analyse`` groups it), or ``None`` if it is not one."""
+    _seen, text = split_time(raw)
+    error = is_error(text)
+    message = clean(text)
+    rule = next(
+        (r for r in RULES if (error or r.containers) and r.matches(container, message)), None
+    )
+    if rule is None and not error:
+        return None
+    return issue_key(container, rule, signature(message))
+
+
 def analyse(
     container: str,
     lines: list[str],
