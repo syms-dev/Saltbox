@@ -83,7 +83,15 @@ export type Overview = {
   config_issues: Record<string, Issue[]>;
   containers: ContainerSummary;
   updates: UpdatesSummary;
-  host: { disks: Disk[]; mounts: Mount[]; reboot_packages?: string[]; reboot_required: boolean; units: Unit[] };
+  host: {
+    disks: Disk[];
+    mounts: Mount[];
+    reboot_packages?: string[];
+    reboot_required: boolean;
+    units: Unit[];
+    /** Seconds since the server booted. */
+    uptime?: number | null;
+  };
   install: { configs_present: boolean; installed: boolean; roles_with_facts: string[] };
   jobs: JobsStatus & { recent: Job[] };
   services: Service[];
@@ -102,12 +110,30 @@ export type ContainerState = {
 };
 
 /** One drive as Scrutiny sees it; the two verdicts are the drive's own and Scrutiny's. */
+/** One SMART attribute that fails, with Scrutiny's name for it and its reason. */
+export type DriveAttribute = {
+  critical: boolean;
+  description: string;
+  failed_scrutiny: boolean;
+  failed_smart: boolean;
+  failure_rate: number | null;
+  id: string;
+  name: string;
+  reason: string;
+  value: number | null;
+};
+
 export type Drive = {
   capacity: number;
   checked_at: string | null;
+  /** Set once someone has dismissed this exact failure; a new failing attribute clears it. */
+  dismissed?: boolean;
   failed_scrutiny: boolean;
   failed_smart: boolean;
+  failing?: DriveAttribute[];
   healthy: boolean;
+  /** Names what is wrong, for dismissing it; null for a healthy drive. */
+  key?: string | null;
   id: string;
   kind: 'HDD' | 'NVMe' | 'SSD';
   label: string;
@@ -126,17 +152,30 @@ export type LogRule = {
   fix: string[];
   id: string;
   meaning: string;
-  /** `problem`: something is not working. `notice`: harmless, but explains the noise. */
-  severity: 'notice' | 'problem';
+  /** `problem`: not working (shown on Home). `minor`: works less well. `notice`: harmless. */
+  severity: 'minor' | 'notice' | 'problem';
   title: string;
 };
 
 /** One error that recurs in a container's log; `message` is its latest occurrence. */
-export type LogGroup = { count: number; last_seen: string; message: string; rule: LogRule | null };
+export type LogGroup = {
+  /** A fix the daemon can make itself, when one is safe on this server. */
+  action?: { detail: string; id: string; label: string } | null;
+  count: number;
+  dismissed?: boolean;
+  key: string;
+  last_seen: string;
+  message: string;
+  more_subjects?: number;
+  rule: LogRule | null;
+  /** What the occurrences were about (files), each once. */
+  subjects?: string[];
+};
 
 export type LogProblems = {
   available: boolean;
   checked_at: number;
+  cloud_storage?: boolean;
   containers: { app: AppRef | null; groups: LogGroup[]; name: string }[];
   scanned: number;
   window: string;

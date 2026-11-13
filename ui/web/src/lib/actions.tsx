@@ -13,6 +13,7 @@ import {
   useUpdateSaltbox,
 } from '../api/queries';
 import type { App, AppRef, ContainerAction, Job, UninstallPlan } from '../api/types';
+import { useConnection } from '../components/connection';
 import { useConfirm, useToast } from '../components/feedback';
 
 export function appTag(app: Pick<App, 'install_tag' | 'role' | 'sb_tag'>): string {
@@ -71,7 +72,8 @@ function CoreWarning(): React.ReactNode {
   return (
     <p>
       This includes part of Saltbox’s core (the proxy or sign-in in front of every web app, this one too). Expect this
-      page to drop for a moment and to sign in again; the job carries on, and its log is under Activity.
+      page to drop for a moment; it reconnects by itself, signing you in again if it has to. The job carries on, and its
+      log is under Activity.
     </p>
   );
 }
@@ -97,9 +99,12 @@ export function useJobActions(): {
   const saltbox = useUpdateSaltbox();
   const restart = useReboot();
   const remove = useUninstallApp();
+  const connection = useConnection();
 
-  function started(title: string): (job: Job) => void {
+  function started(title: string, core = false): (job: Job) => void {
     return (job) => {
+      // Recreating the proxy or sign-in drops this page; watch for it to come back.
+      if (core) connection.expectOutage('proxy');
       toast({ href: `/activity/${job.id}`, linkLabel: 'Watch the log', title, tone: 'info' });
       void navigate(`/activity/${job.id}`);
     };
@@ -151,12 +156,15 @@ export function useJobActions(): {
       if (!ok) return;
       restart.mutate(undefined, {
         onError: (error) => toast({ body: error.message, title: 'Could not restart the server', tone: 'danger' }),
-        onSuccess: () =>
+        onSuccess: () => {
+          // The page then watches for the server to go and come back, and says how it went.
+          connection.expectOutage('reboot');
           toast({
-            body: 'This page comes back by itself in a few minutes.',
+            body: 'This page reconnects by itself in a few minutes.',
             title: 'The server is restarting',
             tone: 'info',
-          }),
+          });
+        },
       });
     },
     uninstall: async (app) => {
@@ -208,7 +216,10 @@ export function useJobActions(): {
         confirmLabel: `Update ${apps.length} app${apps.length === 1 ? '' : 's'}`,
         title: 'Update all apps?',
       });
-      if (ok) all.mutate(undefined, { onError: failed, onSuccess: started('Updating apps') });
+      if (ok) {
+        const core = apps.some((a) => a.core === true);
+        all.mutate(undefined, { onError: failed, onSuccess: started('Updating apps', core) });
+      }
     },
     updateApp: async (app) => {
       const ok = await confirm({
@@ -230,7 +241,7 @@ export function useJobActions(): {
       if (ok) {
         one.mutate(
           { repo: app.repo, role: app.role },
-          { onError: failed, onSuccess: started(`Updating ${app.title}`) },
+          { onError: failed, onSuccess: started(`Updating ${app.title}`, app.core === true) },
         );
       }
     },

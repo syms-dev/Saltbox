@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 
 import { App } from './app';
+import { ConnectionProvider } from './components/connection';
 import { FeedbackProvider } from './components/feedback';
 import './theme.css';
 
@@ -19,7 +20,9 @@ createRoot(container).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <FeedbackProvider>
-          <App />
+          <ConnectionProvider>
+            <App />
+          </ConnectionProvider>
         </FeedbackProvider>
       </BrowserRouter>
     </QueryClientProvider>

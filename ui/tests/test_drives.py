@@ -39,7 +39,7 @@ SUMMARY = {
     "data": {
         "summary": {
             "a": entry("sdb"),
-            "b": entry("sda", status=2),
+            "b": entry("sda", status=2, scrutiny_uuid="uuid-sda"),
             "c": entry("nvme0", device_protocol="NVMe", rotational_speed=0, model_name="WD Black"),
             "d": entry("sdz", archived=True, device_status=1),
             # Registered, but the collector has not reported on it yet.
@@ -50,9 +50,54 @@ SUMMARY = {
 SERVICE = Service("scrutiny", "scrutiny", 8080, True, host="scrutiny")
 
 
+# What Scrutiny says about the failing drive: two readings, the later one with a critical
+# attribute past Scrutiny's threshold, one failing the maker's own, and one only warned about.
+DETAILS = {
+    "success": True,
+    "data": {
+        "smart_results": [
+            {"date": "2026-11-12T05:00:00Z", "attrs": {"5": {"attribute_id": 5, "status": 0}}},
+            {
+                "date": "2026-11-13T05:00:00Z",
+                "attrs": {
+                    "5": {
+                        "attribute_id": 5,
+                        "raw_value": 24,
+                        "status": 4,
+                        "status_reason": "Observed Failure Rate for Critical Attribute is "
+                        "greater than 10%",
+                        "failure_rate": 0.1423,
+                    },
+                    "199": {
+                        "attribute_id": 199,
+                        "raw_value": 3,
+                        "status": 1,
+                        "status_reason": "Attribute is failing manufacturer SMART threshold",
+                    },
+                    "9": {"attribute_id": 9, "raw_value": 26280, "status": 0},
+                    "194": {"attribute_id": 194, "raw_value": 34, "status": 2},
+                },
+            },
+        ]
+    },
+    "metadata": {
+        "5": {
+            "display_name": "Reallocated Sectors Count",
+            "critical": True,
+            "description": "Count of reallocated sectors.",
+        },
+        "199": {"display_name": "UltraDMA CRC Error Count", "critical": False, "description": ""},
+    },
+}
+
+
 def scrutiny(method: str, url: str, headers: dict, body: bytes | None) -> Response:
-    assert (method, url) == ("GET", "http://scrutiny:8080/api/summary")
-    return Response(200, json.dumps(SUMMARY).encode())
+    assert method == "GET"
+    if url == "http://scrutiny:8080/api/summary":
+        return Response(200, json.dumps(SUMMARY).encode())
+    # Only the failing drive is asked about, by Scrutiny's own id for it.
+    assert url == "http://scrutiny:8080/api/device/uuid-sda/details", url
+    return Response(200, json.dumps(DETAILS).encode())
 
 
 def test_drives_are_read_with_failing_ones_first() -> None:
@@ -61,6 +106,32 @@ def test_drives_are_read_with_failing_ones_first() -> None:
     failing, nvme, disk, unread = found
     assert failing["healthy"] is False
     assert failing["failed_scrutiny"] is True and failing["failed_smart"] is False
+    # Which attributes, and why: critical ones first; a warning alone is not a failure.
+    assert failing["failing"] == [
+        {
+            "id": "5",
+            "name": "Reallocated Sectors Count",
+            "description": "Count of reallocated sectors.",
+            "critical": True,
+            "value": 24,
+            "reason": "Observed Failure Rate for Critical Attribute is greater than 10%",
+            "failure_rate": 0.1423,
+            "failed_smart": False,
+            "failed_scrutiny": True,
+        },
+        {
+            "id": "199",
+            "name": "UltraDMA CRC Error Count",
+            "description": "",
+            "critical": False,
+            "value": 3,
+            "reason": "Attribute is failing manufacturer SMART threshold",
+            "failure_rate": None,
+            "failed_smart": True,
+            "failed_scrutiny": False,
+        },
+    ]
+    assert failing["key"] == "drive:0x5000c500sda:scrutiny:199,5"
     assert nvme["kind"] == "NVMe" and nvme["model"] == "WD Black" and nvme["healthy"] is True
     assert disk == {
         "id": "0x5000c500sdb",
@@ -76,6 +147,8 @@ def test_drives_are_read_with_failing_ones_first() -> None:
         "checked_at": "2026-11-13T05:00:00Z",
         "temperature": 34,
         "power_on_hours": 26280,
+        "failing": [],
+        "key": None,
     }
     assert unread["kind"] == "SSD" and unread["checked_at"] is None
     assert unread["temperature"] is None and unread["power_on_hours"] is None
@@ -107,6 +180,29 @@ def test_drives_route(scratch_layout: Layout, fake_sb: Path) -> None:
     assert data["drives"][0]["name"] == "/dev/sda"
     client.get("/api/drives")
     assert len(reads) == 1  # kept for five minutes
+
+
+def test_a_drive_issue_can_be_dismissed_until_it_changes(
+    scratch_layout: Layout, fake_sb: Path
+) -> None:
+    client, _ = client_for(scratch_layout, scrutiny)
+    failing = client.get("/api/drives").json()["drives"][0]
+    assert failing["dismissed"] is False
+    key = failing["key"]
+    assert client.post("/api/dismissals", json={"key": ""}).status_code == 422
+    assert client.post("/api/dismissals", json={"key": key, "label": "/dev/sda"}).json() == {
+        "dismissed": True
+    }
+    drives_now = client.get("/api/drives").json()["drives"]
+    assert drives_now[0]["dismissed"] is True and drives_now[1]["dismissed"] is False
+    saved = scratch_layout.state_dir / "dismissed.json"
+    assert key in json.loads(saved.read_text()) and saved.stat().st_mode & 0o777 == 0o600
+    # Another attribute failing is a different issue: its key no longer matches.
+    worse = {**failing, "failing": [*failing["failing"], {"id": "197"}]}
+    assert drives.issue_key(worse) != key
+    assert client.post("/api/dismissals/restore", json={"key": key}).json() == {"restored": True}
+    assert client.get("/api/drives").json()["drives"][0]["dismissed"] is False
+    assert client.post("/api/dismissals/restore", json={"key": key}).json() == {"restored": False}
 
 
 def test_drives_route_without_scrutiny_or_when_it_is_down(

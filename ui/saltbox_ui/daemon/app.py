@@ -25,6 +25,7 @@ from ..config import ConfigService, Inventory
 from ..layout import Layout
 from ..runner import SbRunner
 from .automation import AutomationService
+from .dismissals import Dismissals
 from .jobs import JobManager
 from .routes import router
 from .updates import UpdateService
@@ -52,10 +53,15 @@ class Services:
     # Restarting the server, and the file Ubuntu leaves when it needs one (tests replace both).
     reboot: Callable[[], None] | None = None
     reboot_flag: Path = Path("/var/run/reboot-required")
+    # Seconds since the server booted (tests replace it).
+    uptime: Callable[[], int | None] | None = None
+    # The merged and the local media folders, for fixes the problem finder offers.
+    storage_roots: tuple[Path, Path] = (Path("/mnt/unionfs"), Path("/mnt/local"))
     # Runs ``docker logs`` for the problem finder (tests replace it).
     log_runner: Callable[[list[str]], tuple[int, str]] | None = None
     updates: UpdateService = field(init=False)
     automation: AutomationService = field(init=False)
+    dismissals: Dismissals = field(init=False)
 
     def __post_init__(self) -> None:
         self.config = ConfigService(self.layout)
@@ -69,6 +75,7 @@ class Services:
             lambda job: self.updates.refresh() if job.kind in {"install", "update"} else None
         )
         self.automation = AutomationService(self)
+        self.dismissals = Dismissals(self.layout.state_dir / "dismissed.json")
         self.jobs.on_finish.append(lambda job: self.automation.on_job_finished(job))
 
 

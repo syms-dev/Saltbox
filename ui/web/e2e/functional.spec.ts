@@ -45,7 +45,10 @@ test.describe('home', () => {
 
   test('says which updates want a reboot and restarts the server on request', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('Saltbox UI 0.1.0')).toBeVisible();
+    // The foot of the sidebar names this app and its version, and nothing else.
+    await expect(page.locator('aside')).toContainText('Saltbox UI');
+    await expect(page.locator('aside')).toContainText('0.1.0');
+    await expect(page.locator('aside')).not.toContainText('master');
     const reboot = page
       .getByRole('region', { name: 'Needs attention' })
       .getByRole('listitem')
@@ -59,22 +62,44 @@ test.describe('home', () => {
     await reboot.getByRole('button', { name: 'Restart the server' }).click();
     await confirm(page, 'Restart the server now?', 'Restart the server');
     await expect(page.getByRole('status').getByText('The server is restarting')).toBeVisible();
+    // From here the page watches for the server to go away and come back.
+    await expect(page.getByText('Restart requested. The server goes down in a moment.')).toBeVisible();
   });
 
-  test('puts a failing drive first and shows every drive as Scrutiny sees it', async ({ page }) => {
+  test('waits when the server stops answering and carries on when it is back', async ({ page }) => {
     await page.goto('/');
-    const first = page.getByRole('region', { name: 'Needs attention' }).getByRole('listitem').first();
+    await expect(page.getByRole('region', { name: 'Needs attention' })).toBeVisible();
+    // What Traefik answers while the daemon behind it is away.
+    await page.route('**/api/meta', (route) => route.fulfill({ body: 'Not Found', status: 404 }));
+    await expect(page.getByText('Lost contact with the server. Trying again every few seconds.')).toBeVisible({
+      timeout: 30_000,
+    });
+    await page.unroute('**/api/meta');
+    await expect(page.getByText(/^The server is back after \d+s$/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Lost contact with the server/)).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Needs attention' })).toBeVisible();
+  });
+
+  test('puts a failing drive first, says which attribute fails, and can be told to stop', async ({ page }) => {
+    await page.goto('/');
+    const attention = page.getByRole('region', { name: 'Needs attention' });
+    const first = attention.getByRole('listitem').first();
     await expect(first).toContainText('Drive /dev/sdb is failing its health check', { timeout: 20_000 });
-    await expect(first).toContainText('WDC WD80EFAX-68KNBN0 · 8.0 TB. Failing Scrutiny’s thresholds.');
+    await expect(first).toContainText('WDC WD80EFAX-68KNBN0 · 8.0 TB. Reallocated Sectors Count is 24.');
     await first.getByRole('link', { name: 'Drive health' }).click();
     await expect(page).toHaveURL(/\/system#drives$/);
     const drives = page.getByRole('region', { name: 'Drive health' });
     await expect(drives).toBeInViewport();
     await expect(drives.getByRole('alert')).toContainText('1 of 3 drives is failing');
-    const rows = drives.getByRole('listitem');
+    const rows = drives.getByRole('list', { name: 'Drives' }).locator('> li');
     await expect(rows).toHaveCount(3);
-    await expect(rows.first()).toContainText('/dev/sdb');
-    await expect(rows.first()).toContainText('Failing Scrutiny’s thresholds');
+    const failing = rows.first();
+    await expect(failing).toContainText('/dev/sdb');
+    await expect(failing).toContainText('Failing Scrutiny’s thresholds');
+    await expect(failing).toContainText(
+      'Reallocated Sectors Count is 24: drives with this value fail about 14% of the time',
+    );
+    await expect(failing).toContainText('critical');
     const nvme = rows.filter({ hasText: '/dev/nvme0' });
     await expect(nvme).toContainText('NVMe');
     await expect(nvme).toContainText('Samsung SSD 980 PRO · 1.0 TB');
@@ -85,31 +110,67 @@ test.describe('home', () => {
       'href',
       'https://scrutiny.e2e.example',
     );
+
+    // A drive can fail its check for months: dismissing takes it off Home, not off this card.
+    await failing.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(failing.getByRole('button', { name: 'Show on Home again' })).toBeVisible();
+    await expect(drives).toContainText('1 of 3 drives is failing (dismissed)');
+    await page.goto('/');
+    await expect(attention).toContainText('A reboot is pending');
+    await expect(attention).not.toContainText('is failing its health check');
+    await page.goto('/system#drives');
+    await page.getByRole('button', { name: 'Show on Home again' }).click();
+    await expect(page.getByRole('region', { name: 'Drive health' }).getByRole('alert')).toBeVisible();
   });
 
-  test('explains a known error from the logs and lists the ones that keep repeating', async ({ page }) => {
+  test('shows each recurring error as its own issue, fixes what it can and lets the rest be dismissed', async ({
+    page,
+  }) => {
     await page.goto('/');
-    const known = page
-      .getByRole('region', { name: 'Needs attention' })
-      .getByRole('listitem')
-      .filter({ hasText: "An indexer is behind Cloudflare's bot check" });
-    await expect(known).toContainText('Prowlarr logged it once in the last day.', { timeout: 20_000 });
-    await known.getByRole('link', { name: 'How to fix it' }).click();
+    const attention = page.getByRole('region', { name: 'Needs attention' });
+    await expect(attention).toContainText("An indexer is behind Cloudflare's bot check", { timeout: 20_000 });
+    const held = attention.getByRole('listitem').filter({ hasText: 'Autoscan is holding back every scan' });
+    await expect(held).toContainText('Autoscan logged it 3 times in the last day.');
+    await held.getByRole('link', { name: 'How to fix it' }).click();
     await expect(page).toHaveURL(/\/system#problems$/);
     const problems = page.getByRole('region', { name: 'Problems in app logs' });
     await expect(problems).toBeInViewport();
-    await expect(problems).toContainText('Prowlarr · logged once');
-    await expect(problems).toContainText('In Prowlarr, add that tag to the indexer.');
-    await expect(problems).toContainText('Unable to access example.invalid, blocked by CloudFlare Protection.');
-    await expect(problems.getByRole('link', { name: 'Open Prowlarr’s log' })).toHaveAttribute(
+    await expect(problems.getByRole('article')).toHaveCount(3);
+
+    // Known, and nothing the daemon can change: what it means, what to do, where to look.
+    const cloudflare = problems.getByRole('article', { name: "An indexer is behind Cloudflare's bot check" });
+    await expect(cloudflare).toContainText('Needs fixing');
+    await expect(cloudflare).toContainText('Prowlarr · logged once');
+    await expect(cloudflare).toContainText('In Prowlarr, add that tag to the indexer.');
+    await expect(cloudflare).toContainText('Unable to access example.invalid, blocked by CloudFlare Protection.');
+    await expect(cloudflare.getByRole('link', { name: /Open Prowlarr’s log/ })).toHaveAttribute(
       'href',
       '/apps/saltbox/prowlarr?tab=logs',
     );
-    await problems.getByText('1 other error that keeps repeating').click();
-    await expect(problems).toContainText('Sonarr · 4 times');
-    await expect(problems).toContainText('[Error] ImportService: Import failed for /downloads/Some.Show.S01E03');
-    await problems.getByRole('button', { name: 'Check again' }).click();
-    await expect(problems).toContainText('Prowlarr · logged once');
+    await expect(cloudflare.getByRole('button', { name: 'Create the anchor file' })).toHaveCount(0);
+
+    // Not known: said so, and dismissed for good with one click (kept in a list of its own).
+    const unexplained = problems.getByRole('article', { name: 'Sonarr keeps logging the same error' });
+    await expect(unexplained).toContainText('Unexplained');
+    await expect(unexplained).toContainText('Sonarr · logged 4 times');
+    await expect(unexplained).toContainText('[Error] ImportService: Import failed for /downloads/Some.Show.S01E03');
+    await unexplained.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(problems.getByRole('article')).toHaveCount(2);
+    await problems.getByText('1 dismissed issue').click();
+    await problems.getByRole('button', { name: 'Show again' }).click();
+    await expect(problems.getByRole('article')).toHaveCount(3);
+
+    // Known, and safe to fix here because this server has no cloud storage: one button.
+    const anchor = problems.getByRole('article', { name: 'Autoscan is holding back every scan' });
+    await expect(anchor).toContainText('This server has no cloud storage set up');
+    await expect(anchor).toContainText('mnt/local/mounted.bin, owned by whoever owns');
+    await anchor.getByRole('button', { name: 'Create the anchor file' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Fixed' })).toContainText('mnt/local/mounted.bin');
+    await expect(problems.getByRole('article')).toHaveCount(2);
+    await expect(anchor).toHaveCount(0);
+    await page.goto('/');
+    await expect(attention).toContainText("An indexer is behind Cloudflare's bot check", { timeout: 20_000 });
+    await expect(attention).not.toContainText('Autoscan is holding back every scan');
   });
 
   test('counts updates the same before and after the apps list arrives, and as the Apps page does', async ({
@@ -132,7 +193,7 @@ test.describe('home', () => {
     const hero = page.locator('header').filter({ hasText: 'containers running' });
     await expect(hero).not.toContainText('apps installed'); // not "0 apps installed" while it loads
     release();
-    await expect(hero).toContainText('12 apps installed');
+    await expect(hero).toContainText('13 apps installed');
     await expect(updates).toContainText('4 app updates available');
     await expect(updates).toContainText('Authelia, Gluetun, Sonarr, Traefik Proxy');
 
@@ -251,7 +312,7 @@ test.describe('apps', () => {
     await page.getByRole('button', { name: /^Updates/ }).click();
     await expect(list.getByRole('listitem')).toHaveCount(4);
     await page.getByRole('button', { name: /^All/ }).click();
-    await page.getByLabel('Filter installed apps').fill('plex');
+    await page.getByLabel('Filter installed apps').fill('dozzle');
     await expect(list.getByRole('listitem')).toHaveCount(1);
   });
 

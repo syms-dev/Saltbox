@@ -9,19 +9,68 @@
   margin: 0;
 }
 
-.finding {
-  border-left: 3px solid var(--color-border);
+.issues {
   display: grid;
-  gap: var(--space-2);
-  padding-left: var(--space-4);
+  gap: var(--space-4);
 }
 
-.finding.problem {
+/* One issue, clearly its own thing: a bordered card with a coloured edge for how bad it is. */
+.issue {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.issue p {
+  margin: 0;
+}
+
+.issue.problem {
   border-left-color: var(--color-warn);
 }
 
-.finding p {
-  margin: 0;
+.issue.minor {
+  border-left-color: var(--color-info);
+}
+
+.head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+
+.badge {
+  background: var(--color-surface-2);
+  border-radius: var(--radius-full);
+  color: var(--color-fg-muted);
+  font-size: var(--text-xs);
+  font-weight: 650;
+  padding: 0 var(--space-2);
+}
+
+.problemBadge {
+  background: var(--color-warn-soft);
+  color: var(--color-warn);
+}
+
+.minorBadge {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.label {
+  color: var(--color-fg-muted);
+  font-size: var(--text-xs);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--space-1);
+  text-transform: uppercase;
 }
 
 .steps {
@@ -31,32 +80,58 @@
   padding-left: var(--space-5);
 }
 
+.files {
+  display: grid;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding: 0;
+}
+
 /* A log line: monospace, wrapped wherever it has to be. */
 .line {
   background: var(--color-surface-2);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  margin: 0;
   overflow-wrap: anywhere;
   padding: var(--space-2) var(--space-3);
 }
 
-.others summary {
-  cursor: pointer;
-  font-weight: 600;
+.actions {
+  align-items: center;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
 }
 
-.list {
+.dismissed summary {
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+
+.dismissedList {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
   list-style: none;
   margin: var(--space-3) 0 0;
   padding: 0;
 }
 
-.list li {
+.dismissedList li {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.dismissedText {
   display: grid;
-  gap: var(--space-1);
+  flex: 1;
   min-width: 0;
 }

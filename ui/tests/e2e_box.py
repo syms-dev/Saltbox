@@ -14,7 +14,8 @@ real job runner, the built web app) on it. Only the outside world is faked:
   images, the rest are current.
 - the Saltbox checkout is a git repository one commit behind its upstream.
 - Ubuntu wants a restart after a kernel update; restarting only leaves a note.
-- Scrutiny reports three drives, one of them failing.
+- Scrutiny reports three drives, one of them failing, and says which attribute.
+- media is on local disks only, and Autoscan waits for an anchor file that is missing.
 - the last day of logs has one known error (Prowlarr) and one that repeats (Sonarr).
 
 The Playwright suite in ``ui/web/e2e`` starts this as its web server.
@@ -97,14 +98,16 @@ CONTAINERS = [
     _container("authelia", "authelia/authelia:4", depends_on="authelia-redis"),
     _container("authelia-redis", "redis:alpine", health=None, web=False),
     _container("scrutiny", "ghcr.io/analogj/scrutiny:master-omnibus", health=None),
+    _container("autoscan", "ghcr.io/saltydk/autoscan:latest", health=None),
     # Installed and not used: the one the uninstall test removes.
     _container("lidarr", "ghcr.io/hotio/lidarr:release"),
 ]
-NO_APPDATA = {"autoheal", "authelia-redis"}
+# Autoscan has no folder here so that Connect apps leaves it alone: only its log matters.
+NO_APPDATA = {"autoheal", "authelia-redis", "autoscan"}
 SECRET_KEY = "e2e-wireguard-private-key="
 
 FAKE_DOCKER = """#!{python}
-import json, sys
+import json, os, sys
 containers = json.load(open({inspect!r}))
 args = sys.argv[1:]
 if args[:1] == ["ps"]:
@@ -136,7 +139,13 @@ elif args[:1] == ["logs"] and "--since" in args:
     # The last day of a log, for the problem finder: one error Prowlarr is known for,
     # one that Sonarr keeps repeating, and nothing wrong anywhere else.
     stamp = "2026-11-13T07:06:22.000000000Z "
-    if args[-1] == "prowlarr":
+    if args[-1] == "autoscan" and not os.path.exists({anchor!r}):
+        # Autoscan waits for a file that only cloud storage would bring; this box has none.
+        missing = 'missing_anchors=["' + {merged!r} + '"]'
+        held = "Nov 13 07:06:22 ERR Anchor files unavailable, retaining queued scans "
+        for _ in range(3):
+            print(stamp + held + missing)
+    elif args[-1] == "prowlarr":
         blocked = "Unable to access example.invalid, blocked by CloudFlare Protection."
         print(stamp + "[Warn] Torznab: " + blocked)
     elif args[-1] == "sonarr":
@@ -250,6 +259,7 @@ def _drive(name: str, model: str, capacity: float, **extra: Any) -> dict[str, An
         "rotational_speed": 7200,
         "device_protocol": "ATA",
         "device_status": 0,
+        "scrutiny_uuid": f"uuid-{name}",
         **extra,
     }
     smart = {"collector_date": "2026-11-13T05:00:00Z", "temp": 34, "power_on_hours": 26280}
@@ -261,6 +271,35 @@ SCRUTINY_DRIVES = {
     "a": _drive("sda", "ST8000VN004-2M2101", 8),
     "b": _drive("sdb", "WDC WD80EFAX-68KNBN0", 8, device_status=2),
     "c": _drive("nvme0", "Samsung SSD 980 PRO", 1, device_protocol="NVMe", rotational_speed=0),
+}
+
+SCRUTINY_FAILING = {
+    "success": True,
+    "data": {
+        "smart_results": [
+            {
+                "date": "2026-11-13T05:00:00Z",
+                "attrs": {
+                    "5": {
+                        "attribute_id": 5,
+                        "raw_value": 24,
+                        "status": 4,
+                        "status_reason": "Observed Failure Rate for Critical Attribute is "
+                        "greater than 10%",
+                        "failure_rate": 0.14,
+                    },
+                    "9": {"attribute_id": 9, "raw_value": 26280, "status": 0},
+                },
+            }
+        ]
+    },
+    "metadata": {
+        "5": {
+            "display_name": "Reallocated Sectors Count",
+            "critical": True,
+            "description": "Count of reallocated sectors.",
+        }
+    },
 }
 
 # qBittorrent as it ships: no seeding limit, so finished torrents never stop.
@@ -297,6 +336,8 @@ def apps_transport(method: str, url: str, headers: dict[str, str], body: Any) ->
         return _json(
             [{"name": "Some.Show.S03E04.1080p.WEB", "progress": 0.62, "eta": 300, "dlspeed": 8e6}]
         )
+    if path == "/api/device/uuid-sdb/details":  # Scrutiny, about the failing drive
+        return _json(SCRUTINY_FAILING)
     if path == "/api/summary":  # Scrutiny's dashboard
         return _json({"success": True, "data": {"summary": SCRUTINY_DRIVES}})
     if path == "/api/v2/app/preferences":
@@ -380,6 +421,8 @@ def build_box(root: Path) -> Layout:
     )
     for name in ("accounts", "settings"):
         text = (repo / "defaults" / f"{name}.yml.default").read_text()
+        # This box keeps its media on its own disks: no cloud remotes.
+        text = text.replace("rclone:\n  enabled: yes", "rclone:\n  enabled: no")
         (repo / f"{name}.yml").write_text(text.replace("testsaltbox.ml", DOMAIN))
     backups = root / "backups"
     backups.mkdir()
@@ -423,7 +466,15 @@ def build_box(root: Path) -> Layout:
     inspect = root / "inspect.json"
     inspect.write_text(json.dumps(CONTAINERS))
     docker = bin_dir / "docker"
-    docker.write_text(FAKE_DOCKER.format(python=sys.executable, inspect=str(inspect)))
+    (root / "mnt" / "local").mkdir(parents=True)
+    docker.write_text(
+        FAKE_DOCKER.format(
+            python=sys.executable,
+            inspect=str(inspect),
+            anchor=str(root / "mnt" / "local" / "mounted.bin"),
+            merged=str(root / "mnt" / "unionfs" / "mounted.bin"),
+        )
+    )
     sb = bin_dir / "sb"
     fake_update = Path(__file__).with_name("fake_sb_update.py")
     sb.write_text(
@@ -464,6 +515,8 @@ def main(argv: list[str] | None = None) -> int:
         flag.with_name("reboot-required.pkgs").write_text("linux-image-6.8.0-55-generic\nlibc6\n")
         services.reboot_flag = flag
         services.reboot = lambda: (Path(tmp) / "rebooted").write_text("yes\n")
+        services.uptime = lambda: 5 * 86400  # not just booted, whatever the test machine is
+        services.storage_roots = (Path(tmp) / "mnt" / "unionfs", Path(tmp) / "mnt" / "local")
         services.app_setup_factory = lambda layout: AppSetup(
             layout,
             transport=apps_transport,

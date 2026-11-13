@@ -2,8 +2,8 @@ import { ExternalLink, HardDrive } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { useApps, useDrives } from '../api/queries';
-import type { Drive, DriveHealth } from '../api/types';
+import { useApps, useDismiss, useDrives } from '../api/queries';
+import type { Drive, DriveAttribute, DriveHealth } from '../api/types';
 import { StatusDot } from '../components/status-dot';
 import { formatRelative } from '../format';
 import styles from './drives-card.module.css';
@@ -38,12 +38,30 @@ function describe(drive: Drive): string {
 }
 
 /** A failing drive is the most urgent thing a server can say: it goes to the top of Home. */
+/** "Reallocated Sectors Count is 24: observed failure rate 14%" */
+export function attributeLine(attribute: DriveAttribute): string {
+  const value = attribute.value === null ? '' : ` is ${attribute.value}`;
+  const why = attribute.failed_smart
+    ? 'past the limit the drive’s maker set'
+    : attribute.failure_rate === null
+      ? attribute.reason
+      : `drives with this value fail about ${Math.round(attribute.failure_rate * 100)}% of the time`;
+  return `${attribute.name}${value}${why === '' ? '' : `: ${why}`}`;
+}
+
+/** Which attributes a drive fails on, shortest useful form: "Reallocated Sectors Count is 24". */
+function failingSummary(drive: Drive): string {
+  const failing = drive.failing ?? [];
+  if (failing.length === 0) return verdict(drive);
+  return failing.map((a) => `${a.name}${a.value === null ? '' : ` is ${a.value}`}`).join(', ');
+}
+
 export function driveAttention(health: DriveHealth | undefined): Attention[] {
   return (health?.drives ?? [])
-    .filter((drive) => !drive.healthy)
+    .filter((drive) => !drive.healthy && drive.dismissed !== true)
     .map((drive) => ({
       actions: [{ kind: 'link' as const, label: 'Drive health', to: '/system#drives' }],
-      detail: `${describe(drive)}. ${verdict(drive)}. Back up what is on it and plan to replace it.`,
+      detail: `${describe(drive)}. ${failingSummary(drive)}. Back up what is on it and plan to replace it.`,
       id: `drive:${drive.id}`,
       title: `Drive ${drive.name} is failing its health check`,
       tone: 'danger' as const,
@@ -51,8 +69,11 @@ export function driveAttention(health: DriveHealth | undefined): Attention[] {
 }
 
 function DriveRow({ drive }: { drive: Drive }): React.ReactNode {
+  const dismiss = useDismiss();
+  const failing = drive.failing ?? [];
+  const dismissed = drive.dismissed === true;
   return (
-    <li className={`${styles['drive']} ${drive.healthy ? '' : styles['failing']}`}>
+    <li className={`${styles['drive']} ${drive.healthy || dismissed ? '' : styles['failing']}`}>
       <div className={styles['head']}>
         <strong className={styles['name']}>{drive.name}</strong>
         <span className={styles['kind']}>{drive.kind}</span>
@@ -74,6 +95,36 @@ function DriveRow({ drive }: { drive: Drive }): React.ReactNode {
           <dd>{drive.checked_at === null ? 'not yet' : formatRelative(drive.checked_at)}</dd>
         </div>
       </dl>
+      {drive.healthy ? null : (
+        <div className={styles['why']}>
+          {failing.length === 0 ? (
+            <span className="small muted">Scrutiny did not say which attribute; its page for the drive has more.</span>
+          ) : (
+            <ul className={styles['attributes']}>
+              {failing.map((attribute) => (
+                <li key={attribute.id} title={attribute.description}>
+                  {attributeLine(attribute)}
+                  {attribute.critical ? <span className={styles['critical']}>critical</span> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+          {drive.key == null ? null : (
+            <div className="row">
+              {dismissed ? <span className="small muted">Dismissed: not shown on Home.</span> : null}
+              <span className="spacer" />
+              <button
+                className="small ghost"
+                disabled={dismiss.isPending}
+                onClick={() => dismiss.mutate({ dismiss: !dismissed, key: drive.key ?? '', label: drive.name })}
+                type="button"
+              >
+                {dismissed ? 'Show on Home again' : 'Dismiss'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </li>
   );
 }
@@ -91,6 +142,7 @@ export function DrivesCard(): React.ReactNode {
   }, [loaded, location.hash]);
   if (health === undefined || !health.installed) return null;
   const failing = health.drives.filter((drive) => !drive.healthy).length;
+  const open = health.drives.filter((drive) => !drive.healthy && drive.dismissed !== true).length;
   const total = health.drives.length;
   const scrutiny = apps.data?.find((app) => app.role === 'scrutiny')?.urls[0];
   return (
@@ -112,12 +164,12 @@ export function DrivesCard(): React.ReactNode {
         <p className="muted small">Scrutiny has not reported on any drive yet.</p>
       ) : (
         <>
-          <p className={failing > 0 ? 'note danger small' : 'muted small'} role={failing > 0 ? 'alert' : undefined}>
+          <p className={open > 0 ? 'note danger small' : 'muted small'} role={open > 0 ? 'alert' : undefined}>
             {failing === 0
               ? `${total === 1 ? 'The drive is' : `All ${total} drives are`} healthy, by the drives’ own SMART checks and by Scrutiny’s thresholds.`
-              : `${failing} of ${total} drive${total === 1 ? '' : 's'} ${failing === 1 ? 'is' : 'are'} failing. Back up what is on ${failing === 1 ? 'it' : 'them'} and plan a replacement.`}
+              : `${failing} of ${total} drive${total === 1 ? '' : 's'} ${failing === 1 ? 'is' : 'are'} failing${open === 0 ? ' (dismissed)' : ''}. Back up what is on ${failing === 1 ? 'it' : 'them'} and plan a replacement. A dismissed drive comes back here if another attribute starts failing.`}
           </p>
-          <ul className={styles['drives']}>
+          <ul aria-label="Drives" className={styles['drives']}>
             {health.drives.map((drive) => (
               <DriveRow drive={drive} key={drive.id} />
             ))}

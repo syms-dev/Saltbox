@@ -49,10 +49,13 @@ after a reboot or a dropped SSH session.
 - **Activity**: every job with a live log. A failed job says which task failed
   and why, and can be run again.
 - **System**: CPU and memory, with every container sortable by name, CPU or
-  memory; errors that keep recurring in the apps' logs, with what the known
-  ones mean and how to fix them; each drive and pool once; with Scrutiny
-  installed, every drive's health, temperature and age (a failing drive goes
-  to the top of Home);
+  memory; errors that keep recurring in the apps' logs, one card each, with
+  what the known ones mean, advice that depends on whether the server has
+  cloud storage, and a fix button where the fix is safe; each drive and pool
+  once; with Scrutiny installed, every drive's health, temperature and age,
+  and which attribute a failing one fails on (it goes to the top of Home).
+  Drive and log issues can be dismissed; a dismissed drive comes back if
+  another attribute starts failing;
   mounts and Saltbox services; Tailscale (and opening this app over it);
   backups (`sb install backup` on demand); Saltbox's own version and `sb update`,
   which shows the update's announcements with the job and waits for your yes or
@@ -76,6 +79,9 @@ after a reboot or a dropped SSH session.
 - **Config**: the YAML files `sb` reads, with the same validation as
   `sb validate-config`.
 - Search with Ctrl+K (⌘K) or `/` to open any app, page or action.
+- When the server stops answering (a reboot, Traefik or Authelia being
+  recreated) the page waits, reconnects by itself, signs in again if it has
+  to, and after a boot shows the containers coming back.
 
 A JSON command line, `sbx`, exposes the same engine for scripting.
 
@@ -85,9 +91,9 @@ Version 0.1.0. Treat it as a beta.
 
 | Check | Result |
 | --- | --- |
-| Python tests (pytest) | 313 tests; pass on Python 3.12 and 3.14 |
-| Web unit tests (Vitest) | 64 tests pass |
-| End-to-end tests (Playwright, Chromium) | 64 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
+| Python tests (pytest) | 317 tests; pass on Python 3.12 and 3.14 |
+| Web unit tests (Vitest) | 72 tests pass |
+| End-to-end tests (Playwright, Chromium) | 65 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
 | Package | CI builds the wheel, installs it in a clean environment and loads the web app from it |
 | Real servers | **One**: Ubuntu 26.04, Python 3.14, local drives pooled with mergerfs, Plex, qBittorrent behind Gluetun (ProtonVPN) |
 
@@ -122,6 +128,9 @@ that one. **Not yet run on any real server:**
   `saltbox/announcements.go`) and is tested against a stand-in that behaves the
   same way at the terminal;
 - uninstalling an app, and restarting the server from the web app;
+- reconnecting after a real reboot or a real Traefik restart (tested by making
+  the daemon unreachable in a browser test, not by restarting anything);
+- the fix that creates Autoscan's anchor file;
 - drive health from Scrutiny (written from Scrutiny's source and tested against
   a stand-in for its API);
 - the log problem finder. Its two app-specific explanations (Autoscan's anchor

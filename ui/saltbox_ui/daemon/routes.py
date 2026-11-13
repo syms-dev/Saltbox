@@ -111,6 +111,8 @@ def overview(request: Request) -> dict[str, Any]:
             "disks": disk_usage(),
             "reboot_required": reboot_required(svc.reboot_flag),
             "reboot_packages": reboot_packages(svc.reboot_flag),
+            # How long ago the server started: the web app watches the apps come back after it.
+            "uptime": (svc.uptime or (lambda: host_stats().get("uptime")))(),
             "mounts": mounts(),
             "units": systemd_units(),
         },
@@ -753,39 +755,71 @@ def drives(request: Request) -> dict[str, Any]:
     svc = services(request)
     cached = svc.__dict__.get("_drives")
     if cached is not None and time.monotonic() - cached[0] < DRIVES_TTL_SECONDS:
-        return cached[1]
-    setup = _app_setup(request)
-    scrutiny = setup.discover().first("scrutiny")
-    data: dict[str, Any] = {"installed": scrutiny is not None, "error": "", "drives": []}
-    if scrutiny is not None:
-        try:
-            data["drives"] = drive_health.health(scrutiny, getattr(setup, "transport", None))
-        except Exception as error:  # Scrutiny stopped or still starting
-            data["error"] = _redactor(svc)(str(error))
-    svc.__dict__["_drives"] = (time.monotonic(), data)
-    return data
+        data = cached[1]
+    else:
+        setup = _app_setup(request)
+        scrutiny = setup.discover().first("scrutiny")
+        data = {"installed": scrutiny is not None, "error": "", "drives": []}
+        if scrutiny is not None:
+            try:
+                data["drives"] = drive_health.health(scrutiny, getattr(setup, "transport", None))
+            except Exception as error:  # Scrutiny stopped or still starting
+                data["error"] = _redactor(svc)(str(error))
+        svc.__dict__["_drives"] = (time.monotonic(), data)
+    # What has been dismissed can change between two reads of the same cached answer.
+    dismissed = svc.dismissals.all()
+    return {
+        **data,
+        "drives": [{**d, "dismissed": d.get("key") in dismissed} for d in data["drives"]],
+    }
+
+
+class Dismissal(BaseModel):
+    key: str = Field(min_length=1, max_length=300)
+    label: str = ""
+
+
+@router.post("/dismissals")
+def dismiss(request: Request, body: Dismissal) -> dict[str, Any]:
+    """Stop reporting an issue (by the key the daemon gave it) until it changes."""
+    try:
+        services(request).dismissals.add(body.key, body.label)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    return {"dismissed": True}
+
+
+@router.post("/dismissals/restore")
+def restore_dismissed(request: Request, body: Dismissal) -> dict[str, Any]:
+    return {"restored": services(request).dismissals.remove(body.key)}
 
 
 # -- problems in the logs ---------------------------------------------------------------
 PROBLEMS_TTL_SECONDS = 600.0
 
 
-@router.get("/problems")
-def problems(request: Request, refresh: bool = False) -> dict[str, Any]:
-    """Errors that keep recurring in the apps' logs, with an explanation for the known ones.
+def _has_cloud_storage(svc) -> bool:
+    """Whether settings.yml sets up rclone remotes. Unknown counts as yes: the cautious side."""
+    try:
+        settings = svc.config.load_plain("settings") or {}
+    except Exception:
+        return True
+    rclone = settings.get("rclone")
+    if not isinstance(rclone, dict):
+        return True
+    enabled = str(rclone.get("enabled", True)).lower() in {"true", "yes", "1"}
+    return enabled and bool(rclone.get("remotes"))
 
-    Reading a day of every container's log takes a few seconds, so the result
-    is kept for ten minutes; ``refresh`` reads again.
-    """
+
+def _problems_scan(svc) -> dict[str, Any]:
     from .. import logcheck
 
-    svc = services(request)
-    cached = svc.__dict__.get("_problems")
-    if not refresh and cached is not None and time.monotonic() - cached[0] < PROBLEMS_TTL_SECONDS:
-        return cached[1]
     containers = _containers_or_none()
     names = [c["name"] for c in containers or [] if c.get("managed")]
-    found = logcheck.scan(names, getattr(svc, "log_runner", None))
+    cloud = _has_cloud_storage(svc)
+    found = logcheck.scan(
+        names, getattr(svc, "log_runner", None), cloud=cloud, roots=svc.storage_roots
+    )
     owners = _owners(svc, containers)
     redact = _redactor(svc)
     result = []
@@ -797,18 +831,86 @@ def problems(request: Request, refresh: bool = False) -> dict[str, Any]:
                 "app": None
                 if owner is None
                 else {"repo": owner.repo, "role": owner.role, "title": owner.title},
-                "groups": [{**group, "message": redact(group["message"])} for group in found[name]],
+                "groups": [
+                    {
+                        **group,
+                        "message": redact(group["message"]),
+                        "subjects": [redact(subject) for subject in group["subjects"]],
+                    }
+                    for group in found[name]
+                ],
             }
         )
-    data = {
+    return {
         "available": containers is not None,
         "checked_at": time.time(),
         "window": logcheck.SINCE,
         "scanned": len(names),
+        "cloud_storage": cloud,
         "containers": result,
     }
-    svc.__dict__["_problems"] = (time.monotonic(), data)
-    return data
+
+
+def _problems(svc, refresh: bool = False) -> dict[str, Any]:
+    cached = svc.__dict__.get("_problems")
+    if not refresh and cached is not None and time.monotonic() - cached[0] < PROBLEMS_TTL_SECONDS:
+        data = cached[1]
+    else:
+        data = _problems_scan(svc)
+        svc.__dict__["_problems"] = (time.monotonic(), data)
+    # Dismissals can change between two reads of the same cached scan.
+    dismissed = svc.dismissals.all()
+    return {
+        **data,
+        "containers": [
+            {
+                **container,
+                "groups": [{**g, "dismissed": g["key"] in dismissed} for g in container["groups"]],
+            }
+            for container in data["containers"]
+        ],
+    }
+
+
+@router.get("/problems")
+def problems(request: Request, refresh: bool = False) -> dict[str, Any]:
+    """Errors that keep recurring in the apps' logs, with an explanation for the known ones.
+
+    Reading a day of every container's log takes a few seconds, so the result
+    is kept for ten minutes; ``refresh`` reads again.
+    """
+    return _problems(services(request), refresh)
+
+
+class ProblemFix(BaseModel):
+    key: str
+
+
+@router.post("/problems/fix")
+def problems_fix(request: Request, body: ProblemFix) -> dict[str, Any]:
+    """Apply the fix the last scan offered for one finding, then scan again."""
+    from .. import logcheck
+
+    svc = services(request)
+    group = next(
+        (
+            g
+            for container in _problems(svc)["containers"]
+            for g in container["groups"]
+            if g["key"] == body.key
+        ),
+        None,
+    )
+    action = group["action"] if group else None
+    if action is None:
+        raise HTTPException(409, "there is no fix on offer for this; check again first")
+    try:
+        if action["id"] != "create-anchor":
+            raise ValueError(f"unknown fix {action['id']}")
+        created = logcheck.create_anchors(action["targets"], svc.storage_roots[1])
+    except (ValueError, OSError) as error:
+        raise HTTPException(422, str(error)) from error
+    return {"fixed": action["id"], "created": created, "problems": _problems(svc, refresh=True)}
 
 
 # -- seeding --------------------------------------------------------------------------

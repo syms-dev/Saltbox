@@ -18,6 +18,7 @@ import { useJobs, useMeta, useOverview } from '../api/queries';
 import type { Job, Meta } from '../api/types';
 import { formatDuration } from '../format';
 import { CommandPalette } from './command-palette';
+import { ConnectionBanner, StartupBanner, useConnection } from './connection';
 import { useToast } from './feedback';
 import styles from './shell.module.css';
 
@@ -44,28 +45,15 @@ function tabClass({ isActive }: { isActive: boolean }): string {
   return isActive ? `${styles['tab']} ${styles['active']}` : (styles['tab'] ?? '');
 }
 
-const DEFAULT_BRANCHES = ['master', 'main'];
-
 /**
- * What is running, for the foot of the sidebar: this app's version, then the Saltbox checkout
- * as a short commit, with its branch only when that is not the one everybody is on.
+ * The foot of the sidebar: this app's name and version, and nothing else. Which commit and
+ * branch Saltbox is on belongs with `sb update` on the System page, where it is shown.
  */
-export function versionLines(meta: Meta): { saltbox: string | null; ui: string } {
-  const { branch, commit } = meta.saltbox;
-  const ui = `Saltbox UI ${meta.version}`;
-  if (branch === null && commit === null) return { saltbox: null, ui };
-  const parts = [`Saltbox ${commit === null ? 'at an unknown commit' : commit.slice(0, 7)}`];
-  if (branch === null) parts.push('no branch');
-  else if (!DEFAULT_BRANCHES.includes(branch)) parts.push(branch);
-  return { saltbox: parts.join(' · '), ui };
-}
-
 function Version({ meta }: { meta: Meta }): React.ReactNode {
-  const { saltbox, ui } = versionLines(meta);
   return (
-    <span className={`muted ${styles['version']}`}>
-      <span>{ui}</span>
-      {saltbox === null ? null : <span title={saltbox}>{saltbox}</span>}
+    <span className={styles['version']}>
+      <span>Saltbox UI</span>
+      <span className={styles['versionNumber']}>{meta.version}</span>
     </span>
   );
 }
@@ -130,6 +118,7 @@ export function Shell(): React.ReactNode {
   const meta = useMeta();
   const jobs = useJobs();
   const overview = useOverview();
+  const connection = useConnection();
   const [searching, setSearching] = useState(false);
   const current = jobs.data?.current ?? null;
   useJobFinishedToast(current);
@@ -215,15 +204,17 @@ export function Shell(): React.ReactNode {
 
       <main className={styles['main']}>
         {current === null ? null : <RunningJob job={current} />}
-        {meta.isError ? (
+        <ConnectionBanner />
+        {connection.offlineSince === null && overview.data !== undefined ? (
+          <StartupBanner
+            running={overview.data.containers.running}
+            total={overview.data.containers.total}
+            uptime={overview.data.host.uptime}
+          />
+        ) : null}
+        {meta.error instanceof ApiError && meta.error.status === 403 ? (
           <p className="note danger" role="alert">
-            {meta.error instanceof ApiError && meta.error.status === 403 ? (
-              <>Access refused: {meta.error.message}.</>
-            ) : (
-              <>
-                The Saltbox UI daemon is not answering. Check <code>systemctl status saltbox-ui</code> on the server.
-              </>
-            )}
+            Access refused: {meta.error.message}.
           </p>
         ) : null}
         <div className={styles['content']}>

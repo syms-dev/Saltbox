@@ -1,9 +1,9 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Drive, DriveHealth } from '../api/types';
 import { renderAt, stubApi } from '../test-utils';
-import { DrivesCard, driveAttention, formatDriveSize, formatPowerOn, verdict } from './drives-card';
+import { DrivesCard, attributeLine, driveAttention, formatDriveSize, formatPowerOn, verdict } from './drives-card';
 
 function drive(overrides: Partial<Drive> = {}): Drive {
   return {
@@ -24,7 +24,36 @@ function drive(overrides: Partial<Drive> = {}): Drive {
   };
 }
 
-const FAILING = drive({ failed_smart: true, healthy: false, id: 'wwn-b', name: '/dev/sdb' });
+const REALLOCATED = {
+  critical: true,
+  description: 'Count of reallocated sectors.',
+  failed_scrutiny: true,
+  failed_smart: false,
+  failure_rate: 0.1423,
+  id: '5',
+  name: 'Reallocated Sectors Count',
+  reason: 'Observed Failure Rate for Critical Attribute is greater than 10%',
+  value: 24,
+};
+const CRC = {
+  ...REALLOCATED,
+  critical: false,
+  failed_scrutiny: false,
+  failed_smart: true,
+  failure_rate: null,
+  id: '199',
+  name: 'UltraDMA CRC Error Count',
+  value: 3,
+};
+
+const FAILING = drive({
+  failed_smart: true,
+  failing: [REALLOCATED, CRC],
+  healthy: false,
+  id: 'wwn-b',
+  key: 'drive:wwn-b:smart:199,5',
+  name: '/dev/sdb',
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -57,7 +86,21 @@ describe('drive helpers', () => {
       title: 'Drive /dev/sdb is failing its health check',
       tone: 'danger',
     });
-    expect(item?.detail).toContain('ST8000VN004 · 8.0 TB. Failing its own SMART check.');
+    expect(item?.detail).toContain(
+      'ST8000VN004 · 8.0 TB. Reallocated Sectors Count is 24, UltraDMA CRC Error Count is 3.',
+    );
+    // Dismissed: still failing, no longer raised.
+    expect(driveAttention({ drives: [{ ...FAILING, dismissed: true }], error: '', installed: true })).toEqual([]);
+  });
+
+  it('says in plain words why an attribute counts as failing', () => {
+    expect(attributeLine(REALLOCATED)).toBe(
+      'Reallocated Sectors Count is 24: drives with this value fail about 14% of the time',
+    );
+    expect(attributeLine(CRC)).toBe('UltraDMA CRC Error Count is 3: past the limit the drive’s maker set');
+    expect(attributeLine({ ...REALLOCATED, failure_rate: null, value: null })).toBe(
+      'Reallocated Sectors Count: Observed Failure Rate for Critical Attribute is greater than 10%',
+    );
   });
 });
 
@@ -75,13 +118,42 @@ describe('DrivesCard', () => {
     });
     const card = await screen.findByRole('region', { name: 'Drive health' });
     expect(within(card).getByRole('alert')).toHaveTextContent('1 of 2 drives is failing');
-    const [failing, unread] = within(card).getAllByRole('listitem');
+    // The drives themselves, not the attributes listed inside a failing one.
+    const rows = [...within(card).getByRole('list', { name: 'Drives' }).children];
+    const [failing, unread] = rows;
     expect(failing).toHaveTextContent('/dev/sdb');
     expect(failing).toHaveTextContent('Failing its own SMART check');
     expect(failing).toHaveTextContent('34 °C');
     expect(failing).toHaveTextContent('3.0 years');
+    expect(failing).toHaveTextContent('Reallocated Sectors Count is 24');
+    expect(failing).toHaveTextContent('critical');
     expect(unread).toHaveTextContent('Healthy');
     expect(unread).toHaveTextContent('not yet');
+    expect(within(unread as HTMLElement).queryByRole('button', { name: 'Dismiss' })).toBeNull();
+  });
+
+  it('dismisses a failing drive on the server and offers to show it again', async () => {
+    let dismissed = false;
+    const api = stubApi({
+      'POST /dismissals': () => {
+        dismissed = true;
+        return { dismissed: true };
+      },
+      '/apps': [],
+      '/drives': () => ({ drives: [{ ...FAILING, dismissed }], error: '', installed: true }),
+    });
+    renderAt(<DrivesCard />);
+    const card = await screen.findByRole('region', { name: 'Drive health' });
+    fireEvent.click(await within(card).findByRole('button', { name: 'Dismiss' }));
+    await waitFor(() =>
+      expect(api).toHaveBeenCalledWith(
+        '/api/dismissals',
+        expect.objectContaining({ body: JSON.stringify({ key: 'drive:wwn-b:smart:199,5', label: '/dev/sdb' }) }),
+      ),
+    );
+    expect(await within(card).findByRole('button', { name: 'Show on Home again' })).toBeInTheDocument();
+    expect(card).toHaveTextContent('1 of 1 drive is failing (dismissed)');
+    expect(within(card).queryByRole('alert')).toBeNull();
   });
 
   it('says all is well in one line when it is', async () => {

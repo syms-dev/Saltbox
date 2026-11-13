@@ -1,0 +1,17 @@
+.banner {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  margin: 0 auto var(--space-5);
+  max-width: var(--content-max);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

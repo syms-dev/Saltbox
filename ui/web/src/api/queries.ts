@@ -361,6 +361,32 @@ export function useRecyclarr(): UseQueryResult<RecyclarrStatus> {
   });
 }
 
+type DismissInput = { dismiss: boolean; key: string; label: string };
+
+/** Stop (or start again) being told about one issue; kept on the server, for every browser. */
+export function useDismiss(): UseMutationResult<unknown, Error, DismissInput> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ dismiss, key, label }: DismissInput) =>
+      apiPost(dismiss ? API_ROUTES.DISMISS : API_ROUTES.DISMISS_RESTORE, { key, label }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['drives'] });
+      void client.invalidateQueries({ queryKey: ['problems'] });
+    },
+  });
+}
+
+type FixResult = { created: string[]; fixed: string; problems: LogProblems };
+
+/** Apply the fix the daemon offered for one finding; it scans again afterwards. */
+export function useFixProblem(): UseMutationResult<FixResult, Error, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string) => apiPost<FixResult>(API_ROUTES.PROBLEMS_FIX, { key }),
+    onSuccess: (result) => client.setQueryData(['problems'], result.problems),
+  });
+}
+
 const DRIVES_REFRESH_MS = 5 * 60_000;
 
 /** Each drive's health, from Scrutiny when it is installed. */
