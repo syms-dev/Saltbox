@@ -184,16 +184,13 @@ export function useJobActions(): {
         {
           onError: (error) => toast({ body: error.message, title: `Could not uninstall ${app.title}`, tone: 'danger' }),
           onSuccess: (result) => {
-            toast({
-              body:
-                result.kept.length > 0
-                  ? `Its settings are still in ${result.kept.join(', ')}.`
-                  : result.deleted.length > 0
-                    ? `Deleted ${result.deleted.join(', ')}.`
-                    : undefined,
-              title: `${app.title} uninstalled`,
-              tone: 'ok',
-            });
+            const left =
+              result.kept.length > 0
+                ? { body: `Its settings are still in ${result.kept.join(', ')}.` }
+                : result.deleted.length > 0
+                  ? { body: `Deleted ${result.deleted.join(', ')}.` }
+                  : {};
+            toast({ ...left, title: `${app.title} uninstalled`, tone: 'ok' });
             void navigate('/apps');
           },
         },
