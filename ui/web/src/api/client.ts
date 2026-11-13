@@ -18,6 +18,7 @@ export const API_ROUTES = {
   OVERVIEW: '/overview',
   RECYCLARR: '/recyclarr',
   RECYCLARR_SYNC: '/recyclarr/sync',
+  DRIVES: '/drives',
   PROBLEMS: '/problems',
   REBOOT: '/host/reboot',
   SEEDING: '/seeding',

@@ -29,6 +29,7 @@ import type {
   Overview,
   RecyclarrStatus,
   SeedingStatus,
+  DriveHealth,
   LogProblems,
   Resources,
   UninstallResult,
@@ -357,6 +358,18 @@ export function useRecyclarr(): UseQueryResult<RecyclarrStatus> {
   return useQuery({
     queryFn: ({ signal }) => apiFetch<RecyclarrStatus>(API_ROUTES.RECYCLARR, { signal }),
     queryKey: ['recyclarr'],
+  });
+}
+
+const DRIVES_REFRESH_MS = 5 * 60_000;
+
+/** Each drive's health, from Scrutiny when it is installed. */
+export function useDrives(): UseQueryResult<DriveHealth> {
+  return useQuery({
+    queryFn: ({ signal }) => apiFetch<DriveHealth>(API_ROUTES.DRIVES, { signal }),
+    queryKey: ['drives'],
+    refetchInterval: DRIVES_REFRESH_MS,
+    staleTime: DRIVES_REFRESH_MS,
   });
 }
 

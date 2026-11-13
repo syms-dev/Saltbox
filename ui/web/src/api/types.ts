@@ -101,6 +101,26 @@ export type ContainerState = {
   urls: string[];
 };
 
+/** One drive as Scrutiny sees it; the two verdicts are the drive's own and Scrutiny's. */
+export type Drive = {
+  capacity: number;
+  checked_at: string | null;
+  failed_scrutiny: boolean;
+  failed_smart: boolean;
+  healthy: boolean;
+  id: string;
+  kind: 'HDD' | 'NVMe' | 'SSD';
+  label: string;
+  model: string;
+  name: string;
+  power_on_hours: number | null;
+  serial: string;
+  temperature: number | null;
+};
+
+/** Drive health; `installed` is false when Scrutiny is not there to ask. */
+export type DriveHealth = { drives: Drive[]; error: string; installed: boolean };
+
 /** A known error message: what it means and what to do about it. */
 export type LogRule = {
   fix: string[];

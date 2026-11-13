@@ -741,6 +741,31 @@ def media(request: Request) -> dict[str, Any]:
     return data
 
 
+# -- drive health -----------------------------------------------------------------------
+DRIVES_TTL_SECONDS = 300.0
+
+
+@router.get("/drives")
+def drives(request: Request) -> dict[str, Any]:
+    """Each drive's health as Scrutiny judges it. ``installed`` is false without Scrutiny."""
+    from .. import drives as drive_health
+
+    svc = services(request)
+    cached = svc.__dict__.get("_drives")
+    if cached is not None and time.monotonic() - cached[0] < DRIVES_TTL_SECONDS:
+        return cached[1]
+    setup = _app_setup(request)
+    scrutiny = setup.discover().first("scrutiny")
+    data: dict[str, Any] = {"installed": scrutiny is not None, "error": "", "drives": []}
+    if scrutiny is not None:
+        try:
+            data["drives"] = drive_health.health(scrutiny, getattr(setup, "transport", None))
+        except Exception as error:  # Scrutiny stopped or still starting
+            data["error"] = _redactor(svc)(str(error))
+    svc.__dict__["_drives"] = (time.monotonic(), data)
+    return data
+
+
 # -- problems in the logs ---------------------------------------------------------------
 PROBLEMS_TTL_SECONDS = 600.0
 

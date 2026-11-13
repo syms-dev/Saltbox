@@ -11,7 +11,16 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { useApps, useJobs, useMedia, useOverview, useProblems, useStartJob, useUpdates } from '../api/queries';
+import {
+  useApps,
+  useDrives,
+  useJobs,
+  useMedia,
+  useOverview,
+  useProblems,
+  useStartJob,
+  useUpdates,
+} from '../api/queries';
 import type { App, Job } from '../api/types';
 import { AppAvatar } from '../components/app-avatar';
 import { useToast } from '../components/feedback';
@@ -25,6 +34,7 @@ import { usePins } from '../lib/pins';
 import { appHealth, hostOf } from '../lib/status';
 import { type Attention, type AttentionAction, attentionItems } from './home-attention';
 import { MediaRow, mediaAttention } from './home-media';
+import { driveAttention } from './drives-card';
 import styles from './home-page.module.css';
 import { problemAttention } from './problems-card';
 
@@ -345,12 +355,18 @@ export function HomePage(): React.ReactNode {
   const apps = useApps();
   const media = useMedia();
   const problems = useProblems();
+  const drives = useDrives();
   if (overview.isPending) return <Loading what="your server" />;
   if (overview.isError) return <ErrorMessage error={overview.error} prefix="Home" />;
   const data = overview.data;
   const all = apps.data ?? [];
   const installed = all.filter((app) => app.installed);
-  const attention = [...mediaAttention(media.data), ...attentionItems(data, all), ...problemAttention(problems.data)];
+  const attention = [
+    ...driveAttention(drives.data),
+    ...mediaAttention(media.data),
+    ...attentionItems(data, all),
+    ...problemAttention(problems.data),
+  ];
   const urgent = attention.filter((item) => item.tone !== 'info').length;
   const running = data.containers.running;
   return (

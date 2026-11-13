@@ -50,7 +50,9 @@ after a reboot or a dropped SSH session.
   and why, and can be run again.
 - **System**: CPU and memory, with every container sortable by name, CPU or
   memory; errors that keep recurring in the apps' logs, with what the known
-  ones mean and how to fix them; each drive and pool once;
+  ones mean and how to fix them; each drive and pool once; with Scrutiny
+  installed, every drive's health, temperature and age (a failing drive goes
+  to the top of Home);
   mounts and Saltbox services; Tailscale (and opening this app over it);
   backups (`sb install backup` on demand); Saltbox's own version and `sb update`,
   which shows the update's announcements with the job and waits for your yes or
@@ -83,9 +85,9 @@ Version 0.1.0. Treat it as a beta.
 
 | Check | Result |
 | --- | --- |
-| Python tests (pytest) | 310 tests; pass on Python 3.12 and 3.14 |
-| Web unit tests (Vitest) | 57 tests pass |
-| End-to-end tests (Playwright, Chromium) | 63 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
+| Python tests (pytest) | 313 tests; pass on Python 3.12 and 3.14 |
+| Web unit tests (Vitest) | 64 tests pass |
+| End-to-end tests (Playwright, Chromium) | 64 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
 | Package | CI builds the wheel, installs it in a clean environment and loads the web app from it |
 | Real servers | **One**: Ubuntu 26.04, Python 3.14, local drives pooled with mergerfs, Plex, qBittorrent behind Gluetun (ProtonVPN) |
 
@@ -120,6 +122,8 @@ that one. **Not yet run on any real server:**
   `saltbox/announcements.go`) and is tested against a stand-in that behaves the
   same way at the terminal;
 - uninstalling an app, and restarting the server from the web app;
+- drive health from Scrutiny (written from Scrutiny's source and tested against
+  a stand-in for its API);
 - the log problem finder. Its two app-specific explanations (Autoscan's anchor
   file, Bazarr and disc images) come from log lines on the real server and are
   tested against those lines, but it has not run there;

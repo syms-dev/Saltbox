@@ -61,6 +61,32 @@ test.describe('home', () => {
     await expect(page.getByRole('status').getByText('The server is restarting')).toBeVisible();
   });
 
+  test('puts a failing drive first and shows every drive as Scrutiny sees it', async ({ page }) => {
+    await page.goto('/');
+    const first = page.getByRole('region', { name: 'Needs attention' }).getByRole('listitem').first();
+    await expect(first).toContainText('Drive /dev/sdb is failing its health check', { timeout: 20_000 });
+    await expect(first).toContainText('WDC WD80EFAX-68KNBN0 · 8.0 TB. Failing Scrutiny’s thresholds.');
+    await first.getByRole('link', { name: 'Drive health' }).click();
+    await expect(page).toHaveURL(/\/system#drives$/);
+    const drives = page.getByRole('region', { name: 'Drive health' });
+    await expect(drives).toBeInViewport();
+    await expect(drives.getByRole('alert')).toContainText('1 of 3 drives is failing');
+    const rows = drives.getByRole('listitem');
+    await expect(rows).toHaveCount(3);
+    await expect(rows.first()).toContainText('/dev/sdb');
+    await expect(rows.first()).toContainText('Failing Scrutiny’s thresholds');
+    const nvme = rows.filter({ hasText: '/dev/nvme0' });
+    await expect(nvme).toContainText('NVMe');
+    await expect(nvme).toContainText('Samsung SSD 980 PRO · 1.0 TB');
+    await expect(nvme).toContainText('Healthy');
+    await expect(nvme).toContainText('34 °C');
+    await expect(nvme).toContainText('3.0 years');
+    await expect(drives.getByRole('link', { name: 'Open Scrutiny' })).toHaveAttribute(
+      'href',
+      'https://scrutiny.e2e.example',
+    );
+  });
+
   test('explains a known error from the logs and lists the ones that keep repeating', async ({ page }) => {
     await page.goto('/');
     const known = page
@@ -106,7 +132,7 @@ test.describe('home', () => {
     const hero = page.locator('header').filter({ hasText: 'containers running' });
     await expect(hero).not.toContainText('apps installed'); // not "0 apps installed" while it loads
     release();
-    await expect(hero).toContainText('11 apps installed');
+    await expect(hero).toContainText('12 apps installed');
     await expect(updates).toContainText('4 app updates available');
     await expect(updates).toContainText('Authelia, Gluetun, Sonarr, Traefik Proxy');
 

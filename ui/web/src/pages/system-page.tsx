@@ -8,6 +8,7 @@ import { ErrorMessage, Loading } from '../components/query-state';
 import { SaltboxUpdates } from '../components/saltbox-updates';
 import { StatusDot } from '../components/status-dot';
 import { formatBytes } from '../format';
+import { DrivesCard } from './drives-card';
 import { ProblemsCard } from './problems-card';
 import { BackupsCard, ResourcesCard, TailscaleCard } from './system-sections';
 import styles from './system-page.module.css';
@@ -64,6 +65,8 @@ export function SystemPage(): React.ReactNode {
           </ul>
         )}
       </section>
+
+      <DrivesCard />
 
       <div className={styles['pair']}>
         <section aria-labelledby="mounts-title" className="card">

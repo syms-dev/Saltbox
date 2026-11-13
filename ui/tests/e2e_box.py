@@ -14,6 +14,7 @@ real job runner, the built web app) on it. Only the outside world is faked:
   images, the rest are current.
 - the Saltbox checkout is a git repository one commit behind its upstream.
 - Ubuntu wants a restart after a kernel update; restarting only leaves a note.
+- Scrutiny reports three drives, one of them failing.
 - the last day of logs has one known error (Prowlarr) and one that repeats (Sonarr).
 
 The Playwright suite in ``ui/web/e2e`` starts this as its web server.
@@ -95,6 +96,7 @@ CONTAINERS = [
     _container("traefik", "traefik:v3", health=None, web=False),
     _container("authelia", "authelia/authelia:4", depends_on="authelia-redis"),
     _container("authelia-redis", "redis:alpine", health=None, web=False),
+    _container("scrutiny", "ghcr.io/analogj/scrutiny:master-omnibus", health=None),
     # Installed and not used: the one the uninstall test removes.
     _container("lidarr", "ghcr.io/hotio/lidarr:release"),
 ]
@@ -238,6 +240,29 @@ def _json(data: Any) -> Response:
     return Response(200, json.dumps(data).encode())
 
 
+def _drive(name: str, model: str, capacity: float, **extra: Any) -> dict[str, Any]:
+    device = {
+        "wwn": f"0x5000c500{name}",
+        "device_name": name,
+        "model_name": model,
+        "serial_number": f"E2E{name.upper()}",
+        "capacity": int(capacity * 1e12),
+        "rotational_speed": 7200,
+        "device_protocol": "ATA",
+        "device_status": 0,
+        **extra,
+    }
+    smart = {"collector_date": "2026-11-13T05:00:00Z", "temp": 34, "power_on_hours": 26280}
+    return {"device": device, "smart": smart}
+
+
+# Three drives as Scrutiny reports them: one is past Scrutiny's failure thresholds.
+SCRUTINY_DRIVES = {
+    "a": _drive("sda", "ST8000VN004-2M2101", 8),
+    "b": _drive("sdb", "WDC WD80EFAX-68KNBN0", 8, device_status=2),
+    "c": _drive("nvme0", "Samsung SSD 980 PRO", 1, device_protocol="NVMe", rotational_speed=0),
+}
+
 # qBittorrent as it ships: no seeding limit, so finished torrents never stop.
 QBIT_PREFERENCES: dict[str, Any] = {
     "max_ratio_enabled": False,
@@ -272,6 +297,8 @@ def apps_transport(method: str, url: str, headers: dict[str, str], body: Any) ->
         return _json(
             [{"name": "Some.Show.S03E04.1080p.WEB", "progress": 0.62, "eta": 300, "dlspeed": 8e6}]
         )
+    if path == "/api/summary":  # Scrutiny's dashboard
+        return _json({"success": True, "data": {"summary": SCRUTINY_DRIVES}})
     if path == "/api/v2/app/preferences":
         return _json(QBIT_PREFERENCES)
     if path == "/api/v2/app/setPreferences":
