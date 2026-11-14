@@ -47,7 +47,7 @@ test.describe('home', () => {
     await page.goto('/');
     // The foot of the sidebar names this app and its version, and nothing else.
     await expect(page.locator('aside')).toContainText('Saltbox UI');
-    await expect(page.locator('aside')).toContainText('0.1.0');
+    await expect(page.locator('aside')).toContainText(/Saltbox UI\s*\d+\.\d+\.\d+/);
     await expect(page.locator('aside')).not.toContainText('master');
     const reboot = page
       .getByRole('region', { name: 'Needs attention' })
@@ -535,6 +535,20 @@ test.describe('system and setup', () => {
     await expect(
       page.getByRole('region', { name: 'Quality profiles' }).getByRole('checkbox', { name: /UHD Bluray/ }),
     ).toBeChecked();
+
+    // A sync creates profiles and moves nothing: the card says what uses what, and offers to move it.
+    const quality = page.getByRole('region', { name: 'Quality profiles' });
+    await expect(quality).toContainText('Sonarr 5 series: 3 on HD-1080p, 2 on Any');
+    await expect(quality).toContainText('Nothing uses WEB-1080p yet.');
+    await expect(quality).toContainText('HD Bluray + WEB is not in Radarr yet.');
+    await expect(quality.getByRole('button', { name: /Move all films/ })).toHaveCount(0);
+    await quality.getByRole('button', { name: 'Move all series to WEB-1080p' }).click();
+    expect(await confirm(page, 'Use WEB-1080p for everything in Sonarr?', 'Move 5 series')).toContain(
+      'Nothing is downloaded now.',
+    );
+    await expect(page.getByRole('status').getByText('5 series in Sonarr now use WEB-1080p')).toBeVisible();
+    await expect(quality).toContainText('Everything uses WEB-1080p.');
+    await expect(quality.getByRole('button', { name: /Move all series/ })).toHaveCount(0);
   });
 
   test('shows finished torrents that keep seeding and sets the limits that stop them', async ({ page }) => {
@@ -740,7 +754,7 @@ test.describe('updating Saltbox UI itself', () => {
 
     await page.goto('/system');
     const card = page.getByRole('region', { name: 'Saltbox UI version' });
-    await expect(card).toContainText('0.1.0, running from a source checkout at 1111111');
+    await expect(card).toContainText(/\d+\.\d+\.\d+, running from a source checkout at 1111111/);
     await card.getByRole('button', { name: 'Update Saltbox UI' }).click();
     expect(await confirm(page, 'Update Saltbox UI?', 'Update Saltbox UI')).toContain('reloads by itself');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Update Saltbox UI');

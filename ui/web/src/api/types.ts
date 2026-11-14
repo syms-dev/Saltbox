@@ -158,6 +158,21 @@ export type LogRule = {
 };
 
 /** One error that recurs in a container's log; `message` is its latest occurrence. */
+/** One Sonarr or Radarr: its quality profiles and how many series or films use each. */
+export type ProfileUse = {
+  app: 'radarr' | 'sonarr';
+  error?: string;
+  /** Asked for in recyclarr.yml but not in the app yet. */
+  missing?: string[];
+  name: string;
+  /** "series" or "films". */
+  noun?: string;
+  profiles?: { count: number; id: number; name: string; synced: boolean }[];
+  total?: number;
+};
+
+export type RecyclarrUsage = { instances: ProfileUse[] };
+
 /** This app's own version, how it was installed, and whether a newer one can be had. */
 export type SelfStatus = {
   can_update: boolean;

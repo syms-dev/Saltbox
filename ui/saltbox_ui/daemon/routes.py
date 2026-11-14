@@ -1191,6 +1191,79 @@ def recyclarr_status(request: Request) -> dict[str, Any]:
     return _recyclarr_status(request)
 
 
+RECYCLARR_USAGE_TTL_SECONDS = 60.0
+
+
+def _recyclarr_usage(request: Request, fresh: bool = False) -> dict[str, Any]:
+    """For each Sonarr and Radarr: its profiles, how many items use each, what is missing."""
+    from .. import recyclarr
+
+    svc = services(request)
+    cached = svc.__dict__.get("_recyclarr_usage")
+    if not fresh and cached and time.monotonic() - cached[0] < RECYCLARR_USAGE_TTL_SECONDS:
+        return cached[1]
+    setup = _app_setup(request)
+    found = setup.discover()
+    transport = getattr(setup, "transport", None)
+    try:
+        text = (recyclarr.config_dir(svc.layout) / "recyclarr.yml").read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+    redact = _redactor(svc)
+    instances = []
+    for app in recyclarr.PROFILES:
+        for service in found.installed(app):
+            if not service.api_key:
+                continue
+            try:
+                instances.append(
+                    recyclarr.usage(service, recyclarr.selected_names(text, app), transport)
+                )
+            except Exception as error:  # the app is stopped or still starting
+                instances.append({"name": service.name, "app": app, "error": redact(str(error))})
+    data = {"instances": instances}
+    svc.__dict__["_recyclarr_usage"] = (time.monotonic(), data)
+    return data
+
+
+@router.get("/recyclarr/usage")
+def recyclarr_usage(request: Request) -> dict[str, Any]:
+    return _recyclarr_usage(request)
+
+
+class RecyclarrAssign(BaseModel):
+    instance: str
+    profile_id: int
+
+
+@router.post("/recyclarr/assign")
+def recyclarr_assign(request: Request, body: RecyclarrAssign) -> dict[str, Any]:
+    """Move every series or film of one Sonarr or Radarr onto one of its quality profiles."""
+    from .. import recyclarr
+    from ..appsetup.http import SetupError
+
+    setup = _app_setup(request)
+    found = setup.discover()
+    service = next(
+        (
+            s
+            for app in recyclarr.PROFILES
+            for s in found.installed(app)
+            if s.name == body.instance and s.api_key
+        ),
+        None,
+    )
+    if service is None:
+        raise HTTPException(404, f"no Sonarr or Radarr called {body.instance}")
+    try:
+        result = recyclarr.assign(service, body.profile_id, getattr(setup, "transport", None))
+    except recyclarr.RecyclarrError as error:
+        raise HTTPException(404, str(error)) from error
+    except SetupError as error:
+        raise HTTPException(502, _redactor(services(request))(str(error))) from error
+    return {**result, "usage": _recyclarr_usage(request, fresh=True)}
+
+
 @router.put("/recyclarr")
 def recyclarr_save(request: Request, body: RecyclarrSelection) -> dict[str, Any]:
     """Write recyclarr.yml and secrets.yml for the chosen TRaSH profiles."""
@@ -1203,6 +1276,7 @@ def recyclarr_save(request: Request, body: RecyclarrSelection) -> dict[str, Any]
     except recyclarr.RecyclarrError as error:
         raise HTTPException(400, str(error)) from error
     svc.__dict__.pop("_redactor", None)  # the new secrets.yml holds keys to hide
+    svc.__dict__.pop("_recyclarr_usage", None)  # which profiles count as synced has changed
     return {**result, "status": _recyclarr_status(request)}
 
 

@@ -2,9 +2,17 @@ import { Eye, PackagePlus, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { useApps, useJobs, useRecyclarr, useRecyclarrSync, useSaveRecyclarr } from '../api/queries';
-import type { RecyclarrApp, RecyclarrStatus } from '../api/types';
-import { useToast } from '../components/feedback';
+import {
+  useApps,
+  useAssignProfile,
+  useJobs,
+  useRecyclarr,
+  useRecyclarrSync,
+  useRecyclarrUsage,
+  useSaveRecyclarr,
+} from '../api/queries';
+import type { ProfileUse, RecyclarrApp, RecyclarrStatus } from '../api/types';
+import { useConfirm, useToast } from '../components/feedback';
 import { jobTitle } from '../components/shell';
 import { formatRelative } from '../format';
 import { useJobActions } from '../lib/actions';
@@ -140,6 +148,116 @@ function Editor({ status }: { status: RecyclarrStatus }): React.ReactNode {
   );
 }
 
+const APP_NAMES: Record<ProfileUse['app'], string> = { radarr: 'Radarr', sonarr: 'Sonarr' };
+
+/** "120 on HD-1080p, 23 on Any" for the profiles that have something on them. */
+export function profileLine(use: ProfileUse): string {
+  const used = (use.profiles ?? []).filter((profile) => profile.count > 0);
+  return used.map((profile) => `${profile.count} on ${profile.name}`).join(', ');
+}
+
+/** One Sonarr or Radarr: whether the synced profiles are there and in use, and a way to use them. */
+function InstanceUse({ use }: { use: ProfileUse }): React.ReactNode {
+  const assign = useAssignProfile();
+  const confirm = useConfirm();
+  const toast = useToast();
+  const title = use.name === use.app ? APP_NAMES[use.app] : `${APP_NAMES[use.app]} (${use.name})`;
+  if (use.error !== undefined && use.error !== '') {
+    return (
+      <li>
+        <strong>{title}</strong> <span className="muted small">did not answer: {use.error}</span>
+      </li>
+    );
+  }
+  const total = use.total ?? 0;
+  const noun = use.noun ?? 'items';
+  const synced = (use.profiles ?? []).filter((profile) => profile.synced);
+
+  async function move(profile: { count: number; id: number; name: string }): Promise<void> {
+    const moving = total - profile.count;
+    const ok = await confirm({
+      body: (
+        <>
+          <p>
+            Changes the quality profile of {moving} {noun} in {title} to <strong>{profile.name}</strong>, the same as
+            selecting them all in its mass editor.
+          </p>
+          <p>
+            Nothing is downloaded now. From then on {title} replaces a file when it finds a release the new profile
+            prefers. To go back, set the old profile again in {title}.
+          </p>
+        </>
+      ),
+      confirmLabel: `Move ${moving} ${noun}`,
+      title: `Use ${profile.name} for everything in ${title}?`,
+    });
+    if (!ok) return;
+    assign.mutate(
+      { instance: use.name, profile_id: profile.id },
+      {
+        onError: (error) => toast({ body: error.message, title: 'Could not change the profiles', tone: 'danger' }),
+        onSuccess: (result) =>
+          toast({ title: `${result.moved} ${noun} in ${title} now use ${result.profile}`, tone: 'ok' }),
+      },
+    );
+  }
+
+  return (
+    <li className={styles['use']}>
+      <div>
+        <strong>{title}</strong>{' '}
+        <span className="muted small">
+          {total} {noun}
+          {total > 0 ? `: ${profileLine(use)}` : ''}
+        </span>
+      </div>
+      {(use.missing ?? []).map((name) => (
+        <span className="small" key={name}>
+          <strong>{name}</strong> is not in {title} yet. Press “Sync now” above to create it.
+        </span>
+      ))}
+      {synced.map((profile) =>
+        profile.count >= total ? (
+          <span className="small" key={profile.id}>
+            {total === 0 ? `${profile.name} is ready for what you add.` : `Everything uses ${profile.name}.`}
+          </span>
+        ) : (
+          <div className="row" key={profile.id}>
+            <span className="small">
+              {profile.count === 0 ? 'Nothing uses' : `${profile.count} of ${total} use`}{' '}
+              <strong>{profile.name}</strong> yet.
+            </span>
+            <button className="small" disabled={assign.isPending} onClick={() => void move(profile)} type="button">
+              Move all {noun} to {profile.name}
+            </button>
+          </div>
+        ),
+      )}
+    </li>
+  );
+}
+
+/** Recyclarr creates profiles and never assigns them: this shows whether anything uses them. */
+function ProfileUsage(): React.ReactNode {
+  const usage = useRecyclarrUsage(true);
+  const instances = usage.data?.instances ?? [];
+  if (usage.data === undefined || instances.length === 0) return null;
+  return (
+    <div className="stack-sm">
+      <h3 className={styles['flush']}>In use</h3>
+      <p className="muted small">
+        A sync creates the profiles in Sonarr and Radarr; it does not put any show or film on them. What you already
+        have keeps its old profile until you move it, and new additions use whichever profile you pick when adding.
+      </p>
+      <ul className={styles['uses']}>
+        {instances.map((use) => (
+          <InstanceUse key={use.name} use={use} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function RecyclarrCard(): React.ReactNode {
   const recyclarr = useRecyclarr();
   const apps = useApps();
@@ -166,7 +284,10 @@ export function RecyclarrCard(): React.ReactNode {
           )}
         </div>
       ) : (
-        <Editor key={JSON.stringify(recyclarr.data.selected)} status={recyclarr.data} />
+        <>
+          <Editor key={JSON.stringify(recyclarr.data.selected)} status={recyclarr.data} />
+          <ProfileUsage />
+        </>
       )}
     </section>
   );

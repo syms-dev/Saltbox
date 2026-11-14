@@ -91,6 +91,12 @@ class Services:
         source = selfupdate.source_dir()
         self.loaded_commit = selfupdate.head_commit(source) if source is not None else None
         self.jobs.on_finish.append(self._after_self_update)
+        # A Recyclarr sync creates profiles: what Sonarr and Radarr hold is worth reading again.
+        self.jobs.on_finish.append(
+            lambda job: (
+                self.__dict__.pop("_recyclarr_usage", None) if job.kind == "recyclarr" else None
+            )
+        )
 
     def _after_self_update(self, job: Any) -> None:
         """Once the app has updated itself, restart to run the new code."""

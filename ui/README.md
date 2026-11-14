@@ -70,7 +70,9 @@ after a reboot or a dropped SSH session.
   exclude, and sends one summary. It does
   not update Saltbox itself: `sb update` is made to be run by a person.
 - **Connect apps**: quality profiles through Recyclarr (TRaSH Guides profiles,
-  written to `/opt/recyclarr` with keys read from the apps), then the
+  written to `/opt/recyclarr` with keys read from the apps), with a count of
+  how many shows and films use each profile and a button to move them all onto
+  a synced one (a sync creates profiles; it assigns nothing); then the
   post-install wiring the Saltbox app docs describe: download clients, root
   folders, Prowlarr sync, FlareSolverr, Autoscan, Plex libraries and settings.
   A Seeding card shows the finished torrents still seeding in qBittorrent and
@@ -89,12 +91,12 @@ A JSON command line, `sbx`, exposes the same engine for scripting.
 
 ## Status: what has and has not been checked
 
-Version 0.1.0. Treat it as a beta.
+Version 0.2.0. Treat it as a beta.
 
 | Check | Result |
 | --- | --- |
-| Python tests (pytest) | 334 tests; pass on Python 3.12 and 3.14 |
-| Web unit tests (Vitest) | 80 tests pass |
+| Python tests (pytest) | 337 tests; pass on Python 3.12 and 3.14 |
+| Web unit tests (Vitest) | 84 tests pass |
 | End-to-end tests (Playwright, Chromium) | 66 tests pass: every flow on desktop, every page at phone and tablet width, failing on any console error |
 | Package | CI builds the wheel, installs it in a clean environment and loads the web app from it |
 | Real servers | **One**: Ubuntu 26.04, Python 3.14, local drives pooled with mergerfs, Plex, qBittorrent behind Gluetun (ProtonVPN) |
@@ -137,6 +139,8 @@ that one. **Not yet run on any real server:**
   Code's documentation; it is tested against a stand-in, not the real CLI);
 - the Saltbox UI update button (tested against a local git repository and a
   stand-in for npm; it has not updated a real install);
+- moving shows and films onto a synced quality profile (the editor calls come
+  from Sonarr's and Radarr's source; tested against stand-ins);
 - drive health from Scrutiny (written from Scrutiny's source and tested against
   a stand-in for its API);
 - the log problem finder. Its two app-specific explanations (Autoscan's anchor
@@ -168,7 +172,7 @@ Install the wheel from this repository's Releases page with pipx:
 
 ```
 sudo apt install -y pipx
-V=0.1.0
+V=0.2.0
 sudo PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install \
   "https://github.com/syms-dev/saltbox-ui/releases/download/v$V/saltbox_ui-$V-py3-none-any.whl"
 ```

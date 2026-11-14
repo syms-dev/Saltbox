@@ -17,7 +17,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from .appsetup.discover import Discovery
+from .appsetup.discover import API_VERSION, Discovery, Service
+from .appsetup.http import Client, Transport
 from .layout import Layout
 from .yamlio import write_atomic
 
@@ -183,3 +184,80 @@ def _match_owner(path: Path, directory: Path) -> None:
             os.chown(path, info.st_uid, info.st_gid)
     except OSError:
         pass
+
+
+# -- are the profiles in use? ----------------------------------------------------------------
+# Recyclarr creates profiles; it never moves a show or a film onto one. Sonarr and Radarr
+# keep using whatever profile each item already had, so a sync alone changes nothing visible.
+LIBRARY = {"sonarr": ("series", "seriesIds", "series"), "radarr": ("movie", "movieIds", "films")}
+
+
+def arr_client(service: Service, transport: Transport | None) -> Client:
+    return Client(
+        f"{service.host_url}/api/{API_VERSION[service.role]}",
+        headers={"X-Api-Key": service.api_key},
+        transport=transport,
+        name=service.name,
+    )
+
+
+def selected_names(text: str, app: str) -> list[str]:
+    """Names of the profiles recyclarr.yml asks for, which is what Recyclarr calls them."""
+    chosen = set(TRASH_ID.findall(text))
+    return [profile.name for profile in PROFILES[app] if profile.trash_id in chosen]
+
+
+def usage(
+    service: Service, synced: list[str], transport: Transport | None = None
+) -> dict[str, Any]:
+    """One Sonarr or Radarr: its quality profiles, how many items use each, and which of the
+    profiles Recyclarr was asked for are there."""
+    resource, _ids, noun = LIBRARY[service.role]
+    client = arr_client(service, transport)
+    profiles = client.get("/qualityprofile") or []
+    items = client.get(f"/{resource}") or []
+    counts: dict[int, int] = {}
+    for item in items:
+        profile = item.get("qualityProfileId")
+        if isinstance(profile, int):
+            counts[profile] = counts.get(profile, 0) + 1
+    wanted = {name.lower() for name in synced}
+    listed = [
+        {
+            "id": profile["id"],
+            "name": str(profile.get("name", "")),
+            "count": counts.get(profile["id"], 0),
+            "synced": str(profile.get("name", "")).lower() in wanted,
+        }
+        for profile in profiles
+        if isinstance(profile.get("id"), int)
+    ]
+    present = {profile["name"].lower() for profile in listed}
+    return {
+        "name": service.name,
+        "app": service.role,
+        "noun": noun,
+        "total": len(items),
+        "profiles": sorted(listed, key=lambda p: (not p["synced"], -p["count"], p["name"])),
+        # Asked for in recyclarr.yml but not in the app: the sync has not run, or it failed.
+        "missing": [name for name in synced if name.lower() not in present],
+    }
+
+
+def assign(service: Service, profile_id: int, transport: Transport | None = None) -> dict[str, Any]:
+    """Put every series or film of one app on quality profile ``profile_id``.
+
+    This is the app's own mass editor (``PUT /series/editor`` or
+    ``/movie/editor``). Nothing is searched for or downloaded by it; the app
+    upgrades files later, as it finds releases the new profile prefers.
+    """
+    resource, ids_field, _noun = LIBRARY[service.role]
+    client = arr_client(service, transport)
+    profiles = {p.get("id"): str(p.get("name", "")) for p in client.get("/qualityprofile") or []}
+    if profile_id not in profiles:
+        raise RecyclarrError(f"{service.name} has no quality profile {profile_id}")
+    items = client.get(f"/{resource}") or []
+    ids = [item["id"] for item in items if item.get("qualityProfileId") != profile_id]
+    if ids:
+        client.put(f"/{resource}/editor", {ids_field: ids, "qualityProfileId": profile_id})
+    return {"moved": len(ids), "total": len(items), "profile": profiles[profile_id]}

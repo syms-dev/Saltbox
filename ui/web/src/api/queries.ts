@@ -28,6 +28,7 @@ import type {
   ContainerState,
   Overview,
   RecyclarrStatus,
+  RecyclarrUsage,
   SeedingStatus,
   SelfStatus,
   DriveHealth,
@@ -510,6 +511,27 @@ export function useSaveSeeding(): UseMutationResult<SeedingStatus, Error, Seedin
   return useMutation({
     mutationFn: (choice: SeedingChoice) => apiPut<SeedingStatus>(API_ROUTES.SEEDING, choice),
     onSuccess: (status) => client.setQueryData(['seeding'], status),
+  });
+}
+
+/** Which quality profiles Sonarr and Radarr have, and how many items use each. */
+export function useRecyclarrUsage(enabled: boolean): UseQueryResult<RecyclarrUsage> {
+  return useQuery({
+    enabled,
+    queryFn: ({ signal }) => apiFetch<RecyclarrUsage>(API_ROUTES.RECYCLARR_USAGE, { signal }),
+    queryKey: ['recyclarr', 'usage'],
+  });
+}
+
+type AssignInput = { instance: string; profile_id: number };
+type AssignResult = { moved: number; profile: string; total: number; usage: RecyclarrUsage };
+
+/** Put every series or film of one app on one quality profile. */
+export function useAssignProfile(): UseMutationResult<AssignResult, Error, AssignInput> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AssignInput) => apiPost<AssignResult>(API_ROUTES.RECYCLARR_ASSIGN, input),
+    onSuccess: (result) => client.setQueryData(['recyclarr', 'usage'], result.usage),
   });
 }
 

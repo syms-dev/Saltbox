@@ -36,6 +36,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from saltbox_ui import __version__
 from saltbox_ui.appsetup import AppSetup
 from saltbox_ui.appsetup.http import Response
 from saltbox_ui.daemon import Services, create_app
@@ -305,6 +306,23 @@ SCRUTINY_FAILING = {
     },
 }
 
+# What Sonarr and Radarr hold. Sonarr has the profile a Recyclarr sync creates, with nothing
+# on it yet; Radarr has not been synced, so the profiles asked for are missing there.
+ARR_LIBRARY: dict[str, dict[str, list[dict[str, Any]]]] = {
+    "sonarr": {
+        "profiles": [
+            {"id": 1, "name": "Any"},
+            {"id": 4, "name": "HD-1080p"},
+            {"id": 9, "name": "WEB-1080p"},
+        ],
+        "items": [{"id": n, "qualityProfileId": 4 if n <= 3 else 1} for n in range(1, 6)],
+    },
+    "radarr": {
+        "profiles": [{"id": 1, "name": "Any"}],
+        "items": [{"id": n, "qualityProfileId": 1} for n in range(1, 4)],
+    },
+}
+
 # qBittorrent as it ships: no seeding limit, so finished torrents never stop.
 QBIT_PREFERENCES: dict[str, Any] = {
     "max_ratio_enabled": False,
@@ -369,6 +387,17 @@ def apps_transport(method: str, url: str, headers: dict[str, str], body: Any) ->
                 }
             }
         )
+    if path == "/api/v3/qualityprofile" and host in ARR_LIBRARY:
+        return _json(ARR_LIBRARY[host]["profiles"])
+    if path in ("/api/v3/series", "/api/v3/movie") and host in ARR_LIBRARY:
+        return _json(ARR_LIBRARY[host]["items"])
+    if path in ("/api/v3/series/editor", "/api/v3/movie/editor") and method == "PUT":
+        edit = json.loads(body or b"{}")
+        ids = edit.get("seriesIds") or edit.get("movieIds") or []
+        for item in ARR_LIBRARY[host]["items"]:
+            if item["id"] in ids:
+                item["qualityProfileId"] = edit["qualityProfileId"]
+        return _json([])
     if path == "/api/v3/calendar":
         soon = (dt.datetime.now(dt.UTC) + dt.timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
         if host == "sonarr":
@@ -538,7 +567,7 @@ def main(argv: list[str] | None = None) -> int:
         # "restarting" leaves a note, after which there is nothing newer.
         updated = Path(tmp) / "self-updated"
         services.self_status = lambda: {
-            "version": "0.1.0",
+            "version": __version__,
             "mode": "source",
             "source": {
                 "path": str(layout.repo),
